@@ -106,6 +106,7 @@ These are the practical fixes and gotchas encountered when getting the Browser h
 - `Flowery.Uno.RuntimeTests` targets: `net10.0;net10.0-windows10.0.19041`.
 - Windows runner build args: `-p:EnableCoreMrtTooling=false` (do **not** disable PRI or copy-local outputs).
 - Windows runner execution: run the app `.exe` when available; always set `FLOWERY_RUNTIME_TESTS_PATH`.
+- Runner build root: `<temp>/frt/<8-char id>/` (`Path.GetTempPath()`), logged as `Runtime test build root: ...`, deleted in `[TestCleanup]` after each run (passing or failing). Keep it short: the WinUI XAML compiler is net472 and ignores `LongPathsEnabled` (MAX_PATH 260). Results XML stays in the test run directory.
 - `App.xaml.cs` for Windows: load runtime-test resources before the early return; copy `Themes` into `Flowery.Uno/Themes` for ms-appx resolution.
 
 ## ✅ CI / GitHub Actions (Uno + gh CLI)

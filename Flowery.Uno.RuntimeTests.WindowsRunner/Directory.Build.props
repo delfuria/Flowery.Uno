@@ -3,6 +3,6 @@
     <EnableMSTestRunner>true</EnableMSTestRunner>
     <TestingPlatformDotNetTestSupport>true</TestingPlatformDotNetTestSupport>
     <TestingPlatformCaptureOutput>false</TestingPlatformCaptureOutput>
-    <TestingPlatformCommandLineArguments>--results-directory "$(MSBuildProjectDirectory)\bin\$(Configuration)\$(TargetFramework)\TestResults\$(MSBuildProjectName)\$([System.DateTime]::UtcNow.ToString('yyyyMMddHHmmssfff'))"</TestingPlatformCommandLineArguments>
+    <TestingPlatformCommandLineArguments>--results-directory "$(MSBuildProjectDirectory)\bin\$(Configuration)\$(TargetFramework)\TestResults\$([System.DateTime]::UtcNow.ToString('yyyyMMddHHmmssfff'))"</TestingPlatformCommandLineArguments>
   </PropertyGroup>
 </Project>

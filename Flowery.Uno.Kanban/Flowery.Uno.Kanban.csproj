@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <TargetFrameworks>net10.0-windows10.0.19041;net10.0-android36.0;net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
+    <!-- Rider reads this list before Uno.Sdk filters it: list Windows only when building on Windows -->
+    <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net10.0-android36.0;net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
+    <TargetFrameworks Condition="'$(FloweryExcludeAndroid)' == 'true'">net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
     <UnoVersion>6.5.229</UnoVersion>
     <UnoSingleProject>true</UnoSingleProject>
 
@@ -25,8 +28,8 @@
 
   <PropertyGroup Condition="'$(IsWindowsTarget)' == 'True'">
     <!-- Required for WinUI on Windows -->
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <Platform>x64</Platform>
+    <RuntimeIdentifier>$(FloweryWindowsRuntimeIdentifier)</RuntimeIdentifier>
+    <Platform>$(FloweryWindowsPlatform)</Platform>
     <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
 
     <!-- Workaround for UNOB0008: allows building WinUI class library with dotnet build when XAML is present -->

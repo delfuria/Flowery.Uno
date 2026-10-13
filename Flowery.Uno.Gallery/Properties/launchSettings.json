@@ -1,0 +1,31 @@
+{
+  "profiles": {
+    // This profile is first in order for dotnet run to pick it up by default.
+    // Port 5280 avoids 5000, which AirPlay Receiver takes on macOS.
+    "Flowery.Uno.Gallery (WebAssembly)": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5280",
+      "compatibleTargetFramework": "browserwasm",
+      "inspectUri": "{wsProtocol}://{url.hostname}:{url.port}/_framework/debug/ws-proxy?browser={browserInspectUri}",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "Flowery.Uno.Gallery (WinAppSDK Unpackaged)": {
+      "commandName": "Project",
+      "compatibleTargetFramework": "windows"
+    },
+    "Flowery.Uno.Gallery (Desktop)": {
+      "commandName": "Project",
+      "compatibleTargetFramework": "desktop"
+    },
+    "Flowery.Uno.Gallery (Desktop WSL2)": {
+      "commandName": "WSL2",
+      "commandLineArgs": "{ProjectDir}/../bin/Debug/Flowery.Uno.Gallery/net10.0-desktop/Flowery.Uno.Gallery.dll",
+      "distributionName": "",
+      "compatibleTargetFramework": "desktop"
+    }
+  }
+}

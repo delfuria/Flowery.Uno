@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <TargetFrameworks>net10.0-android36.0;net10.0-windows10.0.19041;net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
+    <!-- Rider reads this list before Uno.Sdk filters it: list Windows only when building on Windows -->
+    <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net10.0-android36.0;net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
+    <TargetFrameworks Condition="'$(FloweryExcludeAndroid)' == 'true'">net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
     <UnoVersion>6.5.229</UnoVersion>
     <UnoSingleProject>true</UnoSingleProject>
 
@@ -30,8 +33,8 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(IsWindowsTarget)' == 'True'">
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <Platform>x64</Platform>
+    <RuntimeIdentifier>$(FloweryWindowsRuntimeIdentifier)</RuntimeIdentifier>
+    <Platform>$(FloweryWindowsPlatform)</Platform>
     <UnoDisableValidateWinAppSDK3548>true</UnoDisableValidateWinAppSDK3548>
   </PropertyGroup>
 

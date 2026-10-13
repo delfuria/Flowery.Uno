@@ -1,6 +1,8 @@
 <Project Sdk="Uno.Sdk/6.5.33">
   <PropertyGroup>
     <TargetFrameworks>net10.0-desktop;net10.0-windows10.0.19041</TargetFrameworks>
+    <!-- Rider reads this list before Uno.Sdk filters it: list Windows only when building on Windows -->
+    <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net10.0-desktop</TargetFrameworks>
     <UnoSingleProject>true</UnoSingleProject>
   </PropertyGroup>
 
@@ -17,9 +19,9 @@
 
   <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
     <EnableCoreMrtTooling>false</EnableCoreMrtTooling>
-    <!-- Match Gallery's x64 platform to avoid MSB3270 architecture mismatch -->
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <Platform>x64</Platform>
+    <!-- Match Gallery's platform to avoid MSB3270 architecture mismatch -->
+    <RuntimeIdentifier>$(FloweryWindowsRuntimeIdentifier)</RuntimeIdentifier>
+    <Platform>$(FloweryWindowsPlatform)</Platform>
   </PropertyGroup>
 
   <ItemGroup>

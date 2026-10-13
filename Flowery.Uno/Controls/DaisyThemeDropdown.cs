@@ -40,6 +40,7 @@ namespace Flowery.Controls
         private ThemePreviewInfo? _pendingThemeInfo;
         private bool _pendingThemeApplyScheduled;
         private bool _ownsItemsSource;
+        private bool _isSubscribedToThemeList;
         private DaisySize? _lastAppliedSize;
         private string? _lastAppliedThemeName;
 
@@ -62,6 +63,11 @@ namespace Flowery.Controls
         }
         #endregion
 
+        static DaisyThemeDropdown()
+        {
+            DaisyThemeManager.AvailableThemesChanged += (_, _) => InvalidateThemeCache();
+        }
+
         public DaisyThemeDropdown() : base(true)
         {
             // Ensure dropdown is wide enough
@@ -70,6 +76,12 @@ namespace Flowery.Controls
 
         protected override void OnBeforeLoaded()
         {
+            if (!_isSubscribedToThemeList)
+            {
+                DaisyThemeManager.AvailableThemesChanged += OnAvailableThemesChanged;
+                _isSubscribedToThemeList = true;
+            }
+
             if (ItemsSource == null && Items.Count == 0)
             {
                 var themes = GetThemeInfos();
@@ -84,6 +96,26 @@ namespace Flowery.Controls
             }
 
             EnsureFallbackSelection();
+        }
+
+        protected override void OnBeforeUnloaded()
+        {
+            if (_isSubscribedToThemeList)
+            {
+                DaisyThemeManager.AvailableThemesChanged -= OnAvailableThemesChanged;
+                _isSubscribedToThemeList = false;
+            }
+        }
+
+        private void OnAvailableThemesChanged(object? sender, EventArgs e)
+        {
+            if (DispatcherQueue is { HasThreadAccess: false } dispatcherQueue)
+            {
+                dispatcherQueue.TryEnqueue(() => OnAvailableThemesChanged(sender, e));
+                return;
+            }
+
+            RefreshOwnedThemeInfos();
         }
 
         protected override void OnThemeUpdated()
@@ -101,10 +133,8 @@ namespace Flowery.Controls
             foreach (var themeInfo in DaisyThemeManager.AvailableThemes)
             {
                 var preview = new ThemePreviewInfo { Name = themeInfo.Name, IsDark = themeInfo.IsDark };
-                try
+                if (DaisyThemeManager.TryCreatePalette(themeInfo.Name, out var palette) && palette != null)
                 {
-                    var palette = DaisyPaletteFactory.Create(themeInfo.Name);
-
                     if (palette.TryGetValue("DaisyPrimaryBrush", out var primary) && primary is Brush pb)
                         preview.Primary = pb;
                     if (palette.TryGetValue("DaisySecondaryBrush", out var secondary) && secondary is Brush sb)
@@ -118,7 +148,6 @@ namespace Flowery.Controls
                     if (palette.TryGetValue("DaisyBaseContentBrush", out var baseContent) && baseContent is Brush bc)
                         preview.BaseContent = bc;
                 }
-                catch { }
                 themeData.Add(preview);
             }
 
@@ -218,7 +247,7 @@ namespace Flowery.Controls
             if (_lastAppliedSize != Size)
             {
                 _lastAppliedSize = Size;
-                RefreshThemeInfosForSize();
+                RefreshOwnedThemeInfos();
             }
         }
 
@@ -286,7 +315,7 @@ namespace Flowery.Controls
             }
         }
 
-        private void RefreshThemeInfosForSize()
+        private void RefreshOwnedThemeInfos()
         {
             if (!_ownsItemsSource) return;
 

@@ -24,7 +24,7 @@ namespace Flowery.Uno.RuntimeTests.SkiaRunner
 
             Directory.CreateDirectory(runDirectory);
             using var buildLock = AcquireBuildLock(TimeSpan.FromMinutes(10));
-            var buildPaths = CreateBuildPaths(runDirectory, tfm);
+            var buildPaths = CreateBuildPaths();
 
             var buildExitCode = await RunProcessAsync(
                 "dotnet",
@@ -135,14 +135,17 @@ namespace Flowery.Uno.RuntimeTests.SkiaRunner
             public string IntermediateRoot { get; }
         }
 
-        private static BuildPaths CreateBuildPaths(string runDirectory, string targetFramework)
+        private static BuildPaths CreateBuildPaths()
         {
-            var root = Path.Combine(runDirectory, "runtime-build", targetFramework, Guid.NewGuid().ToString("N"));
+            // Build under the temp folder with a short id: the Windows App SDK XAML compiler is a
+            // net472 tool that ignores LongPathsEnabled, so deep paths under TestResults exceed MAX_PATH.
+            var root = Path.Combine(Path.GetTempPath(), "frt", Guid.NewGuid().ToString("N")[..8]);
             var baseOutputPath = Path.Combine(root, "bin") + Path.DirectorySeparatorChar;
             var intermediateRoot = Path.Combine(root, "obj") + Path.DirectorySeparatorChar;
 
             Directory.CreateDirectory(baseOutputPath);
             Directory.CreateDirectory(intermediateRoot);
+            Console.WriteLine($"Runtime test build root: {root}");
 
             return new BuildPaths(baseOutputPath, intermediateRoot);
         }

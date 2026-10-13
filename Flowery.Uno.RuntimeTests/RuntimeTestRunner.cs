@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Flowery.Services;
+using Flowery.Uno.Kanban.Controls;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -24,6 +25,13 @@ namespace Flowery.Uno.RuntimeTests
                 // Pin the global size so default-value assertions don't depend on
                 // whatever size the hosting app (or a previous user session) applied.
                 FlowerySizeManager.Reset();
+
+                // Keep tests away from the app's real state storage: saved settings (e.g. the
+                // Kanban's last view) must not leak into tests, and tests must not write user data.
+                StateStorageProvider.Configure(new InMemoryStateStorage());
+#pragma warning disable CA1416 // Platform support is handled by Uno at runtime; provider is used across heads.
+                FlowKanban.DefaultUserProvider = null;
+#pragma warning restore CA1416
 
                 var host = PrepareHost(window);
                 RuntimeTestContext.Initialize(window, host);

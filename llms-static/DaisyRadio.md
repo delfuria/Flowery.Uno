@@ -17,11 +17,11 @@ DaisyRadio is a styled `RadioButton` with **8 color variants** and **5 size pres
 
 | Size | Outer | Inner | Use Case |
 | --- | --- | --- | --- |
-| ExtraSmall | 16px | 8px | Dense tables/toolbars. |
-| Small | 20px | 12px | Compact forms. |
-| Medium (default) | 24px | 14px | General usage. |
-| Large | 32px | 20px | Spacious layouts or touch targets. |
-| ExtraLarge | Falls back to Medium styling (no explicit theme overrides). |
+| ExtraSmall | 8px | 4px | Dense tables/toolbars. |
+| Small | 10px | 5px | Compact forms. |
+| Medium (default) | 12px | 6px | General usage. |
+| Large | 14px | 7px | Spacious layouts or touch targets. |
+| ExtraLarge | 16px | 8px | Hero sections or large touch targets. |
 
 ## Quick Examples
 

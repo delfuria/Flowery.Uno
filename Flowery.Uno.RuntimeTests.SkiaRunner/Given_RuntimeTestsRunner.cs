@@ -10,7 +10,39 @@ namespace Flowery.Uno.RuntimeTests.SkiaRunner
     [TestClass]
     public class Given_RuntimeTestsRunner
     {
+        private string? _buildRoot;
+
         public TestContext? TestContext { get; set; }
+
+        [TestCleanup]
+        public async Task DeleteBuildRoot()
+        {
+            // Each run leaves about 500 MB, so the build is deleted whatever the outcome.
+            // Possible follow-up: keep it after a failed run so it can be inspected.
+            if (_buildRoot is null)
+            {
+                return;
+            }
+
+            // The app under test can hold its DLLs for a moment after it exits, so retry briefly.
+            for (var attempt = 1; Directory.Exists(_buildRoot); attempt++)
+            {
+                try
+                {
+                    Directory.Delete(_buildRoot, recursive: true);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    if (attempt == 5)
+                    {
+                        Console.WriteLine($"Could not delete runtime test build root {_buildRoot}: {ex.Message}");
+                        return;
+                    }
+
+                    await Task.Delay(TimeSpan.FromSeconds(2));
+                }
+            }
+        }
 
         [TestMethod]
         public async Task When_Running_SkiaRuntimeTests_Succeeds()
@@ -25,6 +57,7 @@ namespace Flowery.Uno.RuntimeTests.SkiaRunner
             Directory.CreateDirectory(runDirectory);
             using var buildLock = AcquireBuildLock(TimeSpan.FromMinutes(10));
             var buildPaths = CreateBuildPaths();
+            _buildRoot = buildPaths.Root;
 
             var buildExitCode = await RunProcessAsync(
                 "dotnet",
@@ -124,11 +157,14 @@ namespace Flowery.Uno.RuntimeTests.SkiaRunner
 
         private sealed class BuildPaths
         {
-            public BuildPaths(string baseOutputPath, string intermediateRoot)
+            public BuildPaths(string root, string baseOutputPath, string intermediateRoot)
             {
+                Root = root;
                 BaseOutputPath = baseOutputPath;
                 IntermediateRoot = intermediateRoot;
             }
+
+            public string Root { get; }
 
             public string BaseOutputPath { get; }
 
@@ -147,7 +183,7 @@ namespace Flowery.Uno.RuntimeTests.SkiaRunner
             Directory.CreateDirectory(intermediateRoot);
             Console.WriteLine($"Runtime test build root: {root}");
 
-            return new BuildPaths(baseOutputPath, intermediateRoot);
+            return new BuildPaths(root, baseOutputPath, intermediateRoot);
         }
 
         private static string QuoteForCommandLine(string value)

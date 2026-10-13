@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Breaking:** Build: moved all Windows, Desktop (Skia), Browser and tooling target frameworks from net9.0 to net10.0 (Android was already net10.0); consumers must now target net10.0. Build/run scripts, CI build, runtime test runners and developer docs updated accordingly.
 - Linux: the Desktop (Skia) Gallery head starts again. The `Tmds.DBus.Protocol` 0.93.0 pin broke Uno's X11 host, which expects the 0.21 API, and aborted startup on `Tmds.DBus.Protocol.Address`. The direct reference and central version pin are removed; the version now flows transitively from Uno.Sdk (`Uno.WinUI.Runtime.Skia.X11` resolves 0.21.3).
-- Tests: the Windows runtime tests no longer fail with path-too-long errors when the repository sits in a deep folder (e.g. a VM shared folder). Both runtime test runners now build the Gallery under `<temp>/frt/<8-char id>/` and log that folder as `Runtime test build root: ...`, because the Windows App SDK XAML compiler (a net472 tool) ignores `LongPathsEnabled`. The results directory also drops a redundant project-name segment.
+- Tests: the Windows runtime tests no longer fail with path-too-long errors when the repository sits in a deep folder (e.g. a VM shared folder). Both runtime test runners now build the Gallery under `<temp>/frt/<8-char id>/` and log that folder as `Runtime test build root: ...`; the folder is deleted after each run. This is needed because the Windows App SDK XAML compiler (a net472 tool) ignores `LongPathsEnabled`. The results directory also drops a redundant project-name segment.
 
 ## [1.2.0] - 2026-07-09
 

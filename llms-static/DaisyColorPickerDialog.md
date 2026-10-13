@@ -25,7 +25,7 @@ DaisyColorPickerDialog is a comprehensive color picker dialog that combines all 
 
 | Event | Description |
 | --- | --- |
-| `PreviewColorChanged` | Fired when the preview color changes (before OK is clicked) |
+| `PreviewColorChanged` | Fired when the selected color changes while the dialog is open (before OK is clicked) |
 
 ## Architecture
 
@@ -33,7 +33,7 @@ The dialog is a **composite control** that assembles several standalone color pi
 
 | File | Purpose |
 | --- | --- |
-| `DaisyColorPickerDialog.cs` | Dialog window, layout, and coordination logic |
+| `DaisyColorPickerDialog.cs` | Dialog (a `FloweryDialogBase` shown through `FloweryDialogHost`), layout, history and coordination logic |
 | `DaisyColorWheel.cs` + `.xaml` | Standalone color wheel control |
 | `DaisyColorGrid.cs` + `.xaml` | Standalone color palette grid |
 | `DaisyColorEditor.cs` + `.xaml` | Standalone RGB/HSL editor with sliders |
@@ -60,122 +60,52 @@ The dialog integrates these components:
 | `DaisyScreenColorPicker` | Pick colors from screen |
 | Color Preview | Shows selected vs. original color |
 
+## Methods
+
+| Member | Description |
+| --- | --- |
+| `static ShowAsync(XamlRoot xamlRoot, Color initialColor)` | Shows the dialog over the app content; returns the selected color, or `null` when cancelled |
+| `static ShowAsync(XamlRoot, Color, bool showAlphaChannel, ColorCollection? customColors)` | Same, with alpha channel option and a custom color collection to show and extend |
+| `ShowAsync(XamlRoot xamlRoot)` | Shows a configured dialog instance |
+| `Undo()` / `Redo()` | Step through the colors chosen while the dialog is open (latest 50 values); also the two history buttons in the footer |
+| `CanUndo` / `CanRedo` | Whether a history step is available |
+| `Confirm()` / `Cancel()` | Close with or without a result; OK also adds the color to `CustomColors` |
+
+Escape and a click outside the dialog count as Cancel. Wheel, lightness slider, palette, screen picker, hex input and the RGB/HSL sliders all update the new-color preview and the returned color.
+
 ## Quick Examples
 
-```xml
-<!-- Basic usage in code-behind -->
+```csharp
+// Show the dialog and use the result
+var color = await DaisyColorPickerDialog.ShowAsync(XamlRoot, currentColor);
+if (color is { } selected)
+{
+    ApplyColor(selected);
+}
 ```
 
 ```csharp
-// Show dialog and get result
+// Keep custom colors across openings, without alpha
+private readonly ColorCollection _customColors = ColorCollection.CreateCustom(16);
+
+var color = await DaisyColorPickerDialog.ShowAsync(XamlRoot, currentColor, showAlphaChannel: false, _customColors);
+```
+
+```csharp
+// Minimal dialog (wheel + editor only) with a live preview
 var dialog = new DaisyColorPickerDialog
 {
     Color = currentColor,
     OriginalColor = currentColor,
-    ShowAlphaChannel = true
-};
-
-var result = await dialog.ShowDialog<bool?>(parentWindow);
-if (result == true)
-{
-    // User clicked OK
-    ApplyColor(dialog.Color);
-}
-```
-
-```csharp
-// With custom colors
-var dialog = new DaisyColorPickerDialog
-{
-    Color = Colors.Blue,
-    OriginalColor = Colors.Blue,
-    CustomColors = new ColorCollection(new[] 
-    { 
-        Colors.Red, 
-        Colors.Green, 
-        Colors.Blue 
-    })
-};
-```
-
-```csharp
-// Minimal dialog (wheel + editor only)
-var dialog = new DaisyColorPickerDialog
-{
-    Color = currentColor,
     ShowColorGrid = false,
     ShowScreenColorPicker = false
 };
+dialog.PreviewColorChanged += (s, e) => PreviewBorder.Background = new SolidColorBrush(e.Color);
+
+var color = await dialog.ShowAsync(XamlRoot);
 ```
 
-```csharp
-// No alpha channel
-var dialog = new DaisyColorPickerDialog
-{
-    Color = currentColor,
-    ShowAlphaChannel = false,
-    PreserveAlphaChannel = false
-};
-```
-
-```csharp
-// Preview changes in real-time
-var dialog = new DaisyColorPickerDialog
-{
-    Color = currentColor
-};
-
-dialog.PreviewColorChanged += (s, e) =>
-{
-    // Update preview in parent window
-    PreviewBorder.Background = new SolidColorBrush(e.Color);
-};
-
-await dialog.ShowDialog<bool?>(this);
-```
-
-## Template Parts
-
-| Part Name | Type | Purpose |
-| --- | --- | --- |
-| `PART_ColorWheel` | `DaisyColorWheel` | Hue/saturation wheel |
-| `PART_ColorGrid` | `DaisyColorGrid` | Color palette |
-| `PART_ColorEditor` | `DaisyColorEditor` | RGB/HSL editor |
-| `PART_ScreenColorPicker` | `DaisyScreenColorPicker` | Eyedropper |
-| `PART_LightnessSlider` | `DaisyColorSlider` | Lightness control |
-| `PART_ColorPreview` | `Border` | Current color preview |
-| `PART_OriginalColorPreview` | `Border` | Original color preview |
-| `PART_OkButton` | `Button` | OK button |
-| `PART_CancelButton` | `Button` | Cancel button |
-
-## Helper Method
-
-```csharp
-/// <summary>
-/// Shows the color picker dialog and returns the selected color.
-/// </summary>
-/// <param name="owner">Parent window</param>
-/// <param name="initialColor">Starting color</param>
-/// <returns>Selected color, or null if cancelled</returns>
-public static async Task<Color?> ShowDialogAsync(Window owner, Color initialColor)
-{
-    var dialog = new DaisyColorPickerDialog
-    {
-        Color = initialColor,
-        OriginalColor = initialColor
-    };
-
-    var result = await dialog.ShowDialog<bool?>(owner);
-    return result == true ? dialog.Color : (Color?)null;
-}
-
-// Usage:
-var color = await DaisyColorPickerDialog.ShowDialogAsync(this, Colors.Red);
-if (color.HasValue)
-{
-    ApplyColor(color.Value);
-}
-```
+The screen color picker is hidden on Android and iOS, where screen capture is not available.
 
 ## Typical Layout
 

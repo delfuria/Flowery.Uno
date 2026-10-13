@@ -171,6 +171,11 @@ Flowery.Uno uses a palette-based architecture:
 | `DaisySuccessBrush` | Success status color |
 | `DaisyWarningBrush` | Warning status color |
 | `DaisyErrorBrush` | Error status color |
+| `DaisyPrimaryForegroundBrush`, `DaisySecondaryForegroundBrush`, `DaisyAccentForegroundBrush` | Text and icons in the variant hue on base surfaces (outline, dash and soft buttons, `DaisyIconText`). Same as the fill unless a theme needs a shade with more contrast. |
+| `DaisyButtonPrimaryForegroundBrush` | Text of primary outline, dash, soft and link buttons. |
+| `DaisyButtonPrimaryDisabledBrush` | Optional opaque fill for disabled primary buttons; only defined by themes that need it (Business). |
+
+Custom palettes created with `DaisyPaletteFactory.Create(ThemePalette)` can set these through `PrimaryForeground`, `SecondaryForeground`, `AccentForeground`, `ButtonPrimaryForeground` and `ButtonPrimaryDisabled`. Palettes from other factories get the foreground keys derived from their base colors when the theme is applied.
 
 ### Using Resources in XAML
 

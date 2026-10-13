@@ -187,6 +187,7 @@ namespace Flowery.Controls
         public bool IsExternallyControlled { get; set; }
 
         private Brush? _normalBackground;
+        private Brush? _disabledBackground;
         private Brush? _pointerOverBackground;
         private Brush? _pressedBackground;
 
@@ -1184,8 +1185,8 @@ namespace Flowery.Controls
                 case DaisyButtonVariant.Link:
                     variantBg = transparent;
                     variantHoverBg = transparent;
-                    variantFg = primary;
-                    variantHoverFg = primary;
+                    variantFg = DaisyResourceLookup.GetBrush(resources, "DaisyButtonPrimaryForegroundBrush", primary);
+                    variantHoverFg = variantFg;
                     break;
                 case DaisyButtonVariant.Info:
                     variantBg = info;
@@ -1259,6 +1260,7 @@ namespace Flowery.Controls
             if (Variant == DaisyButtonVariant.Link)
             {
                 // Link is special: no background/border, no padding by default.
+                _disabledBackground = null;
                 _normalBackground = transparent;
                 _pointerOverBackground = transparent;
                 _pressedBackground = transparent;
@@ -1284,13 +1286,31 @@ namespace Flowery.Controls
 
             var effectiveStyle = ButtonStyle == DaisyButtonStyle.Dash ? DaisyButtonStyle.Outline : ButtonStyle;
 
+            // A palette can give disabled primary default buttons an opaque fill instead of the
+            // half-transparent primary fill.
+            _disabledBackground = Variant == DaisyButtonVariant.Primary && effectiveStyle == DaisyButtonStyle.Default
+                && DaisyResourceLookup.TryGetResource(resources, "DaisyButtonPrimaryDisabledBrush", out var disabledObj)
+                && disabledObj is Brush disabledBrush
+                    ? disabledBrush
+                    : null;
+
+            // Text in the variant hue on the base surface (outline, dash and soft). Some themes need a
+            // lighter or darker shade than the fill for contrast; palettes without one fall back to the fill.
+            var variantText = Variant switch
+            {
+                DaisyButtonVariant.Primary => DaisyResourceLookup.GetBrush(resources, "DaisyButtonPrimaryForegroundBrush", variantBg),
+                DaisyButtonVariant.Secondary => DaisyResourceLookup.GetBrush(resources, "DaisySecondaryForegroundBrush", variantBg),
+                DaisyButtonVariant.Accent => DaisyResourceLookup.GetBrush(resources, "DaisyAccentForegroundBrush", variantBg),
+                _ => variantBg
+            };
+
             if (effectiveStyle == DaisyButtonStyle.Outline)
             {
                 _normalBackground = transparent;
                 _pointerOverBackground = variantBg;
                 _pressedBackground = DaisyResourceLookup.WithOpacity(variantBg, 0.9) ?? variantBg;
 
-                _normalForeground = variantBg;
+                _normalForeground = variantText;
                 _pointerOverForeground = variantFg;
                 _pressedForeground = variantFg;
 
@@ -1308,9 +1328,9 @@ namespace Flowery.Controls
                 _pointerOverBackground = DaisyResourceLookup.WithOpacity(variantBg, 0.28) ?? variantHoverBg;
                 _pressedBackground = DaisyResourceLookup.WithOpacity(variantBg, 0.35) ?? variantHoverBg;
 
-                _normalForeground = variantBg;
-                _pointerOverForeground = variantBg;
-                _pressedForeground = variantBg;
+                _normalForeground = variantText;
+                _pointerOverForeground = variantText;
+                _pressedForeground = variantText;
 
                 _normalBorderBrush = transparent;
                 _pointerOverBorderBrush = transparent;
@@ -1450,7 +1470,8 @@ namespace Flowery.Controls
             // 1. Determine standard visuals for the current state
             if (!IsEnabled)
             {
-                Background = DaisyResourceLookup.WithOpacity(_normalBackground, 0.5) ?? _normalBackground;
+                Background = _disabledBackground
+                    ?? DaisyResourceLookup.WithOpacity(_normalBackground, 0.5) ?? _normalBackground;
                 Foreground = DaisyResourceLookup.WithOpacity(_normalForeground, 0.5) ?? _normalForeground;
                 BorderBrush = DaisyResourceLookup.WithOpacity(_normalBorderBrush, 0.5) ?? _normalBorderBrush;
                 BorderThickness = _normalBorderThickness;

@@ -36,6 +36,33 @@ namespace Flowery.Theming
         public string WarningContent { get; init; } = "#000000";
         public string Error { get; init; } = "#FF627D";
         public string ErrorContent { get; init; } = "#000000";
+
+        /// <summary>
+        /// Text and icon color in the primary hue on base surfaces (icon text). Null uses <see cref="Primary"/>.
+        /// </summary>
+        public string? PrimaryForeground { get; init; }
+
+        /// <summary>
+        /// Text color in the secondary hue on base surfaces (outline, dash and soft buttons, icon text).
+        /// Null uses <see cref="Secondary"/>.
+        /// </summary>
+        public string? SecondaryForeground { get; init; }
+
+        /// <summary>
+        /// Text color in the accent hue on base surfaces (outline, dash and soft buttons, icon text).
+        /// Null uses <see cref="Accent"/>.
+        /// </summary>
+        public string? AccentForeground { get; init; }
+
+        /// <summary>
+        /// Text color of primary outline, dash, soft and link buttons. Null uses <see cref="Primary"/>.
+        /// </summary>
+        public string? ButtonPrimaryForeground { get; init; }
+
+        /// <summary>
+        /// Opaque background of a disabled primary default button. Null keeps the primary fill at half opacity.
+        /// </summary>
+        public string? ButtonPrimaryDisabled { get; init; }
     }
 
     /// <summary>
@@ -94,7 +121,8 @@ namespace Flowery.Theming
                 Neutral = "#3A3A3A", NeutralFocus = "#2E2E2E", NeutralContent = "#FFFFFF",
                 Base100 = "#000000", Base200 = "#141414", Base300 = "#1B1B1B", BaseContent = "#D6D6D6",
                 Info = "#0000FF", InfoContent = "#FFFFFF", Success = "#028002", SuccessContent = "#FFFFFF",
-                Warning = "#FFFF00", WarningContent = "#000000", Error = "#FF0301", ErrorContent = "#FFFFFF"
+                Warning = "#FFFF00", WarningContent = "#000000", Error = "#FF0301", ErrorContent = "#FFFFFF",
+                PrimaryForeground = "#D6D6D6", SecondaryForeground = "#D6D6D6", AccentForeground = "#D6D6D6", ButtonPrimaryForeground = "#D6D6D6"
             },
             ["Bumblebee"] = new ThemePalette
             {
@@ -108,13 +136,14 @@ namespace Flowery.Theming
             },
             ["Business"] = new ThemePalette
             {
-                Primary = "#1C4E80", PrimaryFocus = "#163E66", PrimaryContent = "#D0DAE5",
+                Primary = "#1C4E80", PrimaryFocus = "#163E66", PrimaryContent = "#FFFFFF",
                 Secondary = "#7C909A", SecondaryFocus = "#63737B", SecondaryContent = "#050708",
                 Accent = "#EA6947", AccentFocus = "#BB5438", AccentContent = "#130402",
                 Neutral = "#23282E", NeutralFocus = "#1C2024", NeutralContent = "#CECFD0",
                 Base100 = "#202020", Base200 = "#1C1C1C", Base300 = "#767676", BaseContent = "#CDCDCD",
                 Info = "#0291D5", InfoContent = "#FFFFFF", Success = "#6BB187", SuccessContent = "#000000",
-                Warning = "#DBAE5A", WarningContent = "#000000", Error = "#AC3E31", ErrorContent = "#FFFFFF"
+                Warning = "#DBAE5A", WarningContent = "#000000", Error = "#AC3E31", ErrorContent = "#FFFFFF",
+                ButtonPrimaryForeground = "#FFFFFF", ButtonPrimaryDisabled = "#2B4055"
             },
             ["Caramellatte"] = new ThemePalette
             {
@@ -144,7 +173,8 @@ namespace Flowery.Theming
                 Neutral = "#120C12", NeutralFocus = "#0E090E", NeutralContent = "#C9C7C9",
                 Base100 = "#261B25", Base200 = "#1E151D", Base300 = "#7B737A", BaseContent = "#C59F61",
                 Info = "#8ECAC1", InfoContent = "#000000", Success = "#9DB787", SuccessContent = "#000000",
-                Warning = "#FFD260", WarningContent = "#000000", Error = "#FC9581", ErrorContent = "#000000"
+                Warning = "#FFD260", WarningContent = "#000000", Error = "#FC9581", ErrorContent = "#000000",
+                SecondaryForeground = "#8DB9BB", AccentForeground = "#75C4DC"
             },
             ["Corporate"] = new ThemePalette
             {
@@ -164,7 +194,8 @@ namespace Flowery.Theming
                 Neutral = "#262629", NeutralFocus = "#1E1E20", NeutralContent = "#E4E4E7",
                 Base100 = "#FAF7F5", Base200 = "#EFEAE6", Base300 = "#C3C0BE", BaseContent = "#291334",
                 Info = "#00A4F2", InfoContent = "#FFFFFF", Success = "#00BA7B", SuccessContent = "#FFFFFF",
-                Warning = "#EEAF00", WarningContent = "#000000", Error = "#FE1C55", ErrorContent = "#FFFFFF"
+                Warning = "#EEAF00", WarningContent = "#000000", Error = "#FE1C55", ErrorContent = "#FFFFFF",
+                PrimaryForeground = "#238F80", ButtonPrimaryForeground = "#238F80", SecondaryForeground = "#A0004A", AccentForeground = "#9F2D00"
             },
             ["Cyberpunk"] = new ThemePalette
             {
@@ -184,7 +215,8 @@ namespace Flowery.Theming
                 Neutral = "#09090B", NeutralFocus = "#070708", NeutralContent = "#E4E4E7",
                 Base100 = "#1D232A", Base200 = "#191E24", Base300 = "#374151", BaseContent = "#ECF9FF",
                 Info = "#00BAFE", InfoContent = "#000000", Success = "#00D390", SuccessContent = "#000000",
-                Warning = "#FCB700", WarningContent = "#000000", Error = "#FF627D", ErrorContent = "#000000"
+                Warning = "#FCB700", WarningContent = "#000000", Error = "#FF627D", ErrorContent = "#000000",
+                PrimaryForeground = "#8D8AFF", ButtonPrimaryForeground = "#8D8AFF"
             },
             ["Dim"] = new ThemePalette
             {
@@ -264,7 +296,8 @@ namespace Flowery.Theming
                 Neutral = "#343300", NeutralFocus = "#292800", NeutralContent = "#D2D3C7",
                 Base100 = "#F8FDEF", Base200 = "#E1E6D9", Base300 = "#CBCFC3", BaseContent = "#151614",
                 Info = "#B1D9E9", InfoContent = "#000000", Success = "#B9DBC6", SuccessContent = "#000000",
-                Warning = "#D7D3B0", WarningContent = "#000000", Error = "#EFC6C2", ErrorContent = "#000000"
+                Warning = "#D7D3B0", WarningContent = "#000000", Error = "#EFC6C2", ErrorContent = "#000000",
+                AccentForeground = "#756500"
             },
             ["Light"] = new ThemePalette
             {
@@ -294,7 +327,8 @@ namespace Flowery.Theming
                 Neutral = "#331800", NeutralFocus = "#281300", NeutralContent = "#FFE7A4",
                 Base100 = "#09090B", Base200 = "#171618", Base300 = "#1E1D1F", BaseContent = "#DCA54D",
                 Info = "#67C6FF", InfoContent = "#000000", Success = "#87D03A", SuccessContent = "#000000",
-                Warning = "#E2D563", WarningContent = "#000000", Error = "#FF6F6F", ErrorContent = "#000000"
+                Warning = "#E2D563", WarningContent = "#000000", Error = "#FF6F6F", ErrorContent = "#000000",
+                SecondaryForeground = "#8BA8D8", AccentForeground = "#C394B5"
             },
             ["Night"] = new ThemePalette
             {
@@ -324,7 +358,8 @@ namespace Flowery.Theming
                 Neutral = "#61738D", NeutralFocus = "#4D5C70", NeutralContent = "#DFE5ED",
                 Base100 = "#FFFFFF", Base200 = "#F9FAFB", Base300 = "#C7C7C7", BaseContent = "#161616",
                 Info = "#51E8FB", InfoContent = "#000000", Success = "#7AF1A7", SuccessContent = "#000000",
-                Warning = "#FFB667", WarningContent = "#000000", Error = "#FF9FA0", ErrorContent = "#000000"
+                Warning = "#FFB667", WarningContent = "#000000", Error = "#FF9FA0", ErrorContent = "#000000",
+                PrimaryForeground = "#AF8BCB", ButtonPrimaryForeground = "#AF8BCB", SecondaryForeground = "#D38F9B"
             },
             ["Retro"] = new ThemePalette
             {
@@ -334,7 +369,8 @@ namespace Flowery.Theming
                 Neutral = "#56524C", NeutralFocus = "#44413C", NeutralContent = "#D4D0CE",
                 Base100 = "#ECE3CA", Base200 = "#E4D8B4", Base300 = "#B7B09B", BaseContent = "#793205",
                 Info = "#0082CE", InfoContent = "#FFFFFF", Success = "#00776F", SuccessContent = "#FFFFFF",
-                Warning = "#F34700", WarningContent = "#FFFFFF", Error = "#FF6266", ErrorContent = "#000000"
+                Warning = "#F34700", WarningContent = "#FFFFFF", Error = "#FF6266", ErrorContent = "#000000",
+                PrimaryForeground = "#801518", ButtonPrimaryForeground = "#801518", SecondaryForeground = "#00642E"
             },
             ["Silk"] = new ThemePalette
             {
@@ -352,7 +388,7 @@ namespace Flowery.Theming
                 Secondary = "#D71152", SecondaryFocus = "#B00E45", SecondaryContent = "#FFFFFF",
                 Accent = "#FF4387", AccentFocus = "#FB216F", AccentContent = "#FFFFFF",
                 Neutral = "#080808", NeutralFocus = "#060606", NeutralContent = "#D7D7D7",
-                Base100 = "#020202", Base200 = "#040404", Base300 = "#0C0C0C", BaseContent = "#D7D7D7",
+                Base100 = "#020202", Base200 = "#040404", Base300 = "#555555", BaseContent = "#D7D7D7",
                 Info = "#38BDF8", InfoContent = "#0C4A6E", Success = "#34D399", SuccessContent = "#064E3B",
                 Warning = "#FBBF24", WarningContent = "#78350F", Error = "#F87171", ErrorContent = "#7F1D1D"
             },
@@ -404,7 +440,8 @@ namespace Flowery.Theming
                 Neutral = "#D4D4D4", NeutralFocus = "#A9A9A9", NeutralContent = "#242424",
                 Base100 = "#FFFFFF", Base200 = "#F5F5F5", Base300 = "#C7C7C7", BaseContent = "#161616",
                 Info = "#005889", InfoContent = "#FFFFFF", Success = "#006044", SuccessContent = "#FFFFFF",
-                Warning = "#963B00", WarningContent = "#FFFFFF", Error = "#9D0410", ErrorContent = "#FFFFFF"
+                Warning = "#963B00", WarningContent = "#FFFFFF", Error = "#9D0410", ErrorContent = "#FFFFFF",
+                PrimaryForeground = "#242424", ButtonPrimaryForeground = "#242424", SecondaryForeground = "#242424", AccentForeground = "#242424"
             },
             ["HappyHues01"] = new ThemePalette
             {
@@ -643,6 +680,13 @@ namespace Flowery.Theming
 
             AddColorAndBrush(dict, "DaisyError", FloweryColorHelpers.ColorFromHex(p.Error));
             AddColorAndBrush(dict, "DaisyErrorContent", FloweryColorHelpers.ColorFromHex(p.ErrorContent));
+
+            AddColorAndBrush(dict, "DaisyPrimaryForeground", FloweryColorHelpers.ColorFromHex(p.PrimaryForeground ?? p.Primary));
+            AddColorAndBrush(dict, "DaisySecondaryForeground", FloweryColorHelpers.ColorFromHex(p.SecondaryForeground ?? p.Secondary));
+            AddColorAndBrush(dict, "DaisyAccentForeground", FloweryColorHelpers.ColorFromHex(p.AccentForeground ?? p.Accent));
+            AddColorAndBrush(dict, "DaisyButtonPrimaryForeground", FloweryColorHelpers.ColorFromHex(p.ButtonPrimaryForeground ?? p.Primary));
+            if (p.ButtonPrimaryDisabled != null)
+                AddColorAndBrush(dict, "DaisyButtonPrimaryDisabled", FloweryColorHelpers.ColorFromHex(p.ButtonPrimaryDisabled));
 
             return dict;
         }

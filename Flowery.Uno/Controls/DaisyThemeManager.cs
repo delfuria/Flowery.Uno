@@ -234,6 +234,7 @@ namespace Flowery.Controls
             try
             {
                 var newPalette = def.PaletteFactory();
+                EnsureDerivedPaletteKeys(newPalette);
                 if (_currentPalette == null)
                 {
                     app.Resources.MergedDictionaries.Add(newPalette);
@@ -319,25 +320,77 @@ namespace Flowery.Controls
             catch { }
         }
 
+        // Variant foregrounds a palette may set; when missing they follow the base hue.
+        private static readonly (string Prefix, string Source)[] DerivedForegroundPrefixes =
+        [
+            ("DaisyPrimaryForeground", "DaisyPrimary"),
+            ("DaisySecondaryForeground", "DaisySecondary"),
+            ("DaisyAccentForeground", "DaisyAccent"),
+            ("DaisyButtonPrimaryForeground", "DaisyPrimary")
+        ];
+
+        // Optional keys that are removed when the next palette doesn't define them.
+        private static readonly string[] OptionalPrefixes = ["DaisyButtonPrimaryDisabled"];
+
+        private static readonly string[] PalettePrefixes =
+        [
+            "DaisyPrimary", "DaisyPrimaryFocus", "DaisyPrimaryContent",
+            "DaisySecondary", "DaisySecondaryFocus", "DaisySecondaryContent",
+            "DaisyAccent", "DaisyAccentFocus", "DaisyAccentContent",
+            "DaisyNeutral", "DaisyNeutralFocus", "DaisyNeutralContent",
+            "DaisyBase100", "DaisyBase200", "DaisyBase300", "DaisyBaseContent",
+            "DaisyInfo", "DaisyInfoContent",
+            "DaisySuccess", "DaisySuccessContent",
+            "DaisyWarning", "DaisyWarningContent",
+            "DaisyError", "DaisyErrorContent",
+            "DaisyPrimaryForeground", "DaisySecondaryForeground", "DaisyAccentForeground",
+            "DaisyButtonPrimaryForeground", "DaisyButtonPrimaryDisabled"
+        ];
+
+        /// <summary>
+        /// Adds the variant foreground keys to palettes that don't define them (custom factories,
+        /// CSS themes), so a theme switch never keeps the previous theme's foregrounds.
+        /// </summary>
+        private static void EnsureDerivedPaletteKeys(ResourceDictionary palette)
+        {
+            foreach (var (prefix, source) in DerivedForegroundPrefixes)
+            {
+                if (palette.ContainsKey(prefix + "Color") || palette.ContainsKey(prefix + "Brush"))
+                    continue;
+
+                if (palette.TryGetValue(source + "Color", out var colorObj) && colorObj is Windows.UI.Color color)
+                {
+                    palette[prefix + "Color"] = color;
+                    palette[prefix + "Brush"] = new SolidColorBrush(color);
+                }
+                else if (palette.TryGetValue(source + "Brush", out var brushObj) && brushObj is SolidColorBrush brush)
+                {
+                    palette[prefix + "Color"] = brush.Color;
+                    palette[prefix + "Brush"] = new SolidColorBrush(brush.Color);
+                }
+            }
+        }
+
+        private static void RemoveMissingOptionalKeys(ResourceDictionary target, ResourceDictionary palette)
+        {
+            foreach (var prefix in OptionalPrefixes)
+            {
+                if (palette.ContainsKey(prefix + "Color") || palette.ContainsKey(prefix + "Brush"))
+                    continue;
+
+                target.Remove(prefix + "Color");
+                target.Remove(prefix + "Brush");
+            }
+        }
+
         private static void ApplyPaletteToApplicationResources(ResourceDictionary appResources, ResourceDictionary palette)
         {
+            RemoveMissingOptionalKeys(appResources, palette);
+
             // Do NOT enumerate the ResourceDictionary here.
             // Uno/WinUI ResourceDictionary enumeration can be platform-dependent; instead, copy known keys.
             // We keep stable SolidColorBrush instances in Application.Resources and only mutate Color.
-            var prefixes = new[]
-            {
-                "DaisyPrimary", "DaisyPrimaryFocus", "DaisyPrimaryContent",
-                "DaisySecondary", "DaisySecondaryFocus", "DaisySecondaryContent",
-                "DaisyAccent", "DaisyAccentFocus", "DaisyAccentContent",
-                "DaisyNeutral", "DaisyNeutralFocus", "DaisyNeutralContent",
-                "DaisyBase100", "DaisyBase200", "DaisyBase300", "DaisyBaseContent",
-                "DaisyInfo", "DaisyInfoContent",
-                "DaisySuccess", "DaisySuccessContent",
-                "DaisyWarning", "DaisyWarningContent",
-                "DaisyError", "DaisyErrorContent"
-            };
-
-            foreach (var prefix in prefixes)
+            foreach (var prefix in PalettePrefixes)
             {
                 var colorKey = prefix + "Color";
                 var brushKey = prefix + "Brush";
@@ -378,20 +431,9 @@ namespace Flowery.Controls
 
         private static void ApplyPaletteToResourceDictionary(ResourceDictionary target, ResourceDictionary palette)
         {
-            var prefixes = new[]
-            {
-                "DaisyPrimary", "DaisyPrimaryFocus", "DaisyPrimaryContent",
-                "DaisySecondary", "DaisySecondaryFocus", "DaisySecondaryContent",
-                "DaisyAccent", "DaisyAccentFocus", "DaisyAccentContent",
-                "DaisyNeutral", "DaisyNeutralFocus", "DaisyNeutralContent",
-                "DaisyBase100", "DaisyBase200", "DaisyBase300", "DaisyBaseContent",
-                "DaisyInfo", "DaisyInfoContent",
-                "DaisySuccess", "DaisySuccessContent",
-                "DaisyWarning", "DaisyWarningContent",
-                "DaisyError", "DaisyErrorContent"
-            };
+            RemoveMissingOptionalKeys(target, palette);
 
-            foreach (var prefix in prefixes)
+            foreach (var prefix in PalettePrefixes)
             {
                 var colorKey = prefix + "Color";
                 var brushKey = prefix + "Brush";

@@ -1,12 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Flowery.Uno.Kanban.Controls;
 using Flowery.Enums;
-using Flowery.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Flowery.Uno.RuntimeTests.Controls
@@ -340,6 +338,9 @@ namespace Flowery.Uno.RuntimeTests.Controls
             RuntimeTestHelpers.AttachToHost(kanban);
             await RuntimeTestHelpers.EnsureLoadedAsync(kanban);
 
+            // With no saved boards, OnKanbanLoaded switches to the Home view, which hides the columns.
+            kanban.CurrentView = FlowKanbanView.Board;
+
             FlowKanbanColumn? columnControl = null;
             Microsoft.UI.Xaml.Controls.ListView? tasksListView = null;
             Microsoft.UI.Xaml.Controls.ListViewItem? lastContainer = null;
@@ -457,44 +458,6 @@ namespace Flowery.Uno.RuntimeTests.Controls
             Assert.AreEqual(1, migrated.Columns.Count);
             Assert.AreEqual("Backlog", migrated.Columns[0].Title);
             Assert.AreEqual(1, migrated.Columns[0].Tasks.Count);
-        }
-
-        private sealed class InMemoryStateStorage : IStateStorage
-        {
-            private readonly Dictionary<string, List<string>> _store = new(StringComparer.Ordinal);
-
-            public IReadOnlyList<string> LoadLines(string key)
-            {
-                return _store.TryGetValue(key, out var lines) ? lines : Array.Empty<string>();
-            }
-
-            public void SaveLines(string key, IEnumerable<string> lines)
-            {
-                _store[key] = new List<string>(lines);
-            }
-
-            public void Delete(string key)
-            {
-                _store.Remove(key);
-            }
-
-            public void Rename(string sourceKey, string targetKey)
-            {
-                if (_store.TryGetValue(sourceKey, out var lines))
-                {
-                    _store[targetKey] = new List<string>(lines);
-                    _store.Remove(sourceKey);
-                }
-            }
-
-            public IEnumerable<string> GetKeys(string prefix)
-            {
-                foreach (var key in _store.Keys.ToList())
-                {
-                    if (key.StartsWith(prefix, StringComparison.Ordinal))
-                        yield return key;
-                }
-            }
         }
     }
 }

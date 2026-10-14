@@ -2,15 +2,46 @@
   <PropertyGroup>
     <!-- Default configuration if not specified -->
     <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
-    <BaseOutputPath>$(MSBuildThisFileDirectory)bin\$(Configuration)\</BaseOutputPath>
-    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
-    <OutputPath>$(BaseOutputPath)$(MSBuildProjectName)\</OutputPath>
     <Version Condition="'$(Version)' == ''">1.2.0</Version>
     <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">1.2.0.0</AssemblyVersion>
     <FileVersion Condition="'$(FileVersion)' == ''">1.2.0.0</FileVersion>
     <Authors Condition="'$(Authors)' == ''">tobitege</Authors>
     <PackageProjectUrl Condition="'$(PackageProjectUrl)' == ''">https://github.com/tobitege/Flowery.Uno</PackageProjectUrl>
     <RepositoryUrl Condition="'$(RepositoryUrl)' == ''">https://github.com/tobitege/Flowery.Uno</RepositoryUrl>
+  </PropertyGroup>
+
+  <!--
+    The same checkout is often built from macOS, a Windows VM and a Linux VM. Give macOS and Linux their own
+    bin/obj folders so restore output, generated XAML and absolute paths do not overwrite each other.
+    Windows keeps the original paths, which scripts/publish_windows.ps1 and the release workflow rely on.
+  -->
+  <PropertyGroup>
+    <FloweryHostOsFolder Condition="$([MSBuild]::IsOSPlatform('OSX'))">macos\</FloweryHostOsFolder>
+    <FloweryHostOsFolder Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux\</FloweryHostOsFolder>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)bin\$(FloweryHostOsFolder)$(Configuration)\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)obj\$(FloweryHostOsFolder)$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <OutputPath>$(BaseOutputPath)$(MSBuildProjectName)\</OutputPath>
+  </PropertyGroup>
+
+  <!--
+    Linux hosts often have the android workload but no Android SDK (XA5300). Skip the Android target there unless an
+    SDK location is configured; GitHub runners set ANDROID_HOME, so CI and release packing are unchanged.
+  -->
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Linux')) and '$(ANDROID_HOME)$(ANDROID_SDK_ROOT)$(AndroidSdkDirectory)' == ''">
+    <FloweryExcludeAndroid>true</FloweryExcludeAndroid>
+  </PropertyGroup>
+
+  <!--
+    Windows target: build for the host architecture (win-arm64 on Windows ARM64, win-x64 otherwise) so the Gallery
+    runs natively and Visual Studio's AnyCPU solution platform does not clash with a fixed win-x64 RID (NETSDK1032).
+    An explicit RuntimeIdentifier (e.g. -r win-x64 from CI, release.yml or publish_windows.ps1) still wins.
+  -->
+  <PropertyGroup>
+    <FloweryWindowsRuntimeIdentifier Condition="'$(FloweryWindowsRuntimeIdentifier)' == '' and $(RuntimeIdentifier.StartsWith('win-'))">$(RuntimeIdentifier)</FloweryWindowsRuntimeIdentifier>
+    <FloweryWindowsRuntimeIdentifier Condition="'$(FloweryWindowsRuntimeIdentifier)' == '' and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">win-arm64</FloweryWindowsRuntimeIdentifier>
+    <FloweryWindowsRuntimeIdentifier Condition="'$(FloweryWindowsRuntimeIdentifier)' == ''">win-x64</FloweryWindowsRuntimeIdentifier>
+    <FloweryWindowsPlatform Condition="'$(FloweryWindowsPlatform)' == '' and '$(FloweryWindowsRuntimeIdentifier)' == 'win-arm64'">ARM64</FloweryWindowsPlatform>
+    <FloweryWindowsPlatform Condition="'$(FloweryWindowsPlatform)' == ''">x64</FloweryWindowsPlatform>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(FloweryRuntimeIntermediateRoot)' != ''">

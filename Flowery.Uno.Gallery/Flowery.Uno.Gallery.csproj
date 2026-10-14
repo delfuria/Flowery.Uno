@@ -2,10 +2,16 @@
 
   <PropertyGroup>
     <TargetFrameworks>net10.0-android36.0;net10.0-windows10.0.19041;net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
+    <!-- Rider reads this list before Uno.Sdk filters it: list Windows only when building on Windows -->
+    <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net10.0-android36.0;net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
+    <TargetFrameworks Condition="'$(FloweryExcludeAndroid)' == 'true'">net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
     <UnoVersion>6.5.229</UnoVersion>
     <UnoSingleProject>true</UnoSingleProject>
 
     <OutputType>Exe</OutputType>
+    <!-- Android derives Version from ApplicationDisplayVersion (1.0); keep a single PackageVersion across target
+         frameworks, otherwise Visual Studio's NuGet restore fails with NU1105 -->
+    <PackageVersion>$(Version)</PackageVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
     <Nullable>enable</Nullable>
@@ -14,16 +20,11 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-browserwasm'))">
-    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
     <BuildInParallel>false</BuildInParallel>
 
     <!-- Enable globalization for multi-language support using browser's Intl APIs -->
     <InvariantGlobalization>false</InvariantGlobalization>
     <HybridGlobalization>true</HybridGlobalization>
-
-    <!-- WASM hosting configuration -->
-    <RunCommand>dotnet</RunCommand>
-    <RunArguments>run --no-build --project="$(MSBuildProjectFullPath)"</RunArguments>
   </PropertyGroup>
 
   <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
@@ -52,8 +53,8 @@
     <WindowsPackageType>None</WindowsPackageType>
 
     <!-- Required for WindowsAppSDKSelfContained -->
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <Platform>x64</Platform>
+    <RuntimeIdentifier>$(FloweryWindowsRuntimeIdentifier)</RuntimeIdentifier>
+    <Platform>$(FloweryWindowsPlatform)</Platform>
     <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
 
     <!-- Suppress PRI257: set default language to en-US so it doesn't complain about missing "en" -->
@@ -174,20 +175,22 @@
           Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'"
           AfterTargets="Build">
     <PropertyGroup>
-      <_FloweryLibOutRoot>$(BaseOutputPath)</_FloweryLibOutRoot>
-      <_FloweryLibOutSuffix>$(TargetFramework)\win-x64\</_FloweryLibOutSuffix>
       <!--
-        Flowery.Uno.Kanban's own Themes\Generic.xbf is overwritten in its bin folder by the
-        Flowery.Uno copy that arrives through the project reference (same relative path), so the
-        Kanban Generic.xbf is taken from the Kanban intermediate output, which has no such collision.
-        Both projects share the obj layout from Directory.Build.props, so the Gallery path maps 1:1.
+        The library XBFs are taken from each library's intermediate output, not from its bin folder:
+        - Flowery.Uno.Kanban's own Themes\Generic.xbf is overwritten in its bin folder by the
+          Flowery.Uno copy that arrives through the project reference (same relative path);
+        - with Visual Studio's AnyCPU solution platform the bin folders only have the XBFs under the
+          library layout subfolder (e.g. Flowery.Uno\Themes\), so the bin root paths do not exist.
+        All projects share the obj layout from Directory.Build.props, so the Gallery path maps 1:1.
       -->
+      <_FloweryUnoIntermediateDir>$([System.String]::Copy('$(IntermediateOutputPath)').Replace('\Flowery.Uno.Gallery\', '\Flowery.Uno\'))</_FloweryUnoIntermediateDir>
       <_FloweryKanbanIntermediateDir>$([System.String]::Copy('$(IntermediateOutputPath)').Replace('\Flowery.Uno.Gallery\', '\Flowery.Uno.Kanban\'))</_FloweryKanbanIntermediateDir>
+      <_FloweryGalleryCoreIntermediateDir>$([System.String]::Copy('$(IntermediateOutputPath)').Replace('\Flowery.Uno.Gallery\', '\Flowery.Uno.Gallery.Core\'))</_FloweryGalleryCoreIntermediateDir>
     </PropertyGroup>
     <ItemGroup>
-      <_FloweryUnoThemeXbf Include="$(_FloweryLibOutRoot)Flowery.Uno\$(_FloweryLibOutSuffix)Themes\*.xbf" />
-      <_FloweryKanbanThemeXbf Include="$(_FloweryLibOutRoot)Flowery.Uno.Kanban\$(_FloweryLibOutSuffix)Themes\DaisyKanban.xbf;$(_FloweryKanbanIntermediateDir)Themes\Generic.xbf" />
-      <_FloweryGalleryCoreXbf Include="$(_FloweryLibOutRoot)Flowery.Uno.Gallery.Core\$(_FloweryLibOutSuffix)GalleryResources.xbf" />
+      <_FloweryUnoThemeXbf Include="$(_FloweryUnoIntermediateDir)Themes\*.xbf" />
+      <_FloweryKanbanThemeXbf Include="$(_FloweryKanbanIntermediateDir)Themes\DaisyKanban.xbf;$(_FloweryKanbanIntermediateDir)Themes\Generic.xbf" />
+      <_FloweryGalleryCoreXbf Include="$(_FloweryGalleryCoreIntermediateDir)GalleryResources.xbf" />
     </ItemGroup>
     <Copy SourceFiles="@(_FloweryUnoThemeXbf)"
           DestinationFiles="@(_FloweryUnoThemeXbf->'$(TargetDir)Flowery.Uno\Themes\%(Filename)%(Extension)')"

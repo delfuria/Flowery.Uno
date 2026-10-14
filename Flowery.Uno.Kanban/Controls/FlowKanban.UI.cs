@@ -1327,7 +1327,7 @@ namespace Flowery.Uno.Kanban.Controls
 
             try
             {
-                var currentWindow = Window.Current;
+                var currentWindow = Microsoft.UI.Xaml.Window.Current;
                 if (currentWindow != null)
                 {
                     var bounds = currentWindow.Bounds;
@@ -1385,7 +1385,7 @@ namespace Flowery.Uno.Kanban.Controls
 
             try
             {
-                var currentWindow = Window.Current;
+                var currentWindow = Microsoft.UI.Xaml.Window.Current;
                 if (currentWindow != null)
                 {
                     var bounds = currentWindow.Bounds;

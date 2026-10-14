@@ -4,31 +4,41 @@
     xmlns:controls="using:Flowery.Controls">
 
     <DataTemplate x:Key="DaisyThemeDropdownItemTemplate">
-        <StackPanel Orientation="Horizontal" Margin="4,0,0,0">
-            <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
-                <Ellipse Width="{Binding SwatchSize}"
-                         Height="{Binding SwatchSize}"
-                         Fill="{Binding Base100}"
-                         Stroke="{Binding Neutral}"
-                         StrokeThickness="1" />
-                <Ellipse Width="{Binding SwatchSize}"
-                         Height="{Binding SwatchSize}"
-                         Fill="{Binding Primary}" />
-                <Ellipse Width="{Binding SwatchSize}"
-                         Height="{Binding SwatchSize}"
-                         Fill="{Binding Secondary}" />
-                <Ellipse Width="{Binding SwatchSize}"
-                         Height="{Binding SwatchSize}"
-                         Fill="{Binding Accent}" />
-                <Ellipse Width="{Binding SwatchSize}"
-                         Height="{Binding SwatchSize}"
-                         Fill="{Binding Neutral}" />
+        <StackPanel Orientation="Vertical">
+            <!-- Group separator between preferred themes and the rest; drawn above the first other theme. -->
+            <Border Height="13"
+                    Background="Transparent"
+                    Visibility="{Binding SeparatorVisibility}">
+                <Border Height="1"
+                        VerticalAlignment="Center"
+                        Background="{ThemeResource DaisyBase300Brush}" />
+            </Border>
+            <StackPanel Orientation="Horizontal" Margin="4,0,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+                    <Ellipse Width="{Binding SwatchSize}"
+                             Height="{Binding SwatchSize}"
+                             Fill="{Binding Base100}"
+                             Stroke="{Binding Neutral}"
+                             StrokeThickness="1" />
+                    <Ellipse Width="{Binding SwatchSize}"
+                             Height="{Binding SwatchSize}"
+                             Fill="{Binding Primary}" />
+                    <Ellipse Width="{Binding SwatchSize}"
+                             Height="{Binding SwatchSize}"
+                             Fill="{Binding Secondary}" />
+                    <Ellipse Width="{Binding SwatchSize}"
+                             Height="{Binding SwatchSize}"
+                             Fill="{Binding Accent}" />
+                    <Ellipse Width="{Binding SwatchSize}"
+                             Height="{Binding SwatchSize}"
+                             Fill="{Binding Neutral}" />
+                </StackPanel>
+                <TextBlock Text="{Binding DisplayName}"
+                           VerticalAlignment="Center"
+                           Margin="{Binding TextMargin}"
+                           TextTrimming="CharacterEllipsis"
+                           TextWrapping="NoWrap" />
             </StackPanel>
-            <TextBlock Text="{Binding DisplayName}"
-                       VerticalAlignment="Center"
-                       Margin="{Binding TextMargin}"
-                       TextTrimming="CharacterEllipsis"
-                       TextWrapping="NoWrap" />
         </StackPanel>
     </DataTemplate>
 

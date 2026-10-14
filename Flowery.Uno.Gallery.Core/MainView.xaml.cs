@@ -28,6 +28,8 @@ namespace Flowery.Uno.Gallery
         private const double MinContentWidth = 400;
         private const double MaxSidebarWidthPercent = 0.35;
         private const double HeaderCollapseScrollThreshold = 20;
+        // Below this width (phones in portrait) the header uses a smaller title and logo
+        private const double NarrowHeaderWidth = 520;
         // Central diagnostics log can grow unbounded during log storms; keep disabled for now.
         // Runtime-readonly flag to avoid CS0162 warnings.
         private static readonly bool EnableCentralDiagnosticsLog = false;
@@ -39,6 +41,8 @@ namespace Flowery.Uno.Gallery
         private readonly StringBuilder _diagnosticsLog = new();
         private bool _isHeaderCollapsed;
         private bool _isLandscape;
+        private bool _isHeaderNarrow;
+        private string _licenseText = "2025 - MIT licensed";
         private readonly bool _isMobilePlatform;
         private ScrollViewer? _currentScrollViewer;
         private readonly RectangleGeometry _headerClip = new();
@@ -76,7 +80,8 @@ namespace Flowery.Uno.Gallery
             if (MitLicenseText != null)
             {
                 var platform = GetPlatformName();
-                MitLicenseText.Text = $" - 2025 - MIT licensed ({platform})";
+                _licenseText = $"2025 - MIT licensed ({platform})";
+                MitLicenseText.Text = $" - {_licenseText}";
             }
 
             UpdateFlowDirection();
@@ -270,6 +275,34 @@ namespace Flowery.Uno.Gallery
             MainSplitView.DisplayMode = shouldCollapse ? SplitViewDisplayMode.Overlay : SplitViewDisplayMode.Inline;
             HamburgerButton.Visibility = shouldCollapse ? Visibility.Visible : Visibility.Collapsed;
             MainSplitView.IsPaneOpen = !shouldCollapse;
+
+            SetHeaderNarrow(width > 0 && width < NarrowHeaderWidth);
+        }
+
+        private void SetHeaderNarrow(bool narrow)
+        {
+            if (narrow == _isHeaderNarrow)
+                return;
+
+            _isHeaderNarrow = narrow;
+
+            if (HeaderLogo != null)
+            {
+                HeaderLogo.Width = narrow ? 36 : 48;
+                HeaderLogo.Height = narrow ? 36 : 48;
+                HeaderLogo.Margin = new Thickness(0, 0, narrow ? 8 : 12, 0);
+            }
+
+            // Narrow: license text goes to its own row under "Created by"
+            if (MitLicenseText != null)
+            {
+                Grid.SetRow(MitLicenseText, narrow ? 1 : 0);
+                Grid.SetColumn(MitLicenseText, narrow ? 0 : 2);
+                Grid.SetColumnSpan(MitLicenseText, narrow ? 3 : 1);
+                MitLicenseText.Text = narrow ? _licenseText : $" - {_licenseText}";
+            }
+
+            SetHeaderCollapsed(_isHeaderCollapsed);
         }
 
         private void HamburgerButton_Click(object sender, RoutedEventArgs e)
@@ -578,7 +611,7 @@ namespace Flowery.Uno.Gallery
             else
             {
                 SubtitleRow.Visibility = Visibility.Visible;
-                HeaderTitle.FontSize = 28;
+                HeaderTitle.FontSize = _isHeaderNarrow ? 22 : 28;
                 if (HeaderContentGrid != null)
                     HeaderContentGrid.Margin = new Thickness(12, 16, 16, 8);
                 if (HeaderOrbRight != null)

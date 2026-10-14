@@ -481,7 +481,7 @@ namespace Flowery.Uno.Kanban.Controls
 
         private static bool GetDefaultKeyboardHelpVisibility()
         {
-#if __WASM__ || __ANDROID__
+#if __WASM__ || __ANDROID__ || __IOS__
             return false;
 #else
             return true;
@@ -490,7 +490,7 @@ namespace Flowery.Uno.Kanban.Controls
 
         private static bool GetDefaultColumnTooltipsEnabled()
         {
-#if __WASM__ || __ANDROID__
+#if __WASM__ || __ANDROID__ || __IOS__
             return false;
 #else
             return true;

@@ -21,6 +21,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <!-- iOS uses the Skia renderer (UIKit host); other targets keep their current renderer -->
+  <PropertyGroup Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-ios'))">
+    <UnoFeatures>$(UnoFeatures);SkiaRenderer</UnoFeatures>
+  </PropertyGroup>
+
   <PropertyGroup Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-browserwasm'))">
     <BuildInParallel>false</BuildInParallel>
 
@@ -120,7 +125,7 @@
     <UnoIcon Include="..\Flowery.Uno.Gallery.Core\Assets\app_icon.svg" ForegroundBrush="#FFFFFF" />
   </ItemGroup>
 
-  <ItemGroup Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-browserwasm'))">
+  <ItemGroup Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-browserwasm')) Or $([System.String]::Copy('$(TargetFramework)').Contains('-ios'))">
     <UnoSplashScreen Include="..\Flowery.Uno.Gallery.Core\Assets\splash_screen.svg" />
   </ItemGroup>
 

@@ -19,6 +19,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <!-- iOS uses the Skia renderer (UIKit host); other targets keep their current renderer -->
+  <PropertyGroup Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-ios'))">
+    <UnoFeatures>$(UnoFeatures);SkiaRenderer</UnoFeatures>
+  </PropertyGroup>
+
   <PropertyGroup Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-browserwasm'))">
     <FloweryEnableGlTransitions Condition="'$(FloweryEnableGlTransitions)' == ''">true</FloweryEnableGlTransitions>
     <DefineConstants Condition="'$(FloweryEnableGlTransitions)' == 'true'">$(DefineConstants);FLOWERY_GL_TRANSITIONS</DefineConstants>

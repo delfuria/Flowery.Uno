@@ -3,7 +3,7 @@
 
 # Overview
 
-DaisyToggle is a styled `ToggleSwitch` with **8 color variants** and **4 size presets**. It offers customizable thumb size via `TogglePadding` (knob margin) and uses smooth knob animation on state changes. Use it for binary on/off controls.
+DaisyToggle is a styled `ToggleSwitch` with **8 color variants** and **5 size presets**. It offers customizable thumb size via `TogglePadding` (knob margin) and uses smooth knob animation on state changes. Use it for binary on/off controls.
 
 ## Variant Options
 
@@ -17,16 +17,17 @@ DaisyToggle is a styled `ToggleSwitch` with **8 color variants** and **4 size pr
 
 | Size | Track (W×H) | Knob | Use Case |
 | --- | --- | --- | --- |
-| ExtraSmall | 28×16 | 12px | Dense layouts, tables. |
-| Small | 36×20 | 16px | Compact forms. |
-| Medium (default) | 48×24 | 20px | General purpose. |
-| Large | 60×32 | 26px | Touch-friendly UIs. |
+| ExtraSmall | 16×8 | 4px | Dense layouts, tables. |
+| Small | 20×10 | 6px | Compact forms. |
+| Medium (default) | 24×12 | 8px | General purpose. |
+| Large | 28×14 | 10px | Touch-friendly UIs. |
+| ExtraLarge | 32×16 | 12px | Hero sections or large touch targets. |
 
 ## Additional Styling
 
 | Property | Description |
 | --- | --- |
-| `TogglePadding` | Internal knob padding/margin (default 2). Adjust to tweak knob inset. |
+| `TogglePadding` | Internal knob padding/margin (default 1). Adjust to tweak knob inset. |
 
 ## Quick Examples
 

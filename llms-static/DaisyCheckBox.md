@@ -18,11 +18,11 @@ DaisyCheckBox is a styled checkbox with **9 color variants** and **5 size preset
 
 | Size | Box (approx) | Check | Use Case |
 | --- | --- | --- | --- |
-| ExtraSmall | 16px | 10px | Dense tables/toolbars. |
-| Small | 20px | 12px | Compact forms. |
-| Medium (default) | 24px | 16px | General usage. |
-| Large | 32px | 20px | Spacious layouts, cards. |
-| ExtraLarge | 40px | 24px | Hero sections or touch targets. |
+| ExtraSmall | 8px | 5px | Dense tables/toolbars. |
+| Small | 10px | 6px | Compact forms. |
+| Medium (default) | 12px | 8px | General usage. |
+| Large | 14px | 10px | Spacious layouts, cards. |
+| ExtraLarge | 16px | 12px | Hero sections or touch targets. |
 
 ## Quick Examples
 

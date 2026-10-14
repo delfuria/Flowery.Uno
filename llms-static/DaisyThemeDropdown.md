@@ -3,7 +3,7 @@
 
 # Overview
 
-DaisyThemeDropdown is a ComboBox listing available themes from `DaisyThemeManager`. It previews theme colors in a 2×2 dot grid and applies the selected theme. It syncs selection with the current theme when themes change externally.
+DaisyThemeDropdown is a ComboBox listing available themes from `DaisyThemeManager`. It previews theme colors in a 2×2 dot grid and applies the selected theme. It syncs selection with the current theme when themes change externally. Preview brushes come from `DaisyThemeManager.TryCreatePalette`, including themes registered at runtime.
 
 ## How Theming Works
 
@@ -11,15 +11,22 @@ This control uses `DaisyThemeManager` internally, which manages the application'
 
 - Each of the 35+ built-in themes provides a unique color palette
 - Theme changes are applied through resource dictionary updates
-- For custom themes beyond the built-in set, use `DaisyThemeLoader.ApplyThemeToApplication()` instead
+- Themes added with `DaisyThemeManager.RegisterTheme` appear in the list and use that factory for preview swatches
+- For custom CSS themes loaded at runtime, use `DaisyThemeLoader.ApplyThemeToApplication()`
 
 ## Properties & Behavior
 
 | Property | Description |
 | --- | --- |
 | `SelectedTheme` | Name of the currently selected theme. Setting this applies the theme. |
-| ItemsSource | Auto-populated from `DaisyThemeManager.AvailableThemes` with preview brushes. |
-| Sync | Subscribes to `ThemeChanged` to update selection when themes change elsewhere. |
+| ItemsSource | Auto-populated from `DaisyThemeManager.AvailableThemes` with preview brushes from `TryCreatePalette`. |
+| Sync | Subscribes to `ThemeChanged` and, while loaded, `AvailableThemesChanged`, so selection and the theme list stay current. |
+| `AddTheme(originalName, displayName, preferred)` | Adds a standard, registered or product theme to this dropdown only, with its own display text and group. Selecting an added product theme registers and applies it. |
+| `RemoveThemeOverride(originalName)` | Removes a local entry and restores the manager's entry, if any. |
+
+The list honours `DaisyThemeManager.ExcludedThemes`, `PreferredThemes` and global `AddTheme` entries. Preferred entries come first, followed by a separator line. See [DaisyThemeManager](DaisyThemeManager.md#theme-visibility-and-ordering).
+
+Local and global list customization applies to dropdowns that fill their own list. If the app sets `ItemsSource`, the dropdown shows that list unchanged.
 
 ## Initialization Behavior
 

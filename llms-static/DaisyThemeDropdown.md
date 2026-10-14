@@ -21,6 +21,12 @@ This control uses `DaisyThemeManager` internally, which manages the application'
 | `SelectedTheme` | Name of the currently selected theme. Setting this applies the theme. |
 | ItemsSource | Auto-populated from `DaisyThemeManager.AvailableThemes` with preview brushes from `TryCreatePalette`. |
 | Sync | Subscribes to `ThemeChanged` and, while loaded, `AvailableThemesChanged`, so selection and the theme list stay current. |
+| `AddTheme(originalName, displayName, preferred)` | Adds a standard, registered or product theme to this dropdown only, with its own display text and group. Selecting an added product theme registers and applies it. |
+| `RemoveThemeOverride(originalName)` | Removes a local entry and restores the manager's entry, if any. |
+
+The list honours `DaisyThemeManager.ExcludedThemes`, `PreferredThemes` and global `AddTheme` entries. Preferred entries come first, followed by a separator line. See [DaisyThemeManager](DaisyThemeManager.md#theme-visibility-and-ordering).
+
+Local and global list customization applies to dropdowns that fill their own list. If the app sets `ItemsSource`, the dropdown shows that list unchanged.
 
 ## Initialization Behavior
 

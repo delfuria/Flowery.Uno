@@ -11,6 +11,15 @@
             <StackPanel Style="{StaticResource GallerySectionStyle}">
                 <local:SectionHeader SectionId="theme-controller" Title="Theme Controller" />
 
+                <StackPanel Spacing="6" MaxWidth="350" HorizontalAlignment="Left">
+                    <TextBlock Text="Standard and product themes" FontWeight="SemiBold" Opacity="0.8"
+                               Foreground="{ThemeResource DaisyBaseContentBrush}" />
+                    <TextBlock Text="All standard themes, plus the TheaterCinema product theme as DarkAndRed. Corporate is shown as Office. DarkAndRed and Office appear first as preferred themes."
+                               TextWrapping="Wrap" Opacity="0.7"
+                               Foreground="{ThemeResource DaisyBaseContentBrush}" />
+                    <daisy:DaisyThemeDropdown x:Name="MixedThemeDropdown" Width="300" HorizontalAlignment="Left" />
+                </StackPanel>
+
                 <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="16">
                     <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6">
                         <TextBlock Text="Toggle" FontWeight="SemiBold" Opacity="0.8"

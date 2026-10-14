@@ -226,3 +226,6 @@ llms/
 
 problems.txt
 fixes.txt
+
+# JetBrains Junie agent files
+.junie/

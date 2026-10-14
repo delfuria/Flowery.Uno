@@ -139,42 +139,50 @@ namespace Flowery.Theming
             Ensure(resources, "DaisyBorderThicknessThick", new Thickness(3));
 
             // ---- Checkbox and radio indicator sizes ----
-            Ensure(resources, "DaisyCheckboxExtraLargeSize", 28d);
-            Ensure(resources, "DaisyCheckboxLargeSize", 24d);
-            Ensure(resources, "DaisyCheckboxMediumSize", 20d);
-            Ensure(resources, "DaisyCheckboxSmallSize", 16d);
-            Ensure(resources, "DaisyCheckboxExtraSmallSize", 12d);
+            // Indicators are smaller than their size-tier label text (Flowery.NET 3.3.0).
+            Ensure(resources, "DaisyCheckboxExtraLargeSize", 16d);
+            Ensure(resources, "DaisyCheckboxLargeSize", 14d);
+            Ensure(resources, "DaisyCheckboxMediumSize", 12d);
+            Ensure(resources, "DaisyCheckboxSmallSize", 10d);
+            Ensure(resources, "DaisyCheckboxExtraSmallSize", 8d);
 
-            Ensure(resources, "DaisyCheckmarkExtraLargeSize", 20d);
-            Ensure(resources, "DaisyCheckmarkLargeSize", 16d);
-            Ensure(resources, "DaisyCheckmarkMediumSize", 12d);
-            Ensure(resources, "DaisyCheckmarkSmallSize", 8d);
-            Ensure(resources, "DaisyCheckmarkExtraSmallSize", 8d);
+            Ensure(resources, "DaisyCheckmarkExtraLargeSize", 12d);
+            Ensure(resources, "DaisyCheckmarkLargeSize", 10d);
+            Ensure(resources, "DaisyCheckmarkMediumSize", 8d);
+            Ensure(resources, "DaisyCheckmarkSmallSize", 6d);
+            Ensure(resources, "DaisyCheckmarkExtraSmallSize", 5d);
 
-            Ensure(resources, "DaisyRadioDotExtraLargeSize", 20d);
-            Ensure(resources, "DaisyRadioDotLargeSize", 16d);
-            Ensure(resources, "DaisyRadioDotMediumSize", 12d);
-            Ensure(resources, "DaisyRadioDotSmallSize", 8d);
+            Ensure(resources, "DaisyRadioDotExtraLargeSize", 8d);
+            Ensure(resources, "DaisyRadioDotLargeSize", 7d);
+            Ensure(resources, "DaisyRadioDotMediumSize", 6d);
+            Ensure(resources, "DaisyRadioDotSmallSize", 5d);
             Ensure(resources, "DaisyRadioDotExtraSmallSize", 4d);
 
+            // Radio outer sizes are independent of the checkbox sizes.
+            Ensure(resources, "DaisyRadioExtraLargeSize", 16d);
+            Ensure(resources, "DaisyRadioLargeSize", 14d);
+            Ensure(resources, "DaisyRadioMediumSize", 12d);
+            Ensure(resources, "DaisyRadioSmallSize", 10d);
+            Ensure(resources, "DaisyRadioExtraSmallSize", 8d);
+
             // ---- Toggle switch sizes ----
-            Ensure(resources, "DaisyToggleExtraLargeWidth", 48d);
-            Ensure(resources, "DaisyToggleExtraLargeHeight", 28d);
-            Ensure(resources, "DaisyToggleLargeWidth", 40d);
-            Ensure(resources, "DaisyToggleLargeHeight", 24d);
-            Ensure(resources, "DaisyToggleMediumWidth", 36d);
-            Ensure(resources, "DaisyToggleMediumHeight", 20d);
-            Ensure(resources, "DaisyToggleSmallWidth", 28d);
-            Ensure(resources, "DaisyToggleSmallHeight", 16d);
-            Ensure(resources, "DaisyToggleExtraSmallWidth", 24d);
-            Ensure(resources, "DaisyToggleExtraSmallHeight", 16d);
+            Ensure(resources, "DaisyToggleExtraLargeWidth", 32d);
+            Ensure(resources, "DaisyToggleExtraLargeHeight", 16d);
+            Ensure(resources, "DaisyToggleLargeWidth", 28d);
+            Ensure(resources, "DaisyToggleLargeHeight", 14d);
+            Ensure(resources, "DaisyToggleMediumWidth", 24d);
+            Ensure(resources, "DaisyToggleMediumHeight", 12d);
+            Ensure(resources, "DaisyToggleSmallWidth", 20d);
+            Ensure(resources, "DaisyToggleSmallHeight", 10d);
+            Ensure(resources, "DaisyToggleExtraSmallWidth", 16d);
+            Ensure(resources, "DaisyToggleExtraSmallHeight", 8d);
 
             // ---- Toggle knob sizes ----
-            Ensure(resources, "DaisyToggleKnobExtraLargeSize", 24d);
-            Ensure(resources, "DaisyToggleKnobLargeSize", 20d);
-            Ensure(resources, "DaisyToggleKnobMediumSize", 16d);
-            Ensure(resources, "DaisyToggleKnobSmallSize", 12d);
-            Ensure(resources, "DaisyToggleKnobExtraSmallSize", 12d);
+            Ensure(resources, "DaisyToggleKnobExtraLargeSize", 12d);
+            Ensure(resources, "DaisyToggleKnobLargeSize", 10d);
+            Ensure(resources, "DaisyToggleKnobMediumSize", 8d);
+            Ensure(resources, "DaisyToggleKnobSmallSize", 6d);
+            Ensure(resources, "DaisyToggleKnobExtraSmallSize", 4d);
 
             // ---- Progress bar sizes ----
             Ensure(resources, "DaisyProgressLargeHeight", 16d);

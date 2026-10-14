@@ -121,5 +121,17 @@
     <Style TargetType="controls:DaisyTableCell">
         <Setter Property="Foreground" Value="{ThemeResource DaisyBaseContentBrush}" />
         <Setter Property="VerticalAlignment" Value="Center" />
+        <!-- Explicit template: without it, WinUI renders string content of a cell as empty text. -->
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:DaisyTableCell">
+                    <ContentPresenter Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Padding="{TemplateBinding Padding}"
+                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 </ResourceDictionary>

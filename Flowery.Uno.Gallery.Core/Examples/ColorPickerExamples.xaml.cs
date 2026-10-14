@@ -10,8 +10,8 @@ namespace Flowery.Uno.Gallery.Examples
 {
     public sealed partial class ColorPickerExamples : ScrollableExamplePage
     {
-        private bool _isDialogUpdating;
-        private Color _dialogSelectedColor = Colors.Red;
+        // Custom colors persist across dialog openings for this page.
+        private readonly ColorCollection _customColors = ColorCollection.CreateCustom(16);
 
         public bool IsScreenPickerSupported => !OperatingSystem.IsAndroid() && !OperatingSystem.IsIOS();
 
@@ -45,87 +45,24 @@ namespace Flowery.Uno.Gallery.Examples
                 ScreenPickerValue1.Text = $"Picked: {FormatRgbHex(e.Color)}";
         }
 
-        private void OpenDialogButton_Click(object? sender, RoutedEventArgs e)
+        private async void OpenDialogButton_Click(object? sender, RoutedEventArgs e)
         {
             var currentColor = SelectedColorPreview?.Background is SolidColorBrush brush
                 ? brush.Color
                 : Colors.Red;
 
-            InitializeDialogColors(currentColor);
-
-            if (ColorPickerModal != null)
-                ColorPickerModal.IsOpen = true;
-        }
-
-        private void DialogOkButton_Click(object? sender, RoutedEventArgs e)
-        {
-            if (SelectedColorPreview != null)
-                SelectedColorPreview.Background = new SolidColorBrush(_dialogSelectedColor);
-
-            if (SelectedColorText != null)
-                SelectedColorText.Text = $"Selected: {FormatRgbHex(_dialogSelectedColor)}";
-
-            if (ColorPickerModal != null)
-                ColorPickerModal.IsOpen = false;
-        }
-
-        private void DialogCancelButton_Click(object? sender, RoutedEventArgs e)
-        {
-            if (ColorPickerModal != null)
-                ColorPickerModal.IsOpen = false;
-        }
-
-        private void DialogColorChanged(object? sender, PickerColorChangedEventArgs e)
-        {
-            SetDialogColor(e.Color);
-        }
-
-        private void InitializeDialogColors(Color color)
-        {
-            if (DialogOriginalColorPreview != null)
-                DialogOriginalColorPreview.Background = new SolidColorBrush(color);
-
-            if (DialogSelectedColorPreview != null)
-                DialogSelectedColorPreview.Background = new SolidColorBrush(color);
-
-            if (DialogSelectedColorText != null)
-                DialogSelectedColorText.Text = FormatRgbHex(color);
-
-            SetDialogColor(color);
-        }
-
-        private void SetDialogColor(Color color)
-        {
-            if (_isDialogUpdating)
+            if (XamlRoot is not { } xamlRoot)
                 return;
 
-            _isDialogUpdating = true;
-            try
-            {
-                _dialogSelectedColor = color;
+            var result = await DaisyColorPickerDialog.ShowAsync(xamlRoot, currentColor, showAlphaChannel: true, _customColors);
+            if (result is not { } color)
+                return;
 
-                if (DialogColorWheel != null && DialogColorWheel.Color != color)
-                    DialogColorWheel.Color = color;
+            if (SelectedColorPreview != null)
+                SelectedColorPreview.Background = new SolidColorBrush(color);
 
-                if (DialogColorGrid != null && DialogColorGrid.Color != color)
-                    DialogColorGrid.Color = color;
-
-                if (DialogColorEditor != null && DialogColorEditor.Color != color)
-                    DialogColorEditor.Color = color;
-
-                if (DialogScreenPicker != null && DialogScreenPicker.Color != color)
-                    DialogScreenPicker.Color = color;
-
-                if (DialogSelectedColorPreview != null)
-                    DialogSelectedColorPreview.Background = new SolidColorBrush(color);
-
-                if (DialogSelectedColorText != null)
-                    DialogSelectedColorText.Text = FormatRgbHex(color);
-            }
-            finally
-            {
-                _isDialogUpdating = false;
-            }
+            if (SelectedColorText != null)
+                SelectedColorText.Text = $"Selected: {FormatRgbHex(color)}";
         }
     }
 }

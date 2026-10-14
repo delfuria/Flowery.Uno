@@ -38,6 +38,10 @@ The 96 product themes span 12+ industry categories:
 | `SelectedTheme` | `string` | Name of the currently selected product theme. |
 | `ApplyOnSelection` | `bool` | When true (default), selecting a theme immediately applies it globally. Set to false to only update SelectedTheme without applying. |
 | `ProductThemeSelected` | `event` | Event raised when a product theme is selected, with the theme name. |
+| `AddTheme(originalName, displayName, preferred)` | method | Adds a standard, registered or product theme to this dropdown only, with its own display text and group. |
+| `RemoveThemeOverride(originalName)` | method | Removes a local entry and restores the global or product entry, if any. |
+
+The list honours `DaisyThemeManager.ExcludedThemes`, `PreferredThemes` and global `AddTheme` entries, like `DaisyThemeDropdown`. See [DaisyThemeManager](DaisyThemeManager.md#theme-visibility-and-ordering).
 
 ## How It Works
 

@@ -487,7 +487,14 @@ namespace Flowery.Controls
                 _ => "DaisyBaseContentBrush"
             };
 
-            var brush = DaisyResourceLookup.GetBrush(fgKey);
+            // On base surfaces, primary, secondary and accent text uses the variant foreground brush,
+            // which some themes set to a shade with better contrast than the fill.
+            var foregroundKey = isTransparent && Variant is DaisyBadgeVariant.Primary or DaisyBadgeVariant.Secondary or DaisyBadgeVariant.Accent
+                ? fgKey.Replace("Brush", "ForegroundBrush", StringComparison.Ordinal)
+                : null;
+            var brush = foregroundKey != null
+                ? DaisyResourceLookup.GetBrush(foregroundKey, DaisyResourceLookup.GetBrush(fgKey))
+                : DaisyResourceLookup.GetBrush(fgKey);
 
             // Universal Contrast Guard: If we have a solid background, ensure the foreground actually stands out.
             // This protects against themes with poorly matched ContentBrushes.

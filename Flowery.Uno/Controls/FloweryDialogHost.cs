@@ -47,6 +47,12 @@ namespace Flowery.Controls
                 return currentRoot;
             }
 
+            // WinUI 3 desktop has no Window.Current; the XamlRoot knows its own root element.
+            if (xamlRoot.Content is FrameworkElement xamlRootContent)
+            {
+                return xamlRootContent;
+            }
+
             return FlowerySizeManager.MainWindow?.Content as FrameworkElement
                 ?? Window.Current?.Content as FrameworkElement;
         }

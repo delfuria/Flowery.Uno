@@ -97,17 +97,9 @@ namespace Flowery.Controls
             if (!ApplyOnSelection)
                 return;
 
-            var palette = ProductPalettes.Get(themeInfo.Name);
-            if (palette == null) return;
-
-            // Register this product theme with DaisyThemeManager and apply it
-            // This ensures consistent theme application across the app
-            var isDark = FloweryColorHelpers.IsDark(palette.Base100);
-            DaisyThemeManager.RegisterTheme(
-                new DaisyThemeInfo(themeInfo.Name, isDark),
-                () => DaisyPaletteFactory.Create(palette));
-
-            // Apply via the standard theme manager to ensure all resources are updated correctly
+            // Product themes are registered on first use; entries added with AddTheme can also be
+            // registered standard themes, which ApplyTheme handles directly.
+            EnsureThemeRegistered(themeInfo.Name);
             DaisyThemeManager.ApplyTheme(themeInfo.Name);
         }
 

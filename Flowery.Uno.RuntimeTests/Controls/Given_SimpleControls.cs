@@ -450,7 +450,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
             Assert.IsFalse(toggle.IsOn);
             Assert.AreEqual(DaisyToggleVariant.Default, toggle.Variant);
             Assert.AreEqual(DaisySize.Medium, toggle.Size);
-            Assert.AreEqual(4.0, toggle.TogglePadding);
+            Assert.AreEqual(1.0, toggle.TogglePadding);
         }
 
         [TestMethod]

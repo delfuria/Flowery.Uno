@@ -176,7 +176,7 @@ namespace Flowery.Controls
                 nameof(TogglePadding),
                 typeof(double),
                 typeof(DaisyToggle),
-                new PropertyMetadata(4.0, OnAppearanceChanged));
+                new PropertyMetadata(1.0, OnAppearanceChanged));
 
         /// <summary>
         /// The internal padding of the toggle knob area.
@@ -393,7 +393,7 @@ namespace Flowery.Controls
             // Unchecked: knob left edge at padding offset from left
             // Checked: knob right edge at padding offset from right
             var targetX = IsChecked == true
-                ? Math.Max(0, _switchArea.Width - _knob.Width - padding)
+                ? Math.Max(padding, _switchArea.Width - _knob.Width - padding)
                 : padding;
 
             if (!animate)
@@ -418,11 +418,6 @@ namespace Flowery.Controls
 
         private double GetEffectivePadding()
         {
-            if (ReadLocalValue(TogglePaddingProperty) == DependencyProperty.UnsetValue)
-            {
-                return 4.0;
-            }
-
             return TogglePadding;
         }
 

@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Theming: `DaisyThemeManager.TryCreatePalette` and `GetPaletteFactory` expose the factory passed to `RegisterTheme`. `AvailableThemesChanged` fires when `RegisterTheme` adds a new theme name; built-in themes raise it only when `NotifyForInternalThemesChanged` is true (default false). Ported from Flowery.NET 3.2.0 (4c1cc89).
 - Theming: `DaisyThemeDropdown` preview swatches now come from the registered palette factory. Themes registered with a custom factory previously showed the Dark palette, because the dropdown created palettes by name and unknown names fall back to Dark. Themes registered after a dropdown was loaded now appear in it.
 - Theming: theme lists can be customized, ported from Flowery.NET 3.3.0 (62800f1). `DaisyThemeManager.ExcludedThemes`, `HideTheme`, `ShowTheme` and `IsThemeVisible` hide themes from both dropdowns. `PreferredThemes` and `AddTheme(originalName, displayName, preferred)` put themes into a preferred group at the top, separated by a line, with optional display aliases; `RemoveThemeOverride` undoes an addition. `DaisyThemeDropdown` and `DaisyProductThemeDropdown` gain local `AddTheme`/`RemoveThemeOverride`. Selecting an added product theme registers and applies it. `AvailableThemes` now lists preferred themes first.
+- Security: `System.Security.Cryptography.Xml` (Gallery Browser head) bumped from 10.0.7 to 10.0.13, the first 10.0.x release without known vulnerabilities; this removes the `NU1903` build warnings.
 
 ## [1.2.0] - 2026-07-09
 

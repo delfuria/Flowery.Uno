@@ -713,8 +713,9 @@
                         <daisy:DaisyToggle Header="Small" Size="Small" Variant="Info" IsOn="True" />
                         <daisy:DaisyToggle Header="Medium" Size="Medium" Variant="Info" IsOn="True" />
                         <daisy:DaisyToggle Header="Large" Size="Large" Variant="Info" IsOn="True" />
-                        <daisy:DaisyToggle Header="Tight Padding (1)" Variant="Warning" TogglePadding="1" IsOn="True" />
-                        <daisy:DaisyToggle Header="Loose Padding (4)" Variant="Warning" TogglePadding="4" IsOn="True" />
+                        <daisy:DaisyToggle Header="Extra Large" Size="ExtraLarge" Variant="Info" IsOn="True" />
+                        <daisy:DaisyToggle Header="Default Padding (1)" Variant="Warning" IsOn="True" />
+                        <daisy:DaisyToggle Header="Loose Padding (2)" Variant="Warning" TogglePadding="2" IsOn="True" />
                     </StackPanel>
                 </daisy:WrapPanel>
             </StackPanel>

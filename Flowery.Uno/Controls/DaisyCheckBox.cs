@@ -259,7 +259,13 @@ namespace Flowery.Controls
 
             _checkboxBorder.Width = boxSize;
             _checkboxBorder.Height = boxSize;
-            _checkboxBorder.CornerRadius = DaisyResourceLookup.GetDefaultCornerRadius(Size);
+            // The compact indicator needs small radii, otherwise the box renders as a circle (Flowery.NET 3.3.0).
+            _checkboxBorder.CornerRadius = new CornerRadius(Size switch
+            {
+                DaisySize.ExtraSmall => 1,
+                DaisySize.ExtraLarge => 3,
+                _ => 2
+            });
 
             _checkmark.Width = checkmarkSize;
             _checkmark.Height = checkmarkSize;

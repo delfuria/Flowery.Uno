@@ -144,8 +144,8 @@ namespace Flowery.Controls
 
             // Get sizing from tokens (guaranteed by EnsureDefaults)
             var sizeKey = DaisyResourceLookup.GetSizeKeyFull(Size);
-            double boxSize = DaisyResourceLookup.GetDouble($"DaisyCheckbox{sizeKey}Size", 18);
-            double dotSize = DaisyResourceLookup.GetDouble($"DaisyRadioDot{sizeKey}Size", 10);
+            double boxSize = DaisyResourceLookup.GetDouble($"DaisyRadio{sizeKey}Size", 12);
+            double dotSize = DaisyResourceLookup.GetDouble($"DaisyRadioDot{sizeKey}Size", 6);
 
             _indicatorBorder.Width = boxSize;
             _indicatorBorder.Height = boxSize;

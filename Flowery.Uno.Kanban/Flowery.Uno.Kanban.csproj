@@ -5,6 +5,8 @@
     <!-- Rider reads this list before Uno.Sdk filters it: list Windows only when building on Windows -->
     <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net10.0-android36.0;net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
     <TargetFrameworks Condition="'$(FloweryExcludeAndroid)' == 'true'">net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
+    <!-- iOS needs Xcode: only macOS hosts see the target -->
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(TargetFrameworks);net10.0-ios</TargetFrameworks>
     <UnoVersion>6.5.229</UnoVersion>
     <UnoSingleProject>true</UnoSingleProject>
 
@@ -24,6 +26,11 @@
 
     <IsWindowsTarget>$([System.String]::Copy('$(TargetFramework)').Contains('-windows'))</IsWindowsTarget>
     <IsDesktopTarget>$([System.String]::Copy('$(TargetFramework)').Contains('-desktop'))</IsDesktopTarget>
+  </PropertyGroup>
+
+  <!-- iOS uses the Skia renderer (UIKit host); other targets keep their current renderer -->
+  <PropertyGroup Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-ios'))">
+    <UnoFeatures>$(UnoFeatures);SkiaRenderer</UnoFeatures>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(IsWindowsTarget)' == 'True'">

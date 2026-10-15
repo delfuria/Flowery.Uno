@@ -631,8 +631,8 @@ namespace Flowery.Controls
                 double strokeThickness = 0, bool roundCaps = false, bool roundJoin = false, FillRule? fillRule = null)
             {
                 PathKey = pathKey;
-                Fill = string.IsNullOrWhiteSpace(fillHex) ? null : FloweryColorHelpers.ColorFromHex(fillHex);
-                Stroke = string.IsNullOrWhiteSpace(strokeHex) ? null : FloweryColorHelpers.ColorFromHex(strokeHex);
+                Fill = string.IsNullOrWhiteSpace(fillHex) ? (Color?)null : FloweryColorHelpers.ColorFromHex(fillHex);
+                Stroke = string.IsNullOrWhiteSpace(strokeHex) ? (Color?)null : FloweryColorHelpers.ColorFromHex(strokeHex);
                 StrokeThickness = strokeThickness;
                 RoundCaps = roundCaps;
                 RoundJoin = roundJoin;

@@ -331,6 +331,19 @@ private string GetTabKey(TabItem tab)
 }
 ```
 
+## Keyboard Mnemonics
+
+Tab headers show WinForms-style mnemonics: `&` underlines the access character and `&&` is a literal `&`. `Header` keeps the markers, and the header button's automation name is the display text. It is display only, so select the tab from your own Alt+key handling. See [DaisyMnemonicText](DaisyMnemonicText.md).
+
+```xml
+<daisy:DaisyTabs Variant="Boxed">
+    <StackPanel>
+        <TabViewItem Header="&amp;Texte" />
+        <TabViewItem Header="Save &amp;&amp; Exit" />
+    </StackPanel>
+</daisy:DaisyTabs>
+```
+
 ## Tips & Best Practices
 
 - Use **Lifted** for app-like tabs over panels; **Boxed** for pill-style segmented navigation.

@@ -89,6 +89,15 @@ DaisyButton delivers DaisyUI-styled actions with **11 color variants**, **4 visu
                       ShadowColor="#332196F3" />
 ```
 
+## Keyboard Mnemonics
+
+String content shows WinForms-style mnemonics: `&` underlines the access character and `&&` is a literal `&`. `Content` keeps the markers. While `Content` is a string that contains `&` and no `ContentTemplate` is set, the button shows it through `FloweryMnemonicHelpers.StringContentTemplate`; your own `ContentTemplate` takes precedence. It is display only, so handle Alt+key in your app. See [DaisyMnemonicText](DaisyMnemonicText.md).
+
+```xml
+<controls:DaisyButton Content="&amp;Save" Variant="Primary" />
+<controls:DaisyButton Content="Save &amp;&amp; Exit" />
+```
+
 ## Tips & Best Practices
 
 - Use **Primary** for the single most important action; reserve **Secondary/Accent** for supporting actions.

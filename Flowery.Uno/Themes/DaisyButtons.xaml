@@ -4,6 +4,13 @@
     xmlns:controls="using:Flowery.Controls"
     xmlns:utu="using:Uno.Toolkit.UI">
 
+    <!-- ===================== Mnemonic string content ===================== -->
+    <!-- Shows string content with & markers (for example "&Save") with the access character underlined.
+         Resolved from code by FloweryMnemonicHelpers.StringContentTemplate. -->
+    <DataTemplate x:Key="DaisyMnemonicStringTemplate">
+        <controls:DaisyMnemonicText Text="{Binding}" />
+    </DataTemplate>
+
     <!-- ===================== DaisyButton ===================== -->
     <ControlTemplate x:Key="DaisyButtonTemplate" TargetType="controls:DaisyButton">
         <Grid x:Name="RootGrid">

@@ -705,7 +705,7 @@ namespace Flowery.Controls
             // Content
             if (_contentPresenter != null)
             {
-                _contentPresenter.Content = _userContent;
+                FloweryMnemonicHelpers.SetPresenterContent(_contentPresenter, _userContent);
                 FontSize = fontSize;
 
                 if (IsActive && ActiveForeground != null)
@@ -733,7 +733,9 @@ namespace Flowery.Controls
 
         private string? GetAccessibleName()
         {
-            return DaisyAccessibility.GetAccessibleNameFromContent(_userContent);
+            return _userContent is string text
+                ? FloweryMnemonicHelpers.GetDisplayText(text)
+                : DaisyAccessibility.GetAccessibleNameFromContent(_userContent);
         }
 
     }

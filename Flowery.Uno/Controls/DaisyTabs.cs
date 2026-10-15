@@ -487,9 +487,12 @@ namespace Flowery.Controls
         {
             if (_tabStrip == null) return;
 
+            var headerText = new TextBlock();
+            var header = FloweryMnemonicHelpers.ApplyMnemonicText(headerText, item.Header);
+
             var button = new Button
             {
-                Content = new TextBlock { Text = item.Header },
+                Content = headerText,
                 Tag = index,
                 Padding = DaisyResourceLookup.GetDefaultPadding(Size),
                 CornerRadius = new CornerRadius(8),
@@ -502,6 +505,7 @@ namespace Flowery.Controls
 
             if (!double.IsNaN(TabMaxWidth)) button.MaxWidth = TabMaxWidth;
             if (TabMinWidth > 0) button.MinWidth = TabMinWidth;
+            AutomationProperties.SetName(button, header.DisplayText);
 
             button.Click += OnTabButtonClick;
             button.RightTapped += OnTabButtonRightTapped;
@@ -927,7 +931,7 @@ namespace Flowery.Controls
             if (string.IsNullOrWhiteSpace(name))
             {
                 var header = _items.Count > 0 && _selectedIndex >= 0 && _selectedIndex < _items.Count
-                    ? _items[_selectedIndex].Header
+                    ? FloweryMnemonicHelpers.GetDisplayText(_items[_selectedIndex].Header)
                     : null;
                 name = string.IsNullOrWhiteSpace(header) ? "Tabs" : $"Tabs: {header}";
             }

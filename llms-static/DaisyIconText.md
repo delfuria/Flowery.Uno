@@ -22,7 +22,7 @@ Use it directly in any UI, or as the `Content` of buttons, menu items, tabs, lis
 | --- | --- | --- | --- |
 | `IconData` | `string` | `null` | Path data string for a custom icon (24×24 coordinate system). Takes precedence over `IconSymbol`. |
 | `IconSymbol` | `Symbol?` | `null` | A Windows Symbol enum value (e.g., `Symbol.Home`, `Symbol.Save`). Used when `IconData` is not set. |
-| `Text` | `string` | `null` | Text to display alongside or instead of the icon. |
+| `Text` | `string` | `null` | Text to display alongside or instead of the icon. `&` underlines the access character and `&&` is a literal `&` (see [DaisyMnemonicText](DaisyMnemonicText.md)). |
 | `Size` | `DaisySize` | `Medium` | Controls both icon dimensions and font size. Follows global size if `FlowerySizeManager` is active. |
 | `IconPlacement` | `IconPlacement` | `Left` | Position of the icon relative to text: `Left`, `Right`, `Top`, or `Bottom`. |
 | `Spacing` | `double` | `NaN` (auto) | Gap between icon and text. If `NaN`, auto-computed based on `Size`. |

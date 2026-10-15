@@ -69,6 +69,15 @@ DaisyMenuItemHoverBackground
 </controls:DaisyMenu>
 ```
 
+## Keyboard Mnemonics
+
+String content of a `DaisyMenuItem` shows WinForms-style mnemonics: `&` underlines the access character and `&&` is a literal `&`. The item's automation name is the display text. It is display only, so handle Alt+key in your app. See [DaisyMnemonicText](DaisyMnemonicText.md).
+
+```xml
+<controls:DaisyMenuItem>&amp;File</controls:DaisyMenuItem>
+<controls:DaisyMenuItem>Save &amp;&amp; Close</controls:DaisyMenuItem>
+```
+
 ## Tips & Best Practices
 
 - Use size presets to match surrounding controls; Small/ExtraSmall pair well with toolbars.

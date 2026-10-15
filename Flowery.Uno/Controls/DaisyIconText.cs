@@ -435,10 +435,10 @@ namespace Flowery.Controls
             {
                 _textBlock = new TextBlock
                 {
-                    Text = Text,
                     VerticalAlignment = VerticalAlignment.Center,
                     HorizontalAlignment = HorizontalAlignment.Left
                 };
+                FloweryMnemonicHelpers.ApplyMnemonicText(_textBlock, Text);
 
                 _rootPanel.Children.Add(_textBlock);
             }

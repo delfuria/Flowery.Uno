@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kanban: at the Large and ExtraLarge global sizes the side toolbar no longer clips its buttons; it was fixed at 56 px and is now at least 56 px wide. On task cards the end date moves to a second line when it does not fit next to the start date, instead of being cut off.
 - Kanban: on narrow boards the search box takes the width left beside the filter button instead of a fixed minimum of 200 px, which cut off its right edge, and the status bar items (section count, zoom level, archive toggle, status message) wrap onto further lines instead of being cut off.
 - Layout: `WrapPanel` gives collapsed children no space and no spacing, as `StackPanel` does. Before, each collapsed child added one spacing and could start an empty line. It also no longer moves an item to the next line during arrange that fit on the line during measure: on Desktop (Skia) at 125 % scaling, layout rounding made the arranged width up to one pixel smaller than the measured width.
+- Gallery: on the Windows head the sidebar no longer stays open over the content when the window starts narrower than the inline layout needs. WinUI ignored pane changes made before the `SplitView` had loaded, and a pane that started open stayed visible when it was first closed. The sidebar now starts closed in Overlay mode and opens after the first rendered frame when the window is wide enough.
 
 ## [1.2.0] - 2026-07-09
 

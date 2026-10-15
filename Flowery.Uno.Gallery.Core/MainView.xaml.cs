@@ -42,6 +42,8 @@ namespace Flowery.Uno.Gallery
         private bool _isHeaderCollapsed;
         private bool _isLandscape;
         private bool _isHeaderNarrow;
+        private bool _hasRenderedFrame;
+        private bool _isWaitingForFirstFrame;
         private string _licenseText = "2025 - MIT licensed";
         private readonly bool _isMobilePlatform;
         private ScrollViewer? _currentScrollViewer;
@@ -272,9 +274,31 @@ namespace Flowery.Uno.Gallery
 
             var shouldCollapse = contentWidthIfInline < MinContentWidth || sidebarPercent > MaxSidebarWidthPercent;
 
-            MainSplitView.DisplayMode = shouldCollapse ? SplitViewDisplayMode.Overlay : SplitViewDisplayMode.Inline;
+            if (_hasRenderedFrame)
+            {
+                // Close before switching to Overlay and switch to Inline before opening,
+                // so each change moves the pane through a single visual state transition.
+                if (shouldCollapse)
+                {
+                    MainSplitView.IsPaneOpen = false;
+                    MainSplitView.DisplayMode = SplitViewDisplayMode.Overlay;
+                }
+                else
+                {
+                    MainSplitView.DisplayMode = SplitViewDisplayMode.Inline;
+                    MainSplitView.IsPaneOpen = true;
+                }
+            }
+            else if (!_isWaitingForFirstFrame)
+            {
+                // WinUI ignores pane changes made before the SplitView has loaded, and a pane that starts open
+                // stays visible when it is first closed. The pane therefore starts closed (see MainView.xaml)
+                // and is opened or closed here once rendering has started.
+                _isWaitingForFirstFrame = true;
+                CompositionTarget.Rendering += OnFirstFrameRendering;
+            }
+
             HamburgerButton.Visibility = shouldCollapse ? Visibility.Visible : Visibility.Collapsed;
-            MainSplitView.IsPaneOpen = !shouldCollapse;
 
             SetHeaderNarrow(width > 0 && width < NarrowHeaderWidth);
         }
@@ -303,6 +327,14 @@ namespace Flowery.Uno.Gallery
             }
 
             SetHeaderCollapsed(_isHeaderCollapsed);
+        }
+
+        private void OnFirstFrameRendering(object? sender, object e)
+        {
+            CompositionTarget.Rendering -= OnFirstFrameRendering;
+            _isWaitingForFirstFrame = false;
+            _hasRenderedFrame = true;
+            UpdateResponsiveLayout(ActualWidth);
         }
 
         private void HamburgerButton_Click(object sender, RoutedEventArgs e)

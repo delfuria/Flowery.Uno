@@ -9,9 +9,10 @@
     <Grid x:Name="RootGrid"
           Background="{ThemeResource DaisyBase100Brush}"
           daisy:DaisyBaseContentControl.NeumorphicScopeEnabled="False">
+        <!-- Starts closed; MainView opens the pane once the window has rendered and is wide enough. -->
         <SplitView x:Name="MainSplitView"
-                   IsPaneOpen="True"
-                   DisplayMode="Inline"
+                   IsPaneOpen="False"
+                   DisplayMode="Overlay"
                    OpenPaneLength="250">
             <SplitView.Pane>
                 <!-- SafeArea keeps the sidebar out of the status bar, notch and home indicator on mobile -->

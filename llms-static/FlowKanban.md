@@ -513,5 +513,6 @@ var json = manager.ExportToJson();
 
 ### Platform Notes
 
+- Keyboard help (`IsKeyboardHelpVisible`) and column tooltips (`IsColumnTooltipsEnabled`) default to off on touch heads (Browser, Android, iOS) and on elsewhere; both can be set explicitly.
 - Keyboard focus is supported on all targets except iOS by default; enable experimental keyboard focus on iOS:
   `WinRTFeatureConfiguration.Focus.EnableExperimentalKeyboardFocus = true`.

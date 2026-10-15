@@ -106,8 +106,8 @@
                     <daisy:DaisyButton Content="E&amp;xit" Variant="Secondary" Margin="0,0,8,8" />
                     <daisy:DaisyButton Content="Save &amp;&amp; Exit" Margin="0,0,8,8" />
                     <daisy:DaisyButton Content="&amp;Open" IconSymbol="Folder" Margin="0,0,8,8" />
-                    <daisy:DaisyIconText IconSymbol="Print" Text="&amp;Print preview" VerticalAlignment="Center" Margin="0,0,8,8" />
                 </daisy:WrapPanel>
+                <daisy:DaisyIconText IconSymbol="Print" Text="&amp;Print preview" HorizontalAlignment="Left" Margin="0,0,0,8" />
 
                 <TextBlock Text="Sizes" FontWeight="SemiBold" Opacity="0.8"
                            Foreground="{ThemeResource DaisyBaseContentBrush}"

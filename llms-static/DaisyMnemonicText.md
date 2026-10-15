@@ -78,5 +78,6 @@ char? key = FloweryMnemonicHelpers.GetMnemonicChar("&Save"); // 'S'
 - Keep one access character per label; only the first `&` marker is used.
 - Check existing labels for a plain `&` (for example "Terms & Conditions") and write it as `&&`, otherwise the character after `&` is underlined and the `&` disappears.
 - WinUI's `TextBlock` is sealed, so unlike the Flowery.NET version DaisyMnemonicText hosts a `TextBlock` instead of deriving from it. Set text layout options such as wrapping on a surrounding element, or use `ApplyMnemonicText` on your own `TextBlock`.
+- Uno's Skia text renderer (Desktop, iOS) does not draw `TextDecorations`. On Skia, `ApplyMnemonicText` draws the underline as a composition child visual of the `TextBlock`, placed from the measured text and the current font and foreground. The line is shown only when the access character is on the first line of left-to-right text.
 
 ---

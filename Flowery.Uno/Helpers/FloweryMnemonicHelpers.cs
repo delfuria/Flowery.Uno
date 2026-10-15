@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using Flowery.Services;
 using Flowery.Theming;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -167,6 +168,11 @@ namespace Flowery.Helpers
                     textBlock.Inlines.Add(new Run { Text = display });
                 }
 
+                if (PlatformCompatibility.IsSkiaBackend)
+                {
+                    FloweryMnemonicUnderline.Update(textBlock, display, -1);
+                }
+
                 return info;
             }
 
@@ -186,6 +192,12 @@ namespace Flowery.Helpers
             if (info.MnemonicIndex + 1 < display.Length)
             {
                 textBlock.Inlines.Add(new Run { Text = display[(info.MnemonicIndex + 1)..] });
+            }
+
+            // Uno's Skia text renderer ignores TextDecorations; draw the line separately there.
+            if (PlatformCompatibility.IsSkiaBackend)
+            {
+                FloweryMnemonicUnderline.Update(textBlock, display, info.MnemonicIndex);
             }
 
             return info;

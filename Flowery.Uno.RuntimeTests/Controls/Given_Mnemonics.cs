@@ -1,14 +1,18 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Flowery.Controls;
 using Flowery.Helpers;
+using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Markup;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Windows.UI.Text;
 
@@ -207,6 +211,122 @@ namespace Flowery.Uno.RuntimeTests.Controls
             Assert.IsNotNull(mnemonicText, "Menu items should show string content with a marker as DaisyMnemonicText.");
             Assert.AreEqual('F', mnemonicText.MnemonicChar);
             Assert.AreEqual("File", AutomationProperties.GetName(item));
+        }
+
+        [TestMethod]
+        public async Task When_MnemonicText_Rendered_DrawsUnderlineBelowAccessCharacterOnly()
+        {
+            var mnemonicText = new DaisyMnemonicText
+            {
+                Text = "&Save",
+                FontSize = 24,
+                Foreground = new SolidColorBrush(Colors.Black)
+            };
+            var host = new Border
+            {
+                Background = new SolidColorBrush(Colors.White),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+                Child = mnemonicText
+            };
+
+            RuntimeTestHelpers.AttachToHost(host);
+            await RuntimeTestHelpers.EnsureLoadedAsync(mnemonicText);
+            host.UpdateLayout();
+
+            var black = await CountLinePixelsAsync(host, mnemonicText, (r, g, b) => (r + g + b) / 3 < 96);
+            Assert.IsGreaterThan(black.Columns / 2, black.UnderMnemonic, "A line should run below the access character.");
+            Assert.AreEqual(0, black.UnderNeighbor, "The line should end at the access character.");
+
+            mnemonicText.Foreground = new SolidColorBrush(Colors.Red);
+            host.UpdateLayout();
+            var red = await CountLinePixelsAsync(host, mnemonicText, (r, g, b) => r > 150 && g < 100 && b < 100);
+            Assert.IsGreaterThan(red.Columns / 2, red.UnderMnemonic, "The line should follow the foreground.");
+
+            mnemonicText.ShowMnemonic = false;
+            host.UpdateLayout();
+            var hidden = await CountLinePixelsAsync(host, mnemonicText, (r, g, b) => r > 150 && g < 100 && b < 100);
+            Assert.AreEqual(0, hidden.UnderMnemonic, "The line should disappear with ShowMnemonic=false.");
+        }
+
+        private static async Task<(int UnderMnemonic, int UnderNeighbor, int Columns)> CountLinePixelsAsync(
+            FrameworkElement host,
+            DaisyMnemonicText mnemonicText,
+            Func<byte, byte, byte, bool> isLine)
+        {
+            var textBlock = FindDescendant<TextBlock>(mnemonicText);
+            Assert.IsNotNull(textBlock);
+
+            var bitmap = new RenderTargetBitmap();
+            await bitmap.RenderAsync(host);
+            var pixels = (await bitmap.GetPixelsAsync()).ToArray();
+            var width = bitmap.PixelWidth;
+            var height = bitmap.PixelHeight;
+            var scale = width / host.ActualWidth;
+            int ToPixels(double value) => (int)Math.Round(value * scale);
+
+            // Columns of "S", "a" and "e" in "Save"; "a" and "e" have no descender.
+            var s = ToPixels(MeasureWidth(textBlock, "S"));
+            var sa = ToPixels(MeasureWidth(textBlock, "Sa"));
+            var sav = ToPixels(MeasureWidth(textBlock, "Sav"));
+            var save = ToPixels(MeasureWidth(textBlock, "Save"));
+
+            (byte R, byte G, byte B) Pixel(int x, int y)
+            {
+                var offset = (y * width + x) * 4;
+                return (pixels[offset + 2], pixels[offset + 1], pixels[offset]);
+            }
+
+            var glyphBottom = -1;
+            for (var y = 0; y < height; y++)
+            {
+                for (var x = sav + 1; x < Math.Min(save, width) - 1; x++)
+                {
+                    var (r, g, b) = Pixel(x, y);
+                    if ((r + g + b) / 3 < 200)
+                    {
+                        glyphBottom = y;
+                    }
+                }
+            }
+
+            Assert.IsGreaterThanOrEqualTo(0, glyphBottom, "The text should be rendered.");
+
+            int Count(int fromX, int toX)
+            {
+                var count = 0;
+                for (var y = glyphBottom + 1; y < height; y++)
+                {
+                    for (var x = fromX; x < toX; x++)
+                    {
+                        var (r, g, b) = Pixel(x, y);
+                        if (isLine(r, g, b))
+                        {
+                            count++;
+                        }
+                    }
+                }
+
+                return count;
+            }
+
+            var mnemonicFrom = (int)(s * 0.15);
+            var mnemonicTo = (int)(s * 0.85);
+            return (Count(mnemonicFrom, mnemonicTo), Count(s + 1, sa - 1), mnemonicTo - mnemonicFrom);
+        }
+
+        private static double MeasureWidth(TextBlock source, string text)
+        {
+            var probe = new TextBlock
+            {
+                Text = text,
+                FontFamily = source.FontFamily,
+                FontSize = source.FontSize,
+                FontWeight = source.FontWeight,
+                FontStyle = source.FontStyle
+            };
+            probe.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
+            return probe.DesiredSize.Width;
         }
 
         private static void AssertUnderlinedRuns(TextBlock textBlock, string before, string mnemonic, string after)

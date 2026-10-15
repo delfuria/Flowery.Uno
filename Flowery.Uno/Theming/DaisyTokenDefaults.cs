@@ -100,6 +100,7 @@ namespace Flowery.Theming
             Ensure(resources, "DaisyTabMediumPadding", new Thickness(12, 4, 12, 4));
             Ensure(resources, "DaisyTabSmallPadding", new Thickness(12, 4, 12, 4));
             Ensure(resources, "DaisyTabExtraSmallPadding", new Thickness(8, 4, 8, 4));
+            Ensure(resources, "DaisyTabHeaderTrailingMargin", new Thickness(8, 0, 0, 0));
 
             // ---- Badge padding ----
             Ensure(resources, "DaisyBadgeLargePadding", new Thickness(12, 0, 12, 0));

@@ -35,15 +35,12 @@ namespace Flowery.Controls
             HorizontalContentAlignment = HorizontalAlignment.Stretch;
             VerticalContentAlignment = VerticalAlignment.Stretch;
             IsTabStop = false;
-
-            // Build visual tree immediately in constructor
-            RebuildVisualTree();
         }
 
         private void ApplyAll()
         {
+            // RebuildVisualTree applies the colors as well.
             ApplySizing();
-            ApplyColors();
         }
 
         #region Dependency Properties
@@ -218,7 +215,7 @@ namespace Flowery.Controls
         {
             base.OnLoaded();
             ApplyNeumorphicOptOut();
-            ApplyAll();
+            RebuildVisualTree();
         }
 
         protected override void OnThemeChanged(string themeName)
@@ -438,6 +435,13 @@ namespace Flowery.Controls
 
         private void RebuildVisualTree()
         {
+            // OnLoaded rebuilds. Rebuilding earlier only creates native views that are discarded again, and on iOS with
+            // the native renderer assigning a brush below a discarded view throws ObjectDisposedException (#47).
+            if (!IsLoaded)
+            {
+                return;
+            }
+
             ClearVisualElements();
 
             double thickness = GetThickness();
@@ -1206,6 +1210,12 @@ namespace Flowery.Controls
 
         private void ApplyColors()
         {
+            if (!IsLoaded)
+            {
+                // OnLoaded applies the colors.
+                return;
+            }
+
             var brush = GetLineBrush();
             var opacity = GetLineOpacity();
 

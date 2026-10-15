@@ -23,7 +23,7 @@ namespace Flowery.Uno.Gallery.Droid
 
                 if (string.IsNullOrEmpty(dir))
                 {
-                    dir = "/data/user/0/com.companyname.flowery.uno.gallery/files";
+                    dir = "/data/user/0/com.uno.flowery.gallery/files";
                 }
 
                 dir = System.IO.Path.Combine(dir, "Flowery.Uno.Gallery");

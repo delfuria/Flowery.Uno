@@ -331,6 +331,84 @@ private string GetTabKey(TabItem tab)
 }
 ```
 
+## Trailing Header Content
+
+`HeaderTrailingContent` places custom content to the right of the tab headers, inside the header container. `HeaderTrailingContentTemplate` supports data objects and bindings.
+The header reserves space for this content; the tab strip uses the remaining width.
+An empty slot has no margin or layout effect.
+
+```xml
+<daisy:DaisyTabs Variant="Bordered">
+    <daisy:DaisyTabs.HeaderTrailingContent>
+        <daisy:DaisyButton Content="Refresh" Variant="Ghost" Size="Small" Click="OnRefresh" />
+    </daisy:DaisyTabs.HeaderTrailingContent>
+    <StackPanel>
+        <TabViewItem Header="Summary"><TextBlock Text="Summary content" /></TabViewItem>
+        <TabViewItem Header="Details"><TextBlock Text="Details content" /></TabViewItem>
+    </StackPanel>
+</daisy:DaisyTabs>
+```
+
+`DaisyTabHeaderTrailingMargin` sets the space before the slot. Its default is `8,0,0,0`.
+`TabWidthMode`, `TabMinWidth` and `TabMaxWidth` keep their behavior. Headers wider than the available area are clipped before the slot; the slot does not add overflow scrolling.
+The header Border is named `PART_HeaderContainer` and the slot `PART_HeaderTrailingContent` (a `ContentPresenter`).
+
+## Built-in Header Buttons
+
+If `ShowHeaderButtons` is true and `HeaderTrailingContent` is null, DaisyTabs creates a `DaisyTabsHeaderButtons` instance and shows it in the slot.
+`HeaderButtons` exposes this instance immediately. Both button types start hidden. Configure the instance to show navigation, the view menu, or both.
+
+```xml
+<daisy:DaisyTabs x:Name="RecordTabs" Variant="Boxed" ShowHeaderButtons="True">
+    <StackPanel>
+        <TabViewItem Header="Records"><TextBlock Text="Record content" /></TabViewItem>
+        <TabViewItem Header="Notes"><TextBlock Text="Notes content" /></TabViewItem>
+    </StackPanel>
+</daisy:DaisyTabs>
+```
+
+```csharp
+var buttons = RecordTabs.HeaderButtons!;
+buttons.ShowNavigationButtons = true;
+buttons.ShowViewMenuButton = true;
+buttons.Views = new List<DaisyTabView>
+{
+    new() { Id = "summary", Name = "Summary" },
+    new() { Id = "details", Name = "Details" }
+};
+buttons.ActiveViewId = "summary";
+buttons.ViewSelected += OnViewSelected;
+
+void OnViewSelected(object? sender, DaisyTabViewEventArgs e)
+{
+    if (sender is DaisyTabsHeaderButtons source)
+        source.ActiveViewId = e.Id;
+}
+```
+
+Custom trailing content takes precedence. If the slot contains custom content, `ShowHeaderButtons` leaves it in place.
+`HeaderButtons` remains null until DaisyTabs creates the built-in instance.
+Once created, the instance retains its settings and subscriptions while hidden or replaced by custom content.
+Setting `ShowHeaderButtons` to false removes only the built-in instance from the slot.
+
+Unlike Flowery.NET, `HeaderTrailingContent` stays null while the built-in group is shown: WinUI has no `SetCurrentValue`, and writing the property would replace a binding on it.
+
+The group also works directly in `HeaderTrailingContent` or in a toolbar.
+See [DaisyTabsHeaderButtons](DaisyTabsHeaderButtons.md) for commands, events, collection updates, and scaling.
+
+## Keyboard Mnemonics
+
+Tab headers show WinForms-style mnemonics: `&` underlines the access character and `&&` is a literal `&`. `Header` keeps the markers, and the header button's automation name is the display text. It is display only, so select the tab from your own Alt+key handling. See [DaisyMnemonicText](DaisyMnemonicText.md).
+
+```xml
+<daisy:DaisyTabs Variant="Boxed">
+    <StackPanel>
+        <TabViewItem Header="&amp;Texte" />
+        <TabViewItem Header="Save &amp;&amp; Exit" />
+    </StackPanel>
+</daisy:DaisyTabs>
+```
+
 ## Tips & Best Practices
 
 - Use **Lifted** for app-like tabs over panels; **Boxed** for pill-style segmented navigation.

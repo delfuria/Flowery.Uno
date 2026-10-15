@@ -38,7 +38,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Flowery.Uno\Flowery.Uno.csproj" />
-    <ProjectReference Include="..\Flowery.Integrations.Uno\Flowery.Integrations.Uno.csproj" />
     <ProjectReference Include="..\Flowery.Uno.Kanban\Flowery.Uno.Kanban.csproj" />
   </ItemGroup>
 

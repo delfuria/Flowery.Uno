@@ -225,6 +225,7 @@
   "Kanban_Users_AddLocal_Name": "Ad",
   "Kanban_Users_AddLocal_Email": "E-posta",
   "Kanban_Users_AddLocal_Button": "Kullanıcı ekle",
+  "Kanban_Users_Unresolved": "Kullanılamıyor",
   "Kanban_Users_GitHub_Title": "GitHub bağla",
   "Kanban_Users_GitHub_Message": "GitHub kullanıcılarını etkinleştirmek için GitHub kişisel erişim belirteci yapıştırın.",
   "Kanban_Users_GitHub_Hint": "Yalnızca GitHub kullanıcı adınızı kullanır. 'read:user' kapsamı gerekir.",

@@ -23,6 +23,10 @@
                         <daisy:DaisySizeDropdown ShowAbbreviations="True" />
                     </StackPanel>
                 </StackPanel>
+                <TextBlock Text="FlowerySizeManager.GetControlHeight(size): standard single-line control height per size"
+                    Margin="0,16,0,6" FontWeight="SemiBold" Opacity="0.8" TextWrapping="Wrap"
+                    Foreground="{ThemeResource DaisyBaseContentBrush}" />
+                <daisy:WrapPanel x:Name="ControlHeightPanel" Orientation="Horizontal" />
             </StackPanel>
 
             <daisy:DaisyDivider />

@@ -96,6 +96,19 @@
                     <daisy:DaisyButton Content="Dash" Variant="Primary" ButtonStyle="Dash" />
                 </StackPanel>
 
+                <TextBlock Text="Keyboard Mnemonics" FontWeight="SemiBold" Opacity="0.8" Margin="0,20,0,0"
+                           Foreground="{ThemeResource DaisyBaseContentBrush}" />
+                <TextBlock Text="&amp; marks the access character (display only); &amp;&amp; shows a literal &amp;."
+                           Opacity="0.7" TextWrapping="Wrap"
+                           Foreground="{ThemeResource DaisyBaseContentBrush}" />
+                <daisy:WrapPanel x:Name="MnemonicButtonsPanel" Orientation="Horizontal" Margin="0,8,0,0">
+                    <daisy:DaisyButton Content="&amp;Save" Variant="Primary" Margin="0,0,8,8" />
+                    <daisy:DaisyButton Content="E&amp;xit" Variant="Secondary" Margin="0,0,8,8" />
+                    <daisy:DaisyButton Content="Save &amp;&amp; Exit" Margin="0,0,8,8" />
+                    <daisy:DaisyButton Content="&amp;Open" IconSymbol="Folder" Margin="0,0,8,8" />
+                </daisy:WrapPanel>
+                <daisy:DaisyIconText IconSymbol="Print" Text="&amp;Print preview" HorizontalAlignment="Left" Margin="0,0,0,8" />
+
                 <TextBlock Text="Sizes" FontWeight="SemiBold" Opacity="0.8"
                            Foreground="{ThemeResource DaisyBaseContentBrush}"
                            daisy:FlowerySizeManager.IgnoreGlobalSize="True" />

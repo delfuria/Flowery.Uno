@@ -56,6 +56,9 @@ namespace Flowery.Controls
         private Panel? _tabStrip;
         private ContentPresenter? _contentPresenter;
         private Border? _tabStripBorder;
+        private Grid? _headerGrid;
+        private ContentPresenter? _headerTrailingPresenter;
+        private DaisyTabsHeaderButtons? _headerButtons;
         private int _selectedIndex = 0;
         private bool _isUpdatingAppearance;
         private static readonly IReadOnlyList<DaisyTabPaletteSwatch> TabPaletteSwatches =
@@ -132,6 +135,88 @@ namespace Flowery.Controls
             get => (bool)GetValue(EnableTabContextMenuProperty);
             set => SetValue(EnableTabContextMenuProperty, value);
         }
+
+        #region Header Content
+        public static readonly DependencyProperty HeaderTrailingContentProperty =
+            DependencyProperty.Register(nameof(HeaderTrailingContent), typeof(object), typeof(DaisyTabs),
+                new PropertyMetadata(null, OnHeaderTrailingChanged));
+
+        /// <summary>
+        /// Gets or sets the content to the right of the tab headers.
+        /// </summary>
+        public object? HeaderTrailingContent
+        {
+            get => GetValue(HeaderTrailingContentProperty);
+            set => SetValue(HeaderTrailingContentProperty, value);
+        }
+
+        public static readonly DependencyProperty HeaderTrailingContentTemplateProperty =
+            DependencyProperty.Register(nameof(HeaderTrailingContentTemplate), typeof(DataTemplate), typeof(DaisyTabs),
+                new PropertyMetadata(null, OnHeaderTrailingChanged));
+
+        /// <summary>
+        /// Gets or sets the template for the trailing header content.
+        /// </summary>
+        public DataTemplate? HeaderTrailingContentTemplate
+        {
+            get => (DataTemplate?)GetValue(HeaderTrailingContentTemplateProperty);
+            set => SetValue(HeaderTrailingContentTemplateProperty, value);
+        }
+
+        public static readonly DependencyProperty ShowHeaderButtonsProperty =
+            DependencyProperty.Register(nameof(ShowHeaderButtons), typeof(bool), typeof(DaisyTabs),
+                new PropertyMetadata(false, OnHeaderTrailingChanged));
+
+        /// <summary>
+        /// Gets or sets whether an empty header slot contains the built-in button group.
+        /// </summary>
+        public bool ShowHeaderButtons
+        {
+            get => (bool)GetValue(ShowHeaderButtonsProperty);
+            set => SetValue(ShowHeaderButtonsProperty, value);
+        }
+
+        /// <summary>
+        /// Gets the built-in group after ShowHeaderButtons fills an empty slot.
+        /// The instance retains its settings and event handlers when hidden.
+        /// </summary>
+        public DaisyTabsHeaderButtons? HeaderButtons => _headerButtons;
+
+        /// <summary>
+        /// Gets the content shown in the header slot: HeaderTrailingContent, or the built-in group when the
+        /// slot is empty and ShowHeaderButtons is true. HeaderTrailingContent itself is never written,
+        /// because WinUI has no SetCurrentValue and a local value would replace a binding.
+        /// </summary>
+        internal object? EffectiveHeaderTrailingContent =>
+            HeaderTrailingContent ?? (ShowHeaderButtons ? _headerButtons : null);
+
+        private static void OnHeaderTrailingChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is DaisyTabs tabs)
+            {
+                tabs.UpdateHeaderTrailingContent();
+            }
+        }
+
+        private void UpdateHeaderTrailingContent()
+        {
+            if (ShowHeaderButtons && HeaderTrailingContent is null)
+            {
+                _headerButtons ??= new DaisyTabsHeaderButtons();
+            }
+
+            if (_headerTrailingPresenter == null)
+                return;
+
+            var content = EffectiveHeaderTrailingContent;
+            _headerTrailingPresenter.ContentTemplate = HeaderTrailingContentTemplate;
+            _headerTrailingPresenter.Content = content;
+            _headerTrailingPresenter.Visibility = content is null ? Visibility.Collapsed : Visibility.Visible;
+            _headerTrailingPresenter.Margin = content is null
+                ? new Thickness(0)
+                : DaisyResourceLookup.GetThickness("DaisyTabHeaderTrailingMargin", new Thickness(8, 0, 0, 0));
+        }
+        #endregion
 
         #region Accessibility
         public static readonly DependencyProperty AccessibleTextProperty =
@@ -360,25 +445,42 @@ namespace Flowery.Controls
             // Tab strip container
             _tabStripBorder = new Border
             {
+                Name = "PART_HeaderContainer",
                 Padding = new Thickness(4),
                 CornerRadius = new CornerRadius(12),
                 HorizontalAlignment = HorizontalAlignment.Stretch
             };
 
+            // Tab strip on the left, optional trailing content on the right
+            _headerGrid = new Grid();
+            _headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            _headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
             if (TabWidthMode == DaisyTabWidthMode.Equal)
             {
-                _tabStrip = new Grid { HorizontalAlignment = HorizontalAlignment.Stretch };
+                SetTabStrip(new Grid { HorizontalAlignment = HorizontalAlignment.Stretch });
             }
             else
             {
-                _tabStrip = new StackPanel
+                SetTabStrip(new StackPanel
                 {
                     Orientation = Orientation.Horizontal,
                     Spacing = 4
-                };
+                });
             }
 
-            _tabStripBorder.Child = _tabStrip;
+            _headerTrailingPresenter = new ContentPresenter
+            {
+                Name = "PART_HeaderTrailingContent",
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Center,
+                Visibility = Visibility.Collapsed
+            };
+            Grid.SetColumn(_headerTrailingPresenter, 1);
+            _headerGrid.Children.Add(_headerTrailingPresenter);
+            UpdateHeaderTrailingContent();
+
+            _tabStripBorder.Child = _headerGrid;
             Grid.SetRow(_tabStripBorder, 0);
             _rootGrid.Children.Add(_tabStripBorder);
 
@@ -412,8 +514,7 @@ namespace Flowery.Controls
             {
                 var grid = new Grid { HorizontalAlignment = HorizontalAlignment.Stretch };
                 MoveTabButtons(_tabStrip, grid);
-                _tabStrip = grid;
-                _tabStripBorder.Child = grid;
+                SetTabStrip(grid);
             }
             else if (mode != DaisyTabWidthMode.Equal && _tabStrip is Grid)
             {
@@ -423,8 +524,7 @@ namespace Flowery.Controls
                     Spacing = 4
                 };
                 MoveTabButtons(_tabStrip, panel);
-                _tabStrip = panel;
-                _tabStripBorder.Child = panel;
+                SetTabStrip(panel);
             }
 
             if (mode == DaisyTabWidthMode.Equal && _tabStrip is Grid equalGrid)
@@ -468,6 +568,21 @@ namespace Flowery.Controls
             }
         }
 
+        private void SetTabStrip(Panel strip)
+        {
+            if (_headerGrid == null)
+                return;
+
+            if (_tabStrip != null)
+            {
+                _headerGrid.Children.Remove(_tabStrip);
+            }
+
+            _tabStrip = strip;
+            Grid.SetColumn(strip, 0);
+            _headerGrid.Children.Insert(0, strip);
+        }
+
         private static void MoveTabButtons(Panel from, Panel to)
         {
             List<UIElement> children = [];
@@ -487,9 +602,12 @@ namespace Flowery.Controls
         {
             if (_tabStrip == null) return;
 
+            var headerText = new TextBlock();
+            var header = FloweryMnemonicHelpers.ApplyMnemonicText(headerText, item.Header);
+
             var button = new Button
             {
-                Content = new TextBlock { Text = item.Header },
+                Content = headerText,
                 Tag = index,
                 Padding = DaisyResourceLookup.GetDefaultPadding(Size),
                 CornerRadius = new CornerRadius(8),
@@ -502,6 +620,7 @@ namespace Flowery.Controls
 
             if (!double.IsNaN(TabMaxWidth)) button.MaxWidth = TabMaxWidth;
             if (TabMinWidth > 0) button.MinWidth = TabMinWidth;
+            AutomationProperties.SetName(button, header.DisplayText);
 
             button.Click += OnTabButtonClick;
             button.RightTapped += OnTabButtonRightTapped;
@@ -927,7 +1046,7 @@ namespace Flowery.Controls
             if (string.IsNullOrWhiteSpace(name))
             {
                 var header = _items.Count > 0 && _selectedIndex >= 0 && _selectedIndex < _items.Count
-                    ? _items[_selectedIndex].Header
+                    ? FloweryMnemonicHelpers.GetDisplayText(_items[_selectedIndex].Header)
                     : null;
                 name = string.IsNullOrWhiteSpace(header) ? "Tabs" : $"Tabs: {header}";
             }

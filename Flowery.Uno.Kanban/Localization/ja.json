@@ -225,6 +225,7 @@
   "Kanban_Users_AddLocal_Name": "名前",
   "Kanban_Users_AddLocal_Email": "メール",
   "Kanban_Users_AddLocal_Button": "ユーザーを追加",
+  "Kanban_Users_Unresolved": "利用不可",
   "Kanban_Users_GitHub_Title": "GitHub に接続",
   "Kanban_Users_GitHub_Message": "GitHub ユーザーを有効にするには GitHub の個人アクセストークンを貼り付けてください。",
   "Kanban_Users_GitHub_Hint": "GitHub の自分のユーザーのみを使用します。'read:user' スコープが必要です。",

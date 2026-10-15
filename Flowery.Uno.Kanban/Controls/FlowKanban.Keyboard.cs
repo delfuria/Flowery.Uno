@@ -23,7 +23,6 @@ namespace Flowery.Uno.Kanban.Controls
         private int _keyboardColumnIndex = InvalidColumnIndex;
         private KeyEventHandler? _keyboardKeyDownHandler;
         private readonly List<KeyboardAccelerator> _keyboardAccelerators = new();
-        private bool _keyboardAcceleratorsIncludeAdmin;
         private bool _keyboardAcceleratorsShowTooltips;
         private int _lastTabNavigationTick = int.MinValue;
 
@@ -51,13 +50,11 @@ namespace Flowery.Uno.Kanban.Controls
 
         private void RegisterKeyboardAccelerators()
         {
-            var includeAdmin = _isCurrentUserGlobalAdmin;
             var showTooltips = ShowKeyboardAcceleratorTooltips;
 
             if (_keyboardAccelerators.Count > 0)
             {
-                if (_keyboardAcceleratorsIncludeAdmin == includeAdmin
-                    && _keyboardAcceleratorsShowTooltips == showTooltips)
+                if (_keyboardAcceleratorsShowTooltips == showTooltips)
                 {
                     return;
                 }
@@ -65,7 +62,6 @@ namespace Flowery.Uno.Kanban.Controls
                 UnregisterKeyboardAccelerators();
             }
 
-            _keyboardAcceleratorsIncludeAdmin = includeAdmin;
             _keyboardAcceleratorsShowTooltips = showTooltips;
 
             if (!showTooltips)
@@ -73,13 +69,9 @@ namespace Flowery.Uno.Kanban.Controls
                 return;
             }
 
-            if (includeAdmin)
-            {
-                AddKeyboardAccelerator(VirtualKey.B, VirtualKeyModifiers.Control, OnAddColumnAccelerator);
-                AddKeyboardAccelerator(VirtualKey.D, VirtualKeyModifiers.Control, OnDeleteColumnAccelerator);
-                AddKeyboardAccelerator(VirtualKey.T, VirtualKeyModifiers.Control, OnRenameColumnAccelerator);
-            }
-
+            AddKeyboardAccelerator(VirtualKey.B, VirtualKeyModifiers.Control, OnAddColumnAccelerator);
+            AddKeyboardAccelerator(VirtualKey.D, VirtualKeyModifiers.Control, OnDeleteColumnAccelerator);
+            AddKeyboardAccelerator(VirtualKey.T, VirtualKeyModifiers.Control, OnRenameColumnAccelerator);
             AddKeyboardAccelerator(VirtualKey.N, VirtualKeyModifiers.Control, OnAddCardAccelerator);
             AddKeyboardAccelerator(VirtualKey.F, VirtualKeyModifiers.Control, OnSearchFocusAccelerator);
             AddKeyboardAccelerator(VirtualKey.Left, VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu, OnPreviousColumnAccelerator);
@@ -121,9 +113,6 @@ namespace Flowery.Uno.Kanban.Controls
 
         private void OnAddColumnAccelerator(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
         {
-            if (!_isCurrentUserGlobalAdmin)
-                return;
-
             if (!IsBoardViewActive)
                 return;
 
@@ -133,9 +122,6 @@ namespace Flowery.Uno.Kanban.Controls
 
         private void OnDeleteColumnAccelerator(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
         {
-            if (!_isCurrentUserGlobalAdmin)
-                return;
-
             if (!IsBoardViewActive)
                 return;
 
@@ -148,9 +134,6 @@ namespace Flowery.Uno.Kanban.Controls
 
         private void OnRenameColumnAccelerator(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
         {
-            if (!_isCurrentUserGlobalAdmin)
-                return;
-
             if (!IsBoardViewActive)
                 return;
 
@@ -335,8 +318,7 @@ namespace Flowery.Uno.Kanban.Controls
 
         private bool TryHandleControlShortcut(VirtualKey key, bool isAltDown, bool isShiftDown)
         {
-            // Admin-only column operations.
-            if (!isAltDown && !isShiftDown && _isCurrentUserGlobalAdmin)
+            if (!isAltDown && !isShiftDown)
             {
                 switch (key)
                 {
@@ -351,26 +333,18 @@ namespace Flowery.Uno.Kanban.Controls
                         }
                         break;
                     case VirtualKey.T:
-                        var column = GetActiveColumnData();
-                        if (column != null)
+                        var targetColumn = GetActiveColumnData();
+                        if (targetColumn != null)
                         {
-                            ExecuteEditColumn(column);
+                            ExecuteEditColumn(targetColumn);
                             return true;
                         }
                         break;
-                }
-            }
-
-            // Everyone shortcuts.
-            if (!isAltDown && !isShiftDown)
-            {
-                switch (key)
-                {
                     case VirtualKey.N:
-                        var column = GetActiveColumnData();
-                        if (column != null)
+                        var activeColumn = GetActiveColumnData();
+                        if (activeColumn != null)
                         {
-                            BeginInlineAddCard(column);
+                            BeginInlineAddCard(activeColumn);
                             return true;
                         }
                         break;

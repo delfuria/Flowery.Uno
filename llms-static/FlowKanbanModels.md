@@ -49,7 +49,10 @@ Represents an individual item or "card" on the board with full project managemen
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `Assignee` | `string?` | Person assigned to this task. |
+| `Assignee` | `string?` | Last known display name of the assignee (saved). |
+| `AssigneeId` | `string?` | Stable, case-sensitive host-owned assignee ID (saved). |
+| `AssigneeAvatarSource` | `ImageSource?` | Avatar from the assignee adapter (not saved). |
+| `AssigneeRoles` | `IReadOnlyList<string>` | Descriptive roles from the assignee adapter (not saved). |
 | `Tags` | `string?` | Comma-separated tags for categorization. |
 | `LaneId` | `string?` | Optional swimlane identifier (null/empty/`"0"` treated as Unassigned). |
 

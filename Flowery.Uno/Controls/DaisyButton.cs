@@ -249,6 +249,31 @@ namespace Flowery.Controls
             RequestNeumorphicRefresh();
         }
 
+        protected override void OnContentChanged(object oldContent, object newContent)
+        {
+            base.OnContentChanged(oldContent, newContent);
+            UpdateMnemonicContentTemplate(newContent);
+        }
+
+        /// <summary>
+        /// Shows string content with &amp; markers through the mnemonic template unless a ContentTemplate is set.
+        /// WinUI did not apply a ContentTemplateSelector to string content here, so the template is set directly.
+        /// </summary>
+        private void UpdateMnemonicContentTemplate(object? content)
+        {
+            if (FloweryMnemonicHelpers.IsMnemonicLabel(content))
+            {
+                if (ContentTemplate == null && FloweryMnemonicHelpers.StringContentTemplate is { } template)
+                {
+                    ContentTemplate = template;
+                }
+            }
+            else if (FloweryMnemonicHelpers.IsStringContentTemplate(ContentTemplate))
+            {
+                ClearValue(ContentTemplateProperty);
+            }
+        }
+
         private static T? FindChildByType<T>(DependencyObject parent) where T : DependencyObject
         {
             var count = VisualTreeHelper.GetChildrenCount(parent);
@@ -777,10 +802,10 @@ namespace Flowery.Controls
             {
                 _textPresenter = new ContentPresenter
                 {
-                    Content = _userContent,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center
                 };
+                FloweryMnemonicHelpers.SetPresenterContent(_textPresenter, _userContent);
             }
 
             // Add in correct order based on placement

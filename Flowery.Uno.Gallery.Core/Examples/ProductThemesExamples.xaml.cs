@@ -2358,7 +2358,7 @@ namespace Flowery.Uno.Gallery.Examples
 
             var buttonRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Margin = new Thickness(0, 8, 0, 0) };
             buttonRow.Children.Add(WithNeumorphic(new DaisyButton { Content = "Save Customer", Variant = DaisyButtonVariant.Primary }));
-            buttonRow.Children.Add(WithNeumorphic(new DaisyButton { Content = "Save & Add Another", Variant = DaisyButtonVariant.Secondary }));
+            buttonRow.Children.Add(WithNeumorphic(new DaisyButton { Content = "Save && Add Another", Variant = DaisyButtonVariant.Secondary }));
             buttonRow.Children.Add(WithNeumorphic(new DaisyButton { Content = "Cancel", Variant = DaisyButtonVariant.Ghost }));
             panel.Children.Add(buttonRow);
 

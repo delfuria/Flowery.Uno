@@ -493,6 +493,73 @@
                     </StackPanel>
                 </daisy:WrapPanel>
 
+                <!-- Keyboard Mnemonics (display only) -->
+                <TextBlock Text="Keyboard Mnemonics" FontWeight="SemiBold" Margin="0,16,0,0" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
+                <TextBlock Text="WinForms-style &amp; markers underline the access character; &amp;&amp; shows a literal &amp;. Display only, apps handle Alt+key themselves."
+                           Opacity="0.7" TextWrapping="Wrap" daisy:FlowerySizeManager.ResponsiveFont="Primary" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
+                <daisy:WrapPanel Spacing="16">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Tabs" Opacity="0.5" daisy:FlowerySizeManager.ResponsiveFont="Primary" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
+                        <daisy:DaisyTabs x:Name="MnemonicTabs" Variant="Boxed">
+                            <StackPanel>
+                                <TabViewItem Header="&amp;Texte">
+                                    <TextBlock Text="Alt+T in your app can select this tab." Padding="16" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
+                                </TabViewItem>
+                                <TabViewItem Header="Te&amp;xt / Kalkulation">
+                                    <TextBlock Text="Alt+X in your app can select this tab." Padding="16" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
+                                </TabViewItem>
+                                <TabViewItem Header="Save &amp;&amp; Exit">
+                                    <TextBlock Text="Literal ampersand, no mnemonic." Padding="16" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
+                                </TabViewItem>
+                            </StackPanel>
+                        </daisy:DaisyTabs>
+                    </StackPanel>
+
+                    <StackPanel Spacing="10" Width="220">
+                        <TextBlock Text="Menu" Opacity="0.5" daisy:FlowerySizeManager.ResponsiveFont="Primary" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
+                        <daisy:DaisyMenu x:Name="MnemonicMenu">
+                            <StackPanel>
+                                <daisy:DaisyMenuItem>&amp;File</daisy:DaisyMenuItem>
+                                <daisy:DaisyMenuItem>E&amp;dit</daisy:DaisyMenuItem>
+                                <daisy:DaisyMenuItem>Save &amp;&amp; Close</daisy:DaisyMenuItem>
+                            </StackPanel>
+                        </daisy:DaisyMenu>
+                    </StackPanel>
+                </daisy:WrapPanel>
+
+                <!-- Header actions -->
+                <TextBlock Text="Header actions" FontWeight="SemiBold" Margin="0,16,0,0" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
+                <TextBlock Text="Custom content beside the tab headers"
+                           Opacity="0.7" TextWrapping="Wrap" daisy:FlowerySizeManager.ResponsiveFont="Primary" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
+                <daisy:DaisyTabs x:Name="HeaderSlotTabs" Variant="Bordered">
+                    <daisy:DaisyTabs.HeaderTrailingContent>
+                        <daisy:DaisyButton Content="Refresh" Variant="Ghost" Size="Small" Click="OnHeaderRefresh" />
+                    </daisy:DaisyTabs.HeaderTrailingContent>
+                    <StackPanel>
+                        <TabViewItem Header="Summary">
+                            <TextBlock Text="Summary content" Padding="16" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
+                        </TabViewItem>
+                        <TabViewItem Header="Details">
+                            <TextBlock Text="Details content" Padding="16" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
+                        </TabViewItem>
+                    </StackPanel>
+                </daisy:DaisyTabs>
+                <TextBlock x:Name="HeaderSlotStatus" Text="Ready" Opacity="0.7" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
+
+                <TextBlock Text="Navigation buttons and named views"
+                           Opacity="0.7" TextWrapping="Wrap" Margin="0,8,0,0" daisy:FlowerySizeManager.ResponsiveFont="Primary" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
+                <daisy:DaisyTabs x:Name="HeaderButtonsTabs" Variant="Boxed" ShowHeaderButtons="True">
+                    <StackPanel>
+                        <TabViewItem Header="Records">
+                            <TextBlock Text="Record content" Padding="16" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
+                        </TabViewItem>
+                        <TabViewItem Header="Notes">
+                            <TextBlock Text="Notes content" Padding="16" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
+                        </TabViewItem>
+                    </StackPanel>
+                </daisy:DaisyTabs>
+                <TextBlock x:Name="HeaderButtonsStatus" Text="Selected view: Overview (1)" Opacity="0.7" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
+
                 <!-- Tab Sizes -->
                 <TextBlock Text="Sizes" FontWeight="SemiBold" Margin="0,16,0,0" Foreground="{ThemeResource DaisyBaseContentBrush}"/>
                 <daisy:WrapPanel Spacing="16" daisy:FlowerySizeManager.IgnoreGlobalSize="True">

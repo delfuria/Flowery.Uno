@@ -57,10 +57,8 @@ The Kanban system spans multiple files for modularity:
 - **JSON Persistence**: Atomic save strategy (temp-file rename), schema migration support, and safe-load validation.
 - **Source Gen Support**: Native AOT and WASM compatibility via `FlowKanbanJsonContext`.
 - **Industrial Sidebar**: A dedicated space for board-level controls (home, settings, undo/redo, zoom, save/load, metrics/help).
-- **User-Scoped Preferences**: Confirmation prompts, auto-save, add card placement, and welcome message settings are stored per user.
-- **Global Admin Bootstrap**: Assigns the first available current user as global admin on initial run.
-- **Local User Default**: If no provider is set, FlowKanban defaults to `LocalUserProvider`.
-- **Provider Workflows**: External providers support explicit connect and disconnect flows, with confirmation before disconnecting and token validation after connect.
+- **Preferences**: Confirmation prompts, auto-save, add card placement, and welcome message settings are stored under one settings key (`kanban.settings`).
+- **Host-Owned Assignees**: The host app supplies assignee IDs, names, avatars and roles through `AssigneeAdapter`; the board does not sign users in or connect to external services.
 
 ## Properties
 
@@ -82,29 +80,49 @@ The Kanban system spans multiple files for modularity:
 | `IsSwimlaneLayoutEnabled` | `bool` | True when `Board.GroupBy` is set to `Lane` and lanes exist. |
 | `IsStandardLayoutEnabled` | `bool` | True when swimlanes are disabled or there are no lanes. |
 | `LaneRows` | `ObservableCollection<FlowKanbanLaneRowView>` | Lane row view models used by the swimlane grid template. |
-| `UserProvider` | `IUserProvider` | User provider for identity resolution and current-user context (defaults to `LocalUserProvider`). |
-| `GlobalAdminId` | `string?` | Global admin user ID stored in app settings (if assigned). |
+| `AssigneeAdapter` | `IFlowKanbanAssigneeAdapter?` | Supplies assignee IDs, display names, avatars and roles. |
 
-## User Providers & Identity Workflows
+## Assignees
 
-FlowKanban supports multiple user providers (local and external). The user management surface (`FlowKanbanUserManagement`) exposes consistent connect/disconnect UX and link/unlink workflows.
+The host app owns all external connections, login steps, permissions and tokens. FlowKanban only gets the data it displays: a stable ID, a display name, an optional avatar (`ImageSource`) and optional descriptive roles. Roles are display text only and never grant or deny access. Ported from Flowery.NET 3.1.0.
 
-### Connect (External Providers)
+Set `AssigneeAdapter` to an `IFlowKanbanAssigneeAdapter`. The included `FlowKanbanAssigneeAdapter` covers a direct list, list callbacks and single-ID callbacks:
 
-- **GitHub**: Uses a personal access token (PAT) and **only loads the current user** (no org member enumeration).
-- Token validation runs immediately after connect; invalid/insufficient scopes trigger a user-visible error and the token is cleared.
-- Current requirement: `read:user` scope for GitHub.
+```csharp
+// Direct list
+var assignees = new FlowKanbanAssigneeAdapter(new[]
+{
+    new FlowKanbanAssignee("person-42", "Mina Singh", minaAvatar, new[] { "Designer", "Reviewer" })
+});
+kanban.AssigneeAdapter = assignees;
+assignees.SetAssignees(latestAssignees); // replaces the list and reloads attached boards
 
-### Disconnect (External Providers)
+// Host callbacks
+kanban.AssigneeAdapter = new FlowKanbanAssigneeAdapter(
+    getAssigneesAsync: LoadAssigneesAsync,       // Task<IReadOnlyList<FlowKanbanAssignee>>(CancellationToken)
+    resolveAssigneeAsync: FindAssigneeAsync);    // Task<FlowKanbanAssignee?>(string id, CancellationToken)
 
-- Disconnect requires **user confirmation**.
-- On confirm, the provider token is removed and any linked identities for that provider are cleared.
-- The provider is re-listed as disconnected; user lists are refreshed.
+// Resolve saved IDs only; adds no editor or filter choices
+kanban.AssigneeAdapter = new FlowKanbanAssigneeAdapter(FindAssigneeAsync);
+```
 
-### Link/Unlink Local Users
+- **IDs are case-sensitive and kept exactly**: `person-42` and `Person-42` are different. The first entry wins when a list repeats an ID. A resolver must return the requested ID, otherwise the board reports an error.
+- **Unknown IDs stay**: a saved task keeps its assignee ID and last known name. The assignee filter lists such IDs as "Name (Unavailable)".
+- **Reloads**: the board reloads assignees when it loads, when a board is opened or imported, and when the adapter raises `AssigneesChanged` (`NotifyAssigneesChanged()` for callback adapters). `RefreshAssigneesAsync(cancellationToken)` reloads on request. A newer reload replaces an older unfinished one, and nothing changes after the control unloads.
+- **Errors**: `AssigneeAdapterFailed` reports `Operation` (`LoadAssignees` or `ResolveAssignee`), the original `Exception` and, for single IDs, `AssigneeId`. Errors never rewrite assignee IDs or names in task data.
+- **Avatars and roles** are transient: task cards show the avatar instead of the initials and the roles as a tooltip; neither is saved in the board JSON.
+- **Task editor**: the board does not open `FlowTaskEditorDialog` with assignees itself. Build the options from the adapter, as the Gallery sample does:
 
-- External identities can be linked to a local user (optional).
-- Unlinking removes only the link metadata; it does not delete the external or local user entries.
+```csharp
+kanban.EditCardCommand = new RelayCommand<FlowTask>(async task =>
+{
+    var assignees = await adapter.GetAssigneesAsync();
+    var options = assignees.Select(a => new FlowTaskAssigneeOption(a.Id, a.DisplayName)).ToArray();
+    await FlowTaskEditorDialog.ShowAsyncWithAssignees(task, XamlRoot, kanban.Board.Tags, options, kanban.AutoExpandCardDetails);
+});
+```
+
+`IUserProvider`, `LocalUserProvider` and `CompositeUserProvider` remain available but no longer feed the board. `FlowKanbanUserManagement` remains a public control that hosts can show with their own `IUserProvider`; the board no longer opens it.
 
 ## Commands
 
@@ -210,6 +228,8 @@ The core workspace. It uses a `ScrollViewer` to allow horizontal navigation betw
 ### 1a. Swimlane Grid (When Enabled)
 
 The swimlane layout renders a fixed header row for columns and a row per lane. Each lane row contains a column cell with lane filtering applied, enabling true matrix-style boards. The `FlowKanbanTaskView` wrapper is used to provide lane context to individual cards.
+
+All layouts (standard, compact, swimlane header row and swimlane cells) use the same `FlowKanbanColumn` template, ported from Flowery.NET 3.1.0. The layouts only set properties on the column: `ShowColumnHeader`, `ShowTasks`, `ShowAddCard`, `IsDropEnabled`, `LaneFilterId` and `TaskListMaxHeight` (swimlane cells bind it to `FlowKanban.SwimlaneCellMaxHeight`). Header, policy and WIP indicators, the collapsed rail, add-card controls and the task list therefore look and behave the same in every layout. The template parts keep their names (`PART_ColumnHeaderGrid`, `PART_TasksItemsControl`, `PART_AddCardTop`, `PART_AddCardBottom` and others); swimlane cells also show `PART_LaneWipIndicator`.
 
 ### 2. Utility Sidebar (Right)
 

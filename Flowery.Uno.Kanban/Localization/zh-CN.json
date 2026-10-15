@@ -225,6 +225,7 @@
   "Kanban_Users_AddLocal_Name": "姓名",
   "Kanban_Users_AddLocal_Email": "邮箱",
   "Kanban_Users_AddLocal_Button": "添加用户",
+  "Kanban_Users_Unresolved": "不可用",
   "Kanban_Users_GitHub_Title": "连接 GitHub",
   "Kanban_Users_GitHub_Message": "粘贴 GitHub 个人访问令牌以启用 GitHub 用户。",
   "Kanban_Users_GitHub_Hint": "仅使用你的 GitHub 用户。需要 'read:user' 权限范围。",

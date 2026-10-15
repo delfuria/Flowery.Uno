@@ -150,7 +150,9 @@ public static class DaisyAccessibility
             case TextBlock textBlock:
                 return textBlock.Text;
             case DaisyIconText iconText:
-                return iconText.Text;
+                return iconText.Text is { } iconLabel ? FloweryMnemonicHelpers.GetDisplayText(iconLabel) : null;
+            case DaisyMnemonicText mnemonicText:
+                return mnemonicText.Text is { } mnemonicLabel ? FloweryMnemonicHelpers.GetDisplayText(mnemonicLabel) : null;
             case ContentControl control:
                 return GetAccessibleNameFromContent(control.Content, fallbackText);
             default:

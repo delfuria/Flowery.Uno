@@ -29,7 +29,7 @@ namespace Flowery.Uno.Gallery
         private const double MaxSidebarWidthPercent = 0.35;
         private const double HeaderCollapseScrollThreshold = 20;
         // Below this width (phones in portrait) the header uses a smaller title and logo
-        private const double NarrowHeaderWidth = 520;
+        private const double NarrowHeaderWidth = 560;
         // Central diagnostics log can grow unbounded during log storms; keep disabled for now.
         // Runtime-readonly flag to avoid CS0162 warnings.
         private static readonly bool EnableCentralDiagnosticsLog = false;

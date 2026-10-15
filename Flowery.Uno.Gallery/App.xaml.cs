@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using IOPath = System.IO.Path;
 using Flowery.Theming;
 using Flowery.Uno.Gallery.Localization;
-using Flowery.Uno.Kanban.Controls;
 using Flowery.Services;
 using Microsoft.UI.Xaml.Markup;
 
@@ -100,9 +99,6 @@ namespace Flowery.Uno.Gallery
 #endif
 
             ConfigureStateStorage();
-            // only for demo purposes we enable the user management button!
-            // FlowKanban is SINGLE-USER only for time being!
-            FlowKanban.IsUserManagementButtonEnabled = true;
 
             // Apply language BEFORE creating MainWindow so FloweryLocalization.CurrentCultureName
             // is already set when the sidebar reads it during construction.

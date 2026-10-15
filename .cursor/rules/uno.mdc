@@ -108,7 +108,7 @@ These are the practical fixes and gotchas encountered when getting the Browser h
 - Windows runner execution: run the app `.exe` when available; always set `FLOWERY_RUNTIME_TESTS_PATH`.
 - Runner build root: `<temp>/frt/<8-char id>/` (`Path.GetTempPath()`), logged as `Runtime test build root: ...`, deleted in `[TestCleanup]` after each run (passing or failing). Keep it short: the WinUI XAML compiler is net472 and ignores `LongPathsEnabled` (MAX_PATH 260). Results XML stays in the test run directory.
 - `App.xaml.cs` for Windows: load runtime-test resources before the early return; copy `Themes` into `Flowery.Uno/Themes` for ms-appx resolution.
-- State storage: `RuntimeTestRunner` configures `InMemoryStateStorage` (and resets `FlowKanban.DefaultUserProvider`) before any test, so tests never read or write the app's real storage. Tests that need a specific `FlowKanban` view must set `CurrentView` explicitly: with no saved boards, `OnKanbanLoaded` switches to Home.
+- State storage: `RuntimeTestRunner` configures `InMemoryStateStorage` before any test, so tests never read or write the app's real storage. Tests that need a specific `FlowKanban` view must set `CurrentView` explicitly: with no saved boards, `OnKanbanLoaded` switches to Home.
 
 ## ✅ CI / GitHub Actions (Uno + gh CLI)
 

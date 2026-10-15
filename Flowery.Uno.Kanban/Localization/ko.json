@@ -225,6 +225,7 @@
   "Kanban_Users_AddLocal_Name": "이름",
   "Kanban_Users_AddLocal_Email": "이메일",
   "Kanban_Users_AddLocal_Button": "사용자 추가",
+  "Kanban_Users_Unresolved": "사용할 수 없음",
   "Kanban_Users_GitHub_Title": "GitHub 연결",
   "Kanban_Users_GitHub_Message": "GitHub 사용자를 사용하려면 GitHub 개인 액세스 토큰을 붙여넣으세요.",
   "Kanban_Users_GitHub_Hint": "자신의 GitHub 사용자만 사용합니다. 'read:user' 범위가 필요합니다.",

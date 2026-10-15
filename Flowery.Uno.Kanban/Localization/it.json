@@ -225,6 +225,7 @@
   "Kanban_Users_AddLocal_Name": "Nome",
   "Kanban_Users_AddLocal_Email": "Email",
   "Kanban_Users_AddLocal_Button": "Aggiungi utente",
+  "Kanban_Users_Unresolved": "Non disponibile",
   "Kanban_Users_GitHub_Title": "Connetti GitHub",
   "Kanban_Users_GitHub_Message": "Incolla un token di accesso personale GitHub per abilitare gli utenti GitHub.",
   "Kanban_Users_GitHub_Hint": "Usa solo il tuo utente GitHub. Richiede lo scope 'read:user'.",

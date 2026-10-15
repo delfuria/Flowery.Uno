@@ -24,6 +24,7 @@ namespace Flowery.Uno.Kanban.Controls
         private const double TitleLongPressMoveThreshold = 8;
         private FlowKanban? _parentKanban;
         private DaisyButton? _closeButton;
+        private FrameworkElement? _assigneeAvatar;
         private TextBlock? _titleTextBlock;
         private Border? _rootBorder;
         private Brush? _defaultBorderBrush;
@@ -171,6 +172,60 @@ namespace Flowery.Uno.Kanban.Controls
         {
             get => (string)GetValue(AssigneeInitialsProperty);
             set => SetValue(AssigneeInitialsProperty, value);
+        }
+        #endregion
+
+        #region Assignee metadata
+        public static readonly DependencyProperty AssigneeAvatarSourceProperty =
+            DependencyProperty.Register(
+                nameof(AssigneeAvatarSource),
+                typeof(ImageSource),
+                typeof(FlowTaskCard),
+                new PropertyMetadata(null));
+
+        public ImageSource? AssigneeAvatarSource
+        {
+            get => (ImageSource?)GetValue(AssigneeAvatarSourceProperty);
+            set => SetValue(AssigneeAvatarSourceProperty, value);
+        }
+
+        public static readonly DependencyProperty HasAssigneeAvatarProperty =
+            DependencyProperty.Register(
+                nameof(HasAssigneeAvatar),
+                typeof(bool),
+                typeof(FlowTaskCard),
+                new PropertyMetadata(false));
+
+        public bool HasAssigneeAvatar
+        {
+            get => (bool)GetValue(HasAssigneeAvatarProperty);
+            set => SetValue(HasAssigneeAvatarProperty, value);
+        }
+
+        public static readonly DependencyProperty AssigneeRolesTextProperty =
+            DependencyProperty.Register(
+                nameof(AssigneeRolesText),
+                typeof(string),
+                typeof(FlowTaskCard),
+                new PropertyMetadata(string.Empty));
+
+        public string AssigneeRolesText
+        {
+            get => (string)GetValue(AssigneeRolesTextProperty);
+            set => SetValue(AssigneeRolesTextProperty, value);
+        }
+
+        public static readonly DependencyProperty HasAssigneeRolesProperty =
+            DependencyProperty.Register(
+                nameof(HasAssigneeRoles),
+                typeof(bool),
+                typeof(FlowTaskCard),
+                new PropertyMetadata(false));
+
+        public bool HasAssigneeRoles
+        {
+            get => (bool)GetValue(HasAssigneeRolesProperty);
+            set => SetValue(HasAssigneeRolesProperty, value);
         }
         #endregion
 
@@ -699,6 +754,8 @@ namespace Flowery.Uno.Kanban.Controls
             }
 
             _closeButton = GetTemplateChild("PART_CloseBtn") as DaisyButton;
+            _assigneeAvatar = GetTemplateChild("PART_AssigneeAvatar") as FrameworkElement;
+            UpdateAssignee();
             UpdateCloseButtonVisibility();
             UpdateAutomationProperties();
             if (_closeButton != null)
@@ -950,7 +1007,9 @@ namespace Flowery.Uno.Kanban.Controls
             {
                 UpdateWorkItemNumber();
             }
-            else if (string.Equals(e.PropertyName, nameof(FlowTask.Assignee), StringComparison.Ordinal))
+            else if (string.Equals(e.PropertyName, nameof(FlowTask.Assignee), StringComparison.Ordinal)
+                     || string.Equals(e.PropertyName, nameof(FlowTask.AssigneeAvatarSource), StringComparison.Ordinal)
+                     || string.Equals(e.PropertyName, nameof(FlowTask.AssigneeRoles), StringComparison.Ordinal))
             {
                 UpdateAssignee();
             }
@@ -1044,12 +1103,27 @@ namespace Flowery.Uno.Kanban.Controls
                 HasAssignee = false;
                 AssigneeText = string.Empty;
                 AssigneeInitials = string.Empty;
+                AssigneeAvatarSource = null;
+                HasAssigneeAvatar = false;
+                AssigneeRolesText = string.Empty;
+                HasAssigneeRoles = false;
             }
             else
             {
                 HasAssignee = true;
                 AssigneeText = assignee;
                 AssigneeInitials = BuildInitials(assignee);
+                AssigneeAvatarSource = task?.AssigneeAvatarSource;
+                HasAssigneeAvatar = AssigneeAvatarSource is not null;
+                AssigneeRolesText = task?.AssigneeRoles is { Count: > 0 } roles
+                    ? string.Join(", ", roles)
+                    : string.Empty;
+                HasAssigneeRoles = AssigneeRolesText.Length > 0;
+            }
+
+            if (_assigneeAvatar != null)
+            {
+                ToolTipService.SetToolTip(_assigneeAvatar, HasAssigneeRoles ? AssigneeRolesText : null);
             }
 
             UpdateFooterVisibility();

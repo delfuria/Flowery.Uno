@@ -6,7 +6,7 @@ A cross-platform abstraction for persisting sensitive data (secrets, tokens, pas
 
 `ISecureStorage` provides a unified interface for credential management. On platforms with native vault support, values are routed to OS-backed storage (Keychain, KeyStore, Credential Manager). On WASM/Skia, the default implementation falls back to `ApplicationData.Current.LocalSettings`, which is not a secure vault.
 
-This is the primary security foundation for FlowKanban integrations like GitHub, Teams, and Slack.
+Use it in your app for tokens of external services. FlowKanban itself does not connect to external account services; the host app supplies assignees through `FlowKanban.AssigneeAdapter`.
 
 ## API Reference
 

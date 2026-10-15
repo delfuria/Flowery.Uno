@@ -225,6 +225,7 @@
   "Kanban_Users_AddLocal_Name": "Ім'я",
   "Kanban_Users_AddLocal_Email": "Ел. пошта",
   "Kanban_Users_AddLocal_Button": "Додати користувача",
+  "Kanban_Users_Unresolved": "Недоступний",
   "Kanban_Users_GitHub_Title": "Підключити GitHub",
   "Kanban_Users_GitHub_Message": "Вставте персональний токен доступу GitHub, щоб увімкнути користувачів GitHub.",
   "Kanban_Users_GitHub_Hint": "Використовує лише вашого користувача GitHub. Потрібен доступ 'read:user'.",

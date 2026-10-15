@@ -1,190 +1,267 @@
 using System;
-using System.Diagnostics;
-using System.Runtime.Versioning;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Flowery.Uno.Kanban.Controls.Users;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 
 namespace Flowery.Uno.Kanban.Controls
 {
     public partial class FlowKanban
     {
-        private bool _isEnsuringGlobalAdmin;
-        private IUserProvider? _trackedUserProvider;
-        private bool _isCurrentUserGlobalAdmin;
+        private IFlowKanbanAssigneeAdapter? _trackedAssigneeAdapter;
+        private CancellationTokenSource? _assigneeRefreshCancellation;
+        private long _assigneeRefreshVersion;
 
-        public static readonly DependencyProperty UserProviderProperty =
+        public static readonly DependencyProperty AssigneeAdapterProperty =
             DependencyProperty.Register(
-                nameof(UserProvider),
-                typeof(IUserProvider),
+                nameof(AssigneeAdapter),
+                typeof(IFlowKanbanAssigneeAdapter),
                 typeof(FlowKanban),
-                new PropertyMetadata(null, OnUserProviderChanged));
+                new PropertyMetadata(null, OnAssigneeAdapterChanged));
 
         /// <summary>
-        /// User provider used for resolving identities and current user context.
+        /// Adapter used to map host-owned assignee IDs to display names, avatars, and roles.
         /// </summary>
-        public IUserProvider? UserProvider
+        public IFlowKanbanAssigneeAdapter? AssigneeAdapter
         {
-            get => (IUserProvider?)GetValue(UserProviderProperty);
-            set => SetValue(UserProviderProperty, value);
+            get => (IFlowKanbanAssigneeAdapter?)GetValue(AssigneeAdapterProperty);
+            set => SetValue(AssigneeAdapterProperty, value);
         }
 
         /// <summary>
-        /// Gets the stored global admin user ID, if any.
+        /// Raised when an assignee adapter callback fails.
         /// </summary>
-        public string? GlobalAdminId => LoadGlobalAdminId();
+        public event EventHandler<FlowKanbanAssigneeAdapterFailedEventArgs>? AssigneeAdapterFailed;
 
-        /// <summary>
-        /// Default user provider applied when no instance-specific provider is set.
-        /// </summary>
-[SupportedOSPlatform("windows")]
-[SupportedOSPlatform("android")]
-[SupportedOSPlatform("ios")]
-[SupportedOSPlatform("browser")]
-[SupportedOSPlatform("macos")]
-[SupportedOSPlatform("maccatalyst")]
-[SupportedOSPlatform("linux")]
-        public static IUserProvider? DefaultUserProvider { get; set; }
-
-        private static void OnUserProviderChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        private static void OnAssigneeAdapterChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            if (d is FlowKanban kanban)
+            if (d is not FlowKanban kanban)
+                return;
+
+            kanban.CancelAssigneeRefresh();
+            kanban.DetachAssigneeAdapter();
+            kanban.UpdateAssigneeFilterOptions(Array.Empty<FlowTaskAssigneeOption>());
+            if (!kanban.IsLoaded)
+                return;
+
+            kanban.AttachAssigneeAdapter(e.NewValue as IFlowKanbanAssigneeAdapter);
+            _ = ObserveAssigneeRefreshAsync(kanban.RefreshAssigneesAsync());
+        }
+
+        private void AttachAssigneeAdapter(IFlowKanbanAssigneeAdapter? adapter)
+        {
+            if (ReferenceEquals(_trackedAssigneeAdapter, adapter))
+                return;
+
+            DetachAssigneeAdapter();
+            if (adapter is null)
+                return;
+
+            _trackedAssigneeAdapter = adapter;
+            _trackedAssigneeAdapter.AssigneesChanged += OnAssigneesChanged;
+        }
+
+        private void DetachAssigneeAdapter()
+        {
+            if (_trackedAssigneeAdapter is null)
+                return;
+
+            _trackedAssigneeAdapter.AssigneesChanged -= OnAssigneesChanged;
+            _trackedAssigneeAdapter = null;
+        }
+
+        private void OnAssigneesChanged(object? sender, EventArgs e)
+        {
+            var adapter = _trackedAssigneeAdapter;
+            if (adapter is null)
+                return;
+
+            if (DispatcherQueue is { HasThreadAccess: false } queue)
             {
-                kanban.AttachUserProvider(e.NewValue as IUserProvider);
-                _ = kanban.EnsureGlobalAdminAsync();
-                _ = kanban.RefreshAdminStateAsync();
-                _ = kanban.EnsureUserSettingsLoadedAsync(forceReload: true);
-                _ = kanban.EnsureAssigneeIdsAndFilterOptionsAsync();
-            }
-        }
-
-        private void ApplyDefaultUserProvider()
-        {
-            if (UserProvider != null)
-                return;
-
-#pragma warning disable CA1416 // Platform support is handled by Uno at runtime; provider is used across heads.
-            if (DefaultUserProvider == null)
-            {
-                DefaultUserProvider = new LocalUserProvider();
-            }
-
-            UserProvider = DefaultUserProvider;
-#pragma warning restore CA1416
-        }
-
-        private void AttachUserProvider(IUserProvider? provider)
-        {
-            if (ReferenceEquals(_trackedUserProvider, provider))
-                return;
-
-            DetachUserProvider();
-
-            if (provider == null)
-                return;
-
-            _trackedUserProvider = provider;
-            _trackedUserProvider.UsersChanged += OnUserProviderUsersChanged;
-        }
-
-        private void DetachUserProvider()
-        {
-            if (_trackedUserProvider == null)
-                return;
-
-            _trackedUserProvider.UsersChanged -= OnUserProviderUsersChanged;
-            _trackedUserProvider = null;
-        }
-
-        private void OnUserProviderUsersChanged()
-        {
-            _ = EnsureGlobalAdminAsync();
-            _ = RefreshAdminStateAsync();
-            _ = EnsureUserSettingsLoadedAsync(forceReload: true);
-            _ = EnsureAssigneeIdsAndFilterOptionsAsync();
-        }
-
-        private async Task EnsureAssigneeIdsAndFilterOptionsAsync()
-        {
-            var provider = UserProvider;
-            if (provider == null)
-            {
-                ClearInvalidAssigneeIds(Array.Empty<string>());
-                ClearAssigneeFilterOptions();
+                queue.TryEnqueue(() => RefreshForChangedAdapter(adapter));
                 return;
             }
 
-            var refreshVersion = ++_assigneeFilterRefreshVersion;
+            RefreshForChangedAdapter(adapter);
+        }
+
+        private void RefreshForChangedAdapter(IFlowKanbanAssigneeAdapter adapter)
+        {
+            if (!IsLoaded || !ReferenceEquals(_trackedAssigneeAdapter, adapter))
+                return;
+
+            _ = ObserveAssigneeRefreshAsync(RefreshAssigneesAsync());
+        }
+
+        /// <summary>
+        /// Reloads assignee data from <see cref="AssigneeAdapter"/>.
+        /// Superseded requests and requests canceled by unloading the control do not update the board.
+        /// </summary>
+        public async Task RefreshAssigneesAsync(CancellationToken cancellationToken = default)
+        {
+            if (DispatcherQueue is { HasThreadAccess: false } queue)
+            {
+                await InvokeOnUiThreadAsync(queue, () => RefreshAssigneesAsync(cancellationToken));
+                return;
+            }
+
+            var adapter = AssigneeAdapter;
+            var version = Interlocked.Increment(ref _assigneeRefreshVersion);
+            var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var previousCancellation = Interlocked.Exchange(ref _assigneeRefreshCancellation, cancellation);
+            previousCancellation?.Cancel();
+
             try
             {
-                var users = await provider.GetAllUsersAsync();
-                if (refreshVersion != _assigneeFilterRefreshVersion || !ReferenceEquals(provider, UserProvider))
+                if (adapter is null)
+                {
+                    ApplyResolvedAssignees(Array.Empty<FlowKanbanAssignee>());
+                    return;
+                }
+
+                // The awaits below resume on the UI thread, so board data is only changed there.
+                IReadOnlyList<FlowKanbanAssignee> suppliedAssignees;
+                try
+                {
+                    suppliedAssignees = await adapter.GetAssigneesAsync(cancellation.Token);
+                }
+                catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    ReportAssigneeAdapterFailure(adapter, version, FlowKanbanAssigneeAdapterOperation.LoadAssignees, ex);
+                    return;
+                }
+
+                cancellation.Token.ThrowIfCancellationRequested();
+                if (!IsCurrentAssigneeRefresh(version))
                     return;
 
-                var userList = new List<IFlowUser>();
-                foreach (var user in users)
+                var resolvedAssignees = NormalizeResolvedAssignees(suppliedAssignees);
+                foreach (var assigneeId in CollectUnresolvedAssigneeIds(resolvedAssignees))
                 {
-                    if (user != null)
+                    cancellation.Token.ThrowIfCancellationRequested();
+                    if (!IsCurrentAssigneeRefresh(version))
+                        return;
+
+                    FlowKanbanAssignee? resolvedAssignee;
+                    try
                     {
-                        userList.Add(user);
+                        resolvedAssignee = await adapter.ResolveAssigneeAsync(assigneeId, cancellation.Token);
+                    }
+                    catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        ReportAssigneeAdapterFailure(adapter, version, FlowKanbanAssigneeAdapterOperation.ResolveAssignee, ex, assigneeId);
+                        continue;
+                    }
+
+                    if (resolvedAssignee is not null
+                        && !string.Equals(resolvedAssignee.Id, assigneeId, StringComparison.Ordinal))
+                    {
+                        ReportAssigneeAdapterFailure(
+                            adapter,
+                            version,
+                            FlowKanbanAssigneeAdapterOperation.ResolveAssignee,
+                            new InvalidOperationException(
+                                $"The assignee callback returned ID '{resolvedAssignee.Id}' for requested ID '{assigneeId}'."),
+                            assigneeId);
+                        continue;
+                    }
+
+                    if (resolvedAssignee is not null)
+                    {
+                        resolvedAssignees.Add(resolvedAssignee);
                     }
                 }
 
-                var validIds = BuildValidAssigneeIds(userList);
-                ClearInvalidAssigneeIds(validIds);
-                UpdateAssigneeFilterOptionsFromUsers(userList);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"FlowKanban assignee validation failed: {ex.GetType().Name} - {ex.Message}");
-            }
-        }
-
-        private async Task EnsureAssigneeIdsValidAsync()
-        {
-            var provider = UserProvider;
-            if (provider == null)
-            {
-                ClearInvalidAssigneeIds(Array.Empty<string>());
-                return;
-            }
-
-            try
-            {
-                var users = await provider.GetAllUsersAsync();
-                if (!ReferenceEquals(provider, UserProvider))
+                cancellation.Token.ThrowIfCancellationRequested();
+                if (!IsCurrentAssigneeRefresh(version) || !ReferenceEquals(adapter, AssigneeAdapter))
                     return;
 
-                var validIds = BuildValidAssigneeIds(users);
-                ClearInvalidAssigneeIds(validIds);
+                ApplyResolvedAssignees(resolvedAssignees);
             }
-            catch (Exception ex)
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
             {
-                System.Diagnostics.Debug.WriteLine($"FlowKanban assignee validation failed: {ex.GetType().Name} - {ex.Message}");
+                if (cancellationToken.IsCancellationRequested)
+                    throw;
+            }
+            finally
+            {
+                Interlocked.CompareExchange(ref _assigneeRefreshCancellation, null, cancellation);
+                cancellation.Dispose();
             }
         }
 
-        private static HashSet<string> BuildValidAssigneeIds(IEnumerable<IFlowUser> users)
+        private static Task InvokeOnUiThreadAsync(DispatcherQueue queue, Func<Task> action)
         {
-            var validIds = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var user in users)
+            var completion = new TaskCompletionSource();
+            var queued = queue.TryEnqueue(async () =>
             {
-                if (user == null || string.IsNullOrWhiteSpace(user.Id))
+                try
+                {
+                    await action();
+                    completion.TrySetResult();
+                }
+                catch (OperationCanceledException ex)
+                {
+                    completion.TrySetCanceled(ex.CancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    completion.TrySetException(ex);
+                }
+            });
+
+            if (!queued)
+            {
+                completion.TrySetException(new InvalidOperationException("The UI thread dispatcher is not available."));
+            }
+
+            return completion.Task;
+        }
+
+        private static List<FlowKanbanAssignee> NormalizeResolvedAssignees(
+            IEnumerable<FlowKanbanAssignee>? assignees)
+        {
+            var normalized = new List<FlowKanbanAssignee>();
+            var seenIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var assignee in assignees ?? Array.Empty<FlowKanbanAssignee>())
+            {
+                if (assignee is null)
                     continue;
 
-                validIds.Add(user.Id.Trim());
+                if (!seenIds.Add(assignee.Id))
+                    continue;
+
+                normalized.Add(new FlowKanbanAssignee(
+                    assignee.Id,
+                    assignee.DisplayName,
+                    assignee.AvatarSource,
+                    assignee.Roles));
             }
 
-            return validIds;
+            return normalized;
         }
 
-        private void ClearInvalidAssigneeIds(IReadOnlyCollection<string> validIds)
+        private string[] CollectUnresolvedAssigneeIds(IReadOnlyList<FlowKanbanAssignee> resolvedAssignees)
         {
             if (Board?.Columns == null)
-                return;
+                return Array.Empty<string>();
 
-            var hasValidIds = validIds.Count > 0;
+            var resolvedIds = resolvedAssignees
+                .Select(assignee => assignee.Id)
+                .ToHashSet(StringComparer.Ordinal);
+            var unresolvedIds = new List<string>();
+            var seenIds = new HashSet<string>(StringComparer.Ordinal);
+
             foreach (var column in Board.Columns)
             {
                 if (column?.Tasks == null)
@@ -192,101 +269,101 @@ namespace Flowery.Uno.Kanban.Controls
 
                 foreach (var task in column.Tasks)
                 {
-                    if (task == null || string.IsNullOrWhiteSpace(task.AssigneeId))
+                    var assigneeId = task?.AssigneeId;
+                    if (string.IsNullOrWhiteSpace(assigneeId)
+                        || resolvedIds.Contains(assigneeId)
+                        || !seenIds.Add(assigneeId))
+                    {
+                        continue;
+                    }
+
+                    unresolvedIds.Add(assigneeId);
+                }
+            }
+
+            return unresolvedIds.ToArray();
+        }
+
+        private void ApplyResolvedAssignees(IReadOnlyList<FlowKanbanAssignee> resolvedAssignees)
+        {
+            var assigneesById = resolvedAssignees
+                .ToDictionary(assignee => assignee.Id, StringComparer.Ordinal);
+
+            if (Board?.Columns != null)
+            {
+                foreach (var column in Board.Columns)
+                {
+                    if (column?.Tasks == null)
                         continue;
 
-                    if (!hasValidIds || !validIds.Contains(task.AssigneeId))
+                    foreach (var task in column.Tasks)
                     {
-                        task.AssigneeId = null;
+                        if (task == null)
+                            continue;
+
+                        var assigneeId = task.AssigneeId;
+                        if (!string.IsNullOrWhiteSpace(assigneeId)
+                            && assigneesById.TryGetValue(assigneeId, out var assignee))
+                        {
+                            if (!string.Equals(task.Assignee, assignee.DisplayName, StringComparison.Ordinal))
+                                task.Assignee = assignee.DisplayName;
+                            task.AssigneeAvatarSource = assignee.AvatarSource;
+                            task.AssigneeRoles = assignee.Roles;
+                        }
+                        else
+                        {
+                            task.AssigneeAvatarSource = null;
+                            task.AssigneeRoles = Array.Empty<string>();
+                        }
                     }
                 }
             }
+
+            var filterOptions = resolvedAssignees
+                .Select(assignee => new FlowTaskAssigneeOption(assignee.Id, assignee.DisplayName))
+                .ToArray();
+            UpdateAssigneeFilterOptions(filterOptions);
         }
 
-        private static string? LoadGlobalAdminId()
+        private void ReportAssigneeAdapterFailure(
+            IFlowKanbanAssigneeAdapter adapter,
+            long version,
+            FlowKanbanAssigneeAdapterOperation operation,
+            Exception exception,
+            string? assigneeId = null)
         {
-            var raw = LoadStateText(GlobalAdminStorageKey);
-            if (string.IsNullOrWhiteSpace(raw))
-                return null;
-
-            return raw.Trim();
-        }
-
-        private static void SaveGlobalAdminId(string userId)
-        {
-            if (string.IsNullOrWhiteSpace(userId))
+            if (!IsCurrentAssigneeRefresh(version) || !ReferenceEquals(adapter, AssigneeAdapter))
                 return;
 
-            SaveStateText(GlobalAdminStorageKey, userId.Trim());
+            AssigneeAdapterFailed?.Invoke(
+                this,
+                new FlowKanbanAssigneeAdapterFailedEventArgs(operation, exception, assigneeId));
         }
 
-        private bool HasGlobalAdmin()
+        private bool IsCurrentAssigneeRefresh(long version)
         {
-            return !string.IsNullOrWhiteSpace(LoadGlobalAdminId());
+            return version == Volatile.Read(ref _assigneeRefreshVersion);
         }
 
-        /// <summary>
-        /// Ensures a global admin exists by assigning the current user on first run.
-        /// </summary>
-        public async Task EnsureGlobalAdminAsync(CancellationToken cancellation = default)
+        private void CancelAssigneeRefresh()
         {
-            if (_isEnsuringGlobalAdmin || HasGlobalAdmin())
-                return;
+            Interlocked.Increment(ref _assigneeRefreshVersion);
+            Interlocked.Exchange(ref _assigneeRefreshCancellation, null)?.Cancel();
+        }
 
-            var provider = UserProvider;
-            if (provider == null)
-                return;
-
-            _isEnsuringGlobalAdmin = true;
+        private static async Task ObserveAssigneeRefreshAsync(Task refreshTask)
+        {
             try
             {
-                if (HasGlobalAdmin())
-                    return;
-
-                var currentUser = await provider.GetCurrentUserAsync(cancellation);
-                if (currentUser == null || string.IsNullOrWhiteSpace(currentUser.Id))
-                    return;
-
-                SaveGlobalAdminId(currentUser.Id);
+                await refreshTask;
             }
-            catch (Exception ex)
+            catch (OperationCanceledException)
             {
-                System.Diagnostics.Debug.WriteLine($"FlowKanban global admin bootstrap failed: {ex.GetType().Name} - {ex.Message}");
             }
-            finally
+            catch
             {
-                _isEnsuringGlobalAdmin = false;
+                // Adapter failures are reported through AssigneeAdapterFailed.
             }
-        }
-
-        private async Task RefreshAdminStateAsync(CancellationToken cancellation = default)
-        {
-            var isAdmin = await IsCurrentUserGlobalAdminAsync(cancellation);
-            if (_isCurrentUserGlobalAdmin == isAdmin)
-                return;
-
-            _isCurrentUserGlobalAdmin = isAdmin;
-            RegisterKeyboardAccelerators();
-        }
-
-        private async Task<bool> IsCurrentUserGlobalAdminAsync(CancellationToken cancellation = default)
-        {
-            await EnsureGlobalAdminAsync(cancellation);
-
-            var globalAdminId = LoadGlobalAdminId();
-            if (string.IsNullOrWhiteSpace(globalAdminId))
-                return false;
-
-            var provider = UserProvider;
-            if (provider == null)
-                return false;
-
-            var currentUser = await provider.GetCurrentUserAsync(cancellation);
-            var currentUserId = ResolveUserId(currentUser);
-            if (string.IsNullOrWhiteSpace(currentUserId))
-                return false;
-
-            return string.Equals(currentUserId, globalAdminId, StringComparison.Ordinal);
         }
     }
 }

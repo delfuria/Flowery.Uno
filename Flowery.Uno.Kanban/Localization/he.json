@@ -225,6 +225,7 @@
   "Kanban_Users_AddLocal_Name": "שם",
   "Kanban_Users_AddLocal_Email": "אימייל",
   "Kanban_Users_AddLocal_Button": "הוסף משתמש",
+  "Kanban_Users_Unresolved": "לא זמין",
   "Kanban_Users_GitHub_Title": "חבר GitHub",
   "Kanban_Users_GitHub_Message": "הדבק אסימון גישה אישי של GitHub כדי לאפשר משתמשי GitHub.",
   "Kanban_Users_GitHub_Hint": "משתמש רק במשתמש GitHub שלך. דורש הרשאת 'read:user'.",

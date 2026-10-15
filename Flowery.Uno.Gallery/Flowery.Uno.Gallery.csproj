@@ -88,7 +88,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Flowery.Integrations.Uno\Flowery.Integrations.Uno.csproj" />
     <ProjectReference Include="..\Flowery.Uno.Gallery.Core\Flowery.Uno.Gallery.Core.csproj" />
     <ProjectReference Include="..\Flowery.Uno\Flowery.Uno.csproj" />
     <ProjectReference Include="..\Flowery.Uno.Kanban\Flowery.Uno.Kanban.csproj" />

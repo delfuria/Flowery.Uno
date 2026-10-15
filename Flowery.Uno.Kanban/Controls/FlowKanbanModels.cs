@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Flowery.Enums;
 using Flowery.Localization;
+using Microsoft.UI.Xaml.Media;
 
 namespace Flowery.Uno.Kanban.Controls
 {
@@ -46,6 +47,8 @@ namespace Flowery.Uno.Kanban.Controls
         // Assignment & Categorization
         private string? _assignee;
         private string? _assigneeId;
+        private ImageSource? _assigneeAvatarSource;
+        private IReadOnlyList<string> _assigneeRoles = Array.Empty<string>();
         private string? _tags;
         private string? _laneId;
 
@@ -211,12 +214,28 @@ namespace Flowery.Uno.Kanban.Controls
             set => SetProperty(ref _assignee, value);
         }
 
-        /// <summary>Composite user ID of the assignee (provider-prefixed when available).</summary>
+        /// <summary>Stable host-owned ID of the assignee.</summary>
         [JsonPropertyName("assigneeId")]
         public string? AssigneeId
         {
             get => _assigneeId;
             set => SetProperty(ref _assigneeId, value);
+        }
+
+        /// <summary>Transient avatar supplied by the assignee adapter.</summary>
+        [JsonIgnore]
+        public ImageSource? AssigneeAvatarSource
+        {
+            get => _assigneeAvatarSource;
+            internal set => SetProperty(ref _assigneeAvatarSource, value);
+        }
+
+        /// <summary>Transient roles supplied by the assignee adapter.</summary>
+        [JsonIgnore]
+        public IReadOnlyList<string> AssigneeRoles
+        {
+            get => _assigneeRoles;
+            internal set => SetProperty(ref _assigneeRoles, value ?? Array.Empty<string>());
         }
 
         /// <summary>Comma-separated tags for categorization.</summary>

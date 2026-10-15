@@ -225,6 +225,7 @@
   "Kanban_Users_AddLocal_Name": "الاسم",
   "Kanban_Users_AddLocal_Email": "البريد الإلكتروني",
   "Kanban_Users_AddLocal_Button": "إضافة مستخدم",
+  "Kanban_Users_Unresolved": "غير متاح",
   "Kanban_Users_GitHub_Title": "ربط GitHub",
   "Kanban_Users_GitHub_Message": "ألصق رمز وصول شخصي من GitHub لتمكين مستخدمي GitHub.",
   "Kanban_Users_GitHub_Hint": "يستخدم فقط مستخدم GitHub الخاص بك. يتطلب نطاق 'read:user'.",

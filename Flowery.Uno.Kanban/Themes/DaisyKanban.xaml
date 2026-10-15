@@ -251,11 +251,13 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <controls:DaisyAvatar Grid.Row="0"
+                                <controls:DaisyAvatar x:Name="PART_AssigneeAvatar"
+                                                      Grid.Row="0"
                                                       Grid.RowSpan="2"
                                                       Grid.Column="0"
                                                       Size="ExtraSmall"
-                                                      IsPlaceholder="True"
+                                                      IsPlaceholder="False"
+                                                      Source="{TemplateBinding AssigneeAvatarSource}"
                                                       Initials="{TemplateBinding AssigneeInitials}"
                                                       VerticalAlignment="Center"
                                                       Visibility="{Binding HasAssignee, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}" />
@@ -1538,14 +1540,6 @@
                                                ShowWelcomeMessage="{Binding ShowWelcomeMessage, RelativeSource={RelativeSource TemplatedParent}}"
                                                WelcomeMessageTitle="{Binding WelcomeMessageTitle, RelativeSource={RelativeSource TemplatedParent}}"
                                                WelcomeMessageSubtitle="{Binding WelcomeMessageSubtitle, RelativeSource={RelativeSource TemplatedParent}}" />
-                        <kanban:FlowKanbanUserManagement x:Name="PART_UserManagementView"
-                                                         Grid.Row="0"
-                                                         Grid.RowSpan="4"
-                                                         Grid.Column="0"
-                                                         Visibility="{Binding IsUserManagementViewActive, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                         IsActive="{Binding IsUserManagementViewActive, RelativeSource={RelativeSource TemplatedParent}}"
-                                                         UserProvider="{Binding UserProvider, RelativeSource={RelativeSource TemplatedParent}}"
-                                                         Localization="{Binding Localization, RelativeSource={RelativeSource TemplatedParent}}" />
                         <Grid x:Name="PART_BoardContentHost"
                               Grid.Row="2"
                               Grid.Column="0"
@@ -2664,19 +2658,6 @@
                                             <ToolTip Content="{Binding [Kanban_Home]}" />
                                         </ToolTipService.ToolTip>
                                         <controls:DaisyIconText IconData="{StaticResource DaisyIconHome}"
-                                                                IconSize="14" />
-                                    </controls:DaisyButton>
-                                    <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
-                                                          Command="{TemplateBinding ShowUserManagementCommand}"
-                                                          AutomationProperties.Name="{Binding [Kanban_Users_Title]}"
-                                                          Variant="Neutral"
-                                                          Shape="Square"
-                                                          Size="Small"
-                                                          Visibility="{Binding IsUserManagementButtonVisible, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <ToolTipService.ToolTip>
-                                            <ToolTip Content="{Binding [Kanban_Users_Title]}" />
-                                        </ToolTipService.ToolTip>
-                                        <controls:DaisyIconText IconData="{StaticResource DaisyIconUser}"
                                                                 IconSize="14" />
                                     </controls:DaisyButton>
                                     <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"

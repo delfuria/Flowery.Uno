@@ -229,6 +229,8 @@ The core workspace. It uses a `ScrollViewer` to allow horizontal navigation betw
 
 The swimlane layout renders a fixed header row for columns and a row per lane. Each lane row contains a column cell with lane filtering applied, enabling true matrix-style boards. The `FlowKanbanTaskView` wrapper is used to provide lane context to individual cards.
 
+All layouts (standard, compact, swimlane header row and swimlane cells) use the same `FlowKanbanColumn` template, ported from Flowery.NET 3.1.0. The layouts only set properties on the column: `ShowColumnHeader`, `ShowTasks`, `ShowAddCard`, `IsDropEnabled`, `LaneFilterId` and `TaskListMaxHeight` (swimlane cells bind it to `FlowKanban.SwimlaneCellMaxHeight`). Header, policy and WIP indicators, the collapsed rail, add-card controls and the task list therefore look and behave the same in every layout. The template parts keep their names (`PART_ColumnHeaderGrid`, `PART_TasksItemsControl`, `PART_AddCardTop`, `PART_AddCardBottom` and others); swimlane cells also show `PART_LaneWipIndicator`.
+
 ### 2. Utility Sidebar (Right)
 
 A space-efficient vertical bar (`56px` wide) containing square `DaisyButton` controls for board-level management (home, settings, undo/redo, zoom, save/load, metrics/help).

@@ -409,9 +409,269 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
-                        <ContentPresenter Content="{TemplateBinding Content}"
-                                          HorizontalAlignment="Stretch"
-                                          VerticalAlignment="Stretch" />
+                        <!-- One column surface for the standard, compact and swimlane layouts; the layouts only set properties. -->
+                        <Grid x:Name="PART_ColumnRoot"
+                              DataContext="{Binding ColumnData, RelativeSource={RelativeSource TemplatedParent}}"
+                              Tag="{Binding ParentKanban, RelativeSource={RelativeSource TemplatedParent}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <!-- Lane WIP Badge (swimlane cells) -->
+                            <StackPanel x:Name="PART_LaneWipIndicator"
+                                        Grid.Row="0"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Right"
+                                        Spacing="6"
+                                        Visibility="{Binding Tag.HasLaneWipLimit, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+                                <Border Background="{ThemeResource DaisySecondaryBrush}"
+                                        CornerRadius="10"
+                                        Padding="6,2"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Tag.LaneWipDisplay, RelativeSource={RelativeSource TemplatedParent}}"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               Foreground="{ThemeResource DaisySecondaryContentBrush}" />
+                                </Border>
+                                <controls:DaisyIconText IconData="{StaticResource DaisyIconWarning}"
+                                                        IconSize="12"
+                                                        Foreground="{ThemeResource DaisyWarningBrush}"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="{Binding Tag.IsLaneWipExceeded, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip Content="{Binding ParentKanban.Localization[Kanban_LaneWipLimitExceeded], RelativeSource={RelativeSource TemplatedParent}}"
+                                                 IsEnabled="{Binding ParentKanban.IsColumnTooltipsEnabled, RelativeSource={RelativeSource TemplatedParent}}" />
+                                    </ToolTipService.ToolTip>
+                                </controls:DaisyIconText>
+                            </StackPanel>
+                            <!-- Column Header -->
+                            <Grid Grid.Row="0"
+                                  Visibility="{Binding ShowColumnHeader, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid x:Name="PART_ColumnHeaderGrid"
+                                      Margin="0,0,0,8"
+                                      Background="Transparent"
+                                      Visibility="{Binding IsCollapsed, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border x:Name="PART_ColumnGrip"
+                                            Grid.Row="0"
+                                            Background="Transparent"
+                                            Padding="4"
+                                            CornerRadius="4"
+                                            VerticalAlignment="Center"
+                                            AutomationProperties.Name="{Binding ParentKanban.Localization[Kanban_Column_Reorder], RelativeSource={RelativeSource TemplatedParent}}">
+                                        <controls:DaisyIconText IconData="{StaticResource DaisyIconNestedSquares}"
+                                                                IconSize="12"
+                                                                Foreground="{Binding ElementName=PART_ColumnTitle, Path=Foreground}" />
+                                    </Border>
+                                    <TextBlock x:Name="PART_ColumnTitle"
+                                               Grid.Row="0"
+                                               Grid.Column="1"
+                                               Text="{Binding DisplayTitle}"
+                                               FontSize="18"
+                                               Foreground="{ThemeResource DaisyBaseContentBrush}"
+                                               FontWeight="Bold"
+                                               TextTrimming="CharacterEllipsis"
+                                               TextWrapping="NoWrap"
+                                               VerticalAlignment="Center" />
+                                    <StackPanel x:Name="PART_ColumnHeaderIcons"
+                                                Grid.Row="0"
+                                                Grid.Column="1"
+                                                Orientation="Horizontal"
+                                                Spacing="8"
+                                                HorizontalAlignment="Right">
+                                        <controls:DaisyBadge Variant="Neutral"
+                                                             Size="Small"
+                                                             Content="{Binding ParentKanban.Localization[Kanban_ArchiveColumn], RelativeSource={RelativeSource TemplatedParent}}"
+                                                             Visibility="{Binding IsArchiveColumn, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                             AutomationProperties.Name="{Binding ParentKanban.Localization[Kanban_ArchiveColumn], RelativeSource={RelativeSource TemplatedParent}}">
+                                            <ToolTipService.ToolTip>
+                                                <ToolTip Content="{Binding ParentKanban.Localization[Kanban_ArchiveColumn], RelativeSource={RelativeSource TemplatedParent}}"
+                                                         IsEnabled="{Binding ParentKanban.IsColumnTooltipsEnabled, RelativeSource={RelativeSource TemplatedParent}}" />
+                                            </ToolTipService.ToolTip>
+                                        </controls:DaisyBadge>
+                                        <!-- Task Count Badge -->
+                                        <Border x:Name="PART_TaskCountBadge"
+                                                Background="{ThemeResource DaisySecondaryBrush}"
+                                                CornerRadius="10"
+                                                Padding="6,2"
+                                                VerticalAlignment="Center">
+                                            <TextBlock x:Name="PART_TaskCountText"
+                                                       Text="{Binding WipDisplay}"
+                                                       FontSize="11"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{ThemeResource DaisySecondaryContentBrush}" />
+                                        </Border>
+                                        <controls:DaisyIconText IconData="{StaticResource DaisyIconWarning}"
+                                                                IconSize="12"
+                                                                Foreground="{ThemeResource DaisyWarningBrush}"
+                                                                VerticalAlignment="Center"
+                                                                Visibility="{Binding IsWipExceeded, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <ToolTipService.ToolTip>
+                                                <ToolTip Content="{Binding ParentKanban.Localization[Kanban_WipLimitExceeded], RelativeSource={RelativeSource TemplatedParent}}"
+                                                         IsEnabled="{Binding ParentKanban.IsColumnTooltipsEnabled, RelativeSource={RelativeSource TemplatedParent}}" />
+                                            </ToolTipService.ToolTip>
+                                        </controls:DaisyIconText>
+                                        <controls:DaisyIconText x:Name="PART_PolicyIcon"
+                                                                IconData="{StaticResource DaisyIconInfo}"
+                                                                IconSize="12"
+                                                                Foreground="{ThemeResource DaisyBaseContentBrush}"
+                                                                VerticalAlignment="Center"
+                                                                Visibility="{Binding HasPolicy, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                AutomationProperties.Name="{Binding ParentKanban.Localization[Kanban_Policy_Info], RelativeSource={RelativeSource TemplatedParent}}">
+                                            <ToolTipService.ToolTip>
+                                                <ToolTip Content="{Binding PolicyText}"
+                                                         IsEnabled="{Binding ParentKanban.IsColumnTooltipsEnabled, RelativeSource={RelativeSource TemplatedParent}}" />
+                                            </ToolTipService.ToolTip>
+                                        </controls:DaisyIconText>
+                                        <!-- Edit Title Button (shown on hover) -->
+                                        <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
+                                                              x:Name="PART_RenameBtn"
+                                                              Command="{Binding ParentKanban.EditColumnCommand, RelativeSource={RelativeSource TemplatedParent}}"
+                                                              CommandParameter="{Binding}"
+                                                              Variant="Ghost"
+                                                              Shape="Square"
+                                                              Size="ExtraSmall"
+                                                              Opacity="0"
+                                                              IsHitTestVisible="False"
+                                                              controls:DaisyNeumorphic.IsEnabled="False"
+                                                              VerticalAlignment="Center"
+                                                              AutomationProperties.Name="{Binding ParentKanban.Localization[Kanban_RenameSection], RelativeSource={RelativeSource TemplatedParent}}">
+                                            <ToolTipService.ToolTip>
+                                                <ToolTip Content="{Binding ParentKanban.Localization[Kanban_RenameSection], RelativeSource={RelativeSource TemplatedParent}}"
+                                                         IsEnabled="{Binding ParentKanban.IsColumnTooltipsEnabled, RelativeSource={RelativeSource TemplatedParent}}" />
+                                            </ToolTipService.ToolTip>
+                                            <controls:DaisyIconText IconData="{StaticResource DaisyIconPencil}"
+                                                                    IconSize="12" />
+                                        </controls:DaisyButton>
+                                    </StackPanel>
+                                    <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
+                                                          x:Name="PART_CollapseBtn"
+                                                          Grid.Row="0"
+                                                          Grid.Column="2"
+                                                          Visibility="{Binding ParentKanban.IsCompactLayoutEnabled, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}"
+                                                          Command="{Binding ParentKanban.ToggleColumnCollapseCommand, RelativeSource={RelativeSource TemplatedParent}}"
+                                                          CommandParameter="{Binding}"
+                                                          Variant="Ghost"
+                                                          Shape="Square"
+                                                          Size="ExtraSmall"
+                                                          VerticalAlignment="Center"
+                                                          AutomationProperties.Name="{Binding ParentKanban.Localization[Kanban_Column_ToggleCollapse], RelativeSource={RelativeSource TemplatedParent}}">
+                                        <ToolTipService.ToolTip>
+                                            <ToolTip Content="{Binding ParentKanban.Localization[Kanban_Column_ToggleCollapse], RelativeSource={RelativeSource TemplatedParent}}"
+                                                     IsEnabled="{Binding ParentKanban.IsColumnTooltipsEnabled, RelativeSource={RelativeSource TemplatedParent}}" />
+                                        </ToolTipService.ToolTip>
+                                        <controls:DaisyIconText x:Name="PART_CollapseIcon"
+                                                                IconData="{StaticResource DaisyIconChevronLeft}"
+                                                                IconSize="12" />
+                                    </controls:DaisyButton>
+                                </Grid>
+
+                                <!-- Collapsed Header -->
+                                <StackPanel x:Name="PART_CollapsedHeader"
+                                            Visibility="{Binding IsCollapsed, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                            Margin="0,0,0,8"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Top"
+                                            Spacing="4">
+                                    <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
+                                                          x:Name="PART_CollapsedExpandBtn"
+                                                          Variant="Ghost"
+                                                          Shape="Square"
+                                                          Size="ExtraSmall"
+                                                          Visibility="{Binding ParentKanban.IsCompactLayoutEnabled, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}"
+                                                          Command="{Binding ParentKanban.ToggleColumnCollapseCommand, RelativeSource={RelativeSource TemplatedParent}}"
+                                                          CommandParameter="{Binding}"
+                                                          AutomationProperties.Name="{Binding ParentKanban.Localization[Kanban_Column_ToggleCollapse], RelativeSource={RelativeSource TemplatedParent}}">
+                                        <controls:DaisyIconText IconData="{StaticResource DaisyIconChevronRight}"
+                                                                IconSize="12" />
+                                    </controls:DaisyButton>
+                                    <TextBlock x:Name="PART_CollapsedTitle"
+                                               Text="{Binding DisplayTitle}"
+                                               FontSize="18"
+                                               Foreground="{ThemeResource DaisyBaseContentBrush}"
+                                               FontWeight="Bold"
+                                               TextWrapping="Wrap"
+                                               TextTrimming="None"
+                                               TextAlignment="Center"
+                                               HorizontalAlignment="Center" />
+                                </StackPanel>
+                            </Grid>
+                            <!-- Add Card (top) -->
+                            <kanban:FlowKanbanAddCard x:Name="PART_AddCardTop"
+                                                      Grid.Row="1"
+                                                      ColumnData="{Binding}"
+                                                      LaneId="{Binding LaneFilterId, RelativeSource={RelativeSource TemplatedParent}}"
+                                                      InsertAtTop="True"
+                                                      AddCardText="{Binding ParentKanban.Localization[Kanban_AddCard], RelativeSource={RelativeSource TemplatedParent}}"
+                                                      AddCardPlaceholderText="{Binding ParentKanban.Localization[Kanban_AddCardPlaceholder], RelativeSource={RelativeSource TemplatedParent}}"
+                                                      AddCardConfirmText="{Binding ParentKanban.Localization[Common_Add], RelativeSource={RelativeSource TemplatedParent}}"
+                                                      AddCardCancelText="{Binding ParentKanban.Localization[Common_Cancel], RelativeSource={RelativeSource TemplatedParent}}"
+                                                      Margin="0,0,0,8"
+                                                      Visibility="{Binding ShowAddCardTop, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <!-- Tasks (scrollable) -->
+                            <Grid Grid.Row="2"
+                                  Margin="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource KanbanTasksHostMarginConverter}}"
+                                  Visibility="{Binding ShowTasks, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <ListView x:Name="PART_TasksItemsControl"
+                                          ItemsSource="{Binding TaskViews, RelativeSource={RelativeSource TemplatedParent}}"
+                                          MaxHeight="{Binding TaskListMaxHeight, RelativeSource={RelativeSource TemplatedParent}}"
+                                          SelectionMode="None"
+                                          IsItemClickEnabled="False"
+                                          Padding="{Binding ColumnSize, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource KanbanTasksListViewPaddingConverter}}"
+                                          ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                          ScrollViewer.VerticalScrollMode="Enabled"
+                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                          ItemContainerStyle="{StaticResource KanbanTasksListViewItemContainerStyle}">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Spacing="4"
+                                                        HorizontalAlignment="Stretch">
+                                                <TextBlock Text="{Binding Lane.Title}"
+                                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                                           Foreground="{ThemeResource DaisyBaseContentBrush}"
+                                                           Visibility="{Binding ShowLaneHeader, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                <kanban:FlowTaskCard Title="{Binding Task.Title}"
+                                                                     Task="{Binding Task}"
+                                                                     Palette="{Binding Task.Palette}"
+                                                                     CloseCommand="{Binding Tag.RemoveCardCommand, ElementName=PART_ColumnRoot}"
+                                                                     CloseCommandParameter="{Binding Task}"
+                                                                     EditCommand="{Binding Tag.EditCardCommand, ElementName=PART_ColumnRoot}"
+                                                                     Visibility="{Binding Task.IsSearchMatch, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                     HorizontalAlignment="Stretch">
+                                                    <TextBlock Text="{Binding Task.Description}"
+                                                               TextWrapping="Wrap"
+                                                               FontSize="12" />
+                                                </kanban:FlowTaskCard>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                                <Canvas x:Name="PART_TaskDropIndicatorHost"
+                                        IsHitTestVisible="False" />
+                            </Grid>
+                            <!-- Add Card (bottom) -->
+                            <kanban:FlowKanbanAddCard x:Name="PART_AddCardBottom"
+                                                      Grid.Row="3"
+                                                      ColumnData="{Binding}"
+                                                      LaneId="{Binding LaneFilterId, RelativeSource={RelativeSource TemplatedParent}}"
+                                                      AddCardText="{Binding ParentKanban.Localization[Kanban_AddCard], RelativeSource={RelativeSource TemplatedParent}}"
+                                                      AddCardPlaceholderText="{Binding ParentKanban.Localization[Kanban_AddCardPlaceholder], RelativeSource={RelativeSource TemplatedParent}}"
+                                                      AddCardConfirmText="{Binding ParentKanban.Localization[Common_Add], RelativeSource={RelativeSource TemplatedParent}}"
+                                                      AddCardCancelText="{Binding ParentKanban.Localization[Common_Cancel], RelativeSource={RelativeSource TemplatedParent}}"
+                                                      Margin="0,8,0,0"
+                                                      Visibility="{Binding ShowAddCardBottom, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        </Grid>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
@@ -1578,239 +1838,7 @@
                                                                          BorderBrush="{ThemeResource DaisyBase300Brush}"
                                                                          BorderThickness="1"
                                                                          MaxHeight="{Binding Tag.CompactColumnMaxHeight, ElementName=PART_BoardRoot}"
-                                                                         Visibility="{Binding IsArchiveColumnVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <Grid>
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="Auto" />
-                                                            <RowDefinition Height="Auto" />
-                                                            <RowDefinition Height="*" />
-                                                            <RowDefinition Height="Auto" />
-                                                        </Grid.RowDefinitions>
-                                                        <!-- Column Header -->
-                                                        <Grid Grid.Row="0"
-                                                              Visibility="{Binding ShowColumnHeader, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                            <Grid x:Name="PART_ColumnHeaderGrid"
-                                                                  Margin="0,0,0,8"
-                                                                  Background="Transparent"
-                                                                  Visibility="{Binding IsCollapsed, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}">
-                                                                <Grid.RowDefinitions>
-                                                                    <RowDefinition Height="Auto" />
-                                                                    <RowDefinition Height="Auto" />
-                                                                </Grid.RowDefinitions>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                    <ColumnDefinition Width="*" />
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                </Grid.ColumnDefinitions>
-                                                                <Border x:Name="PART_ColumnGrip"
-                                                                        Grid.Row="0"
-                                                                        Background="Transparent"
-                                                                        Padding="4"
-                                                                        CornerRadius="4"
-                                                                        VerticalAlignment="Center"
-                                                                        AutomationProperties.Name="{Binding DataContext[Kanban_Column_Reorder], ElementName=PART_BoardRoot}">
-                                                                    <controls:DaisyIconText IconData="{StaticResource DaisyIconNestedSquares}"
-                                                                                            IconSize="12"
-                                                                                            Foreground="{Binding ElementName=PART_ColumnTitle, Path=Foreground}" />
-                                                                </Border>
-                                                                <TextBlock x:Name="PART_ColumnTitle"
-                                                                           Grid.Row="0"
-                                                                           Grid.Column="1"
-                                                                           Text="{Binding DisplayTitle}"
-                                                                           FontSize="18"
-                                                                           Foreground="{ThemeResource DaisyBaseContentBrush}"
-                                                                           FontWeight="Bold"
-                                                                           TextTrimming="CharacterEllipsis"
-                                                                           TextWrapping="NoWrap"
-                                                                           VerticalAlignment="Center" />
-                                                                <StackPanel x:Name="PART_ColumnHeaderIcons"
-                                                                            Grid.Row="0"
-                                                                            Grid.Column="1"
-                                                                            Orientation="Horizontal"
-                                                                            Spacing="8"
-                                                                            HorizontalAlignment="Right">
-                                                                    <controls:DaisyBadge Variant="Neutral"
-                                                                                         Size="Small"
-                                                                                         Content="{Binding DataContext[Kanban_ArchiveColumn], ElementName=PART_BoardRoot}"
-                                                                                         Visibility="{Binding IsArchiveColumn, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                                                         AutomationProperties.Name="{Binding DataContext[Kanban_ArchiveColumn], ElementName=PART_BoardRoot}">
-                                                                        <ToolTipService.ToolTip>
-                                                                            <ToolTip Content="{Binding DataContext[Kanban_ArchiveColumn], ElementName=PART_BoardRoot}"
-                                                                                     IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                        </ToolTipService.ToolTip>
-                                                                    </controls:DaisyBadge>
-                                                                    <!-- Task Count Badge -->
-                                                                    <Border x:Name="PART_TaskCountBadge"
-                                                                            Background="{ThemeResource DaisySecondaryBrush}"
-                                                                            CornerRadius="10"
-                                                                            Padding="6,2"
-                                                                            VerticalAlignment="Center">
-                                                                        <TextBlock x:Name="PART_TaskCountText"
-                                                                                   Text="{Binding WipDisplay}"
-                                                                                   FontSize="11"
-                                                                                   FontWeight="SemiBold"
-                                                                                   Foreground="{ThemeResource DaisySecondaryContentBrush}" />
-                                                                    </Border>
-                                                                    <controls:DaisyIconText IconData="{StaticResource DaisyIconWarning}"
-                                                                                            IconSize="12"
-                                                                                            Foreground="{ThemeResource DaisyWarningBrush}"
-                                                                                            VerticalAlignment="Center"
-                                                                                            Visibility="{Binding IsWipExceeded, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                        <ToolTipService.ToolTip>
-                                                                            <ToolTip Content="{Binding DataContext[Kanban_WipLimitExceeded], ElementName=PART_BoardRoot}"
-                                                                                     IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                        </ToolTipService.ToolTip>
-                                                                    </controls:DaisyIconText>
-                                                                    <controls:DaisyIconText IconData="{StaticResource DaisyIconInfo}"
-                                                                                            IconSize="12"
-                                                                                            Foreground="{ThemeResource DaisyBaseContentBrush}"
-                                                                                            VerticalAlignment="Center"
-                                                                                            Visibility="{Binding HasPolicy, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                                                            AutomationProperties.Name="{Binding DataContext[Kanban_Policy_Info], ElementName=PART_BoardRoot}">
-                                                                        <ToolTipService.ToolTip>
-                                                                            <ToolTip Content="{Binding PolicyText}"
-                                                                                     IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                        </ToolTipService.ToolTip>
-                                                                    </controls:DaisyIconText>
-                                                                    <!-- Edit Title Button (shown on hover) -->
-                                                                    <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
-                                                                                          x:Name="PART_RenameBtn"
-                                                                                          Command="{Binding Tag.EditColumnCommand, ElementName=PART_BoardRoot}"
-                                                                                          CommandParameter="{Binding}"
-                                                                                          Variant="Ghost"
-                                                                                          Shape="Square"
-                                                                                          Size="ExtraSmall"
-                                                                                          Opacity="0"
-                                                                                          IsHitTestVisible="False"
-                                                                                          controls:DaisyNeumorphic.IsEnabled="False"
-                                                                                          VerticalAlignment="Center"
-                                                                                          AutomationProperties.Name="{Binding DataContext[Kanban_RenameSection], ElementName=PART_BoardRoot}">
-                                                                        <ToolTipService.ToolTip>
-                                                                            <ToolTip Content="{Binding DataContext[Kanban_RenameSection], ElementName=PART_BoardRoot}"
-                                                                                     IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                        </ToolTipService.ToolTip>
-                                                                        <controls:DaisyIconText IconData="{StaticResource DaisyIconPencil}"
-                                                                                                IconSize="12" />
-                                                                    </controls:DaisyButton>
-                                                                </StackPanel>
-                                                                <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
-                                                                                      x:Name="PART_CollapseBtn"
-                                                                                      Grid.Row="0"
-                                                                                      Grid.Column="2"
-                                                                                      Visibility="{Binding Tag.IsCompactLayoutEnabled, ElementName=PART_BoardRoot, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}"
-                                                                                      Command="{Binding Tag.ToggleColumnCollapseCommand, ElementName=PART_BoardRoot}"
-                                                                                      CommandParameter="{Binding}"
-                                                                                      Variant="Ghost"
-                                                                                      Shape="Square"
-                                                                                      Size="ExtraSmall"
-                                                                                      VerticalAlignment="Center"
-                                                                                      AutomationProperties.Name="{Binding DataContext[Kanban_Column_ToggleCollapse], ElementName=PART_BoardRoot}">
-                                                                    <ToolTipService.ToolTip>
-                                                                        <ToolTip Content="{Binding DataContext[Kanban_Column_ToggleCollapse], ElementName=PART_BoardRoot}"
-                                                                                 IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                    </ToolTipService.ToolTip>
-                                                                    <controls:DaisyIconText x:Name="PART_CollapseIcon"
-                                                                                            IconData="{StaticResource DaisyIconChevronLeft}"
-                                                                                            IconSize="12" />
-                                                                </controls:DaisyButton>
-                                                            </Grid>
-
-                                                            <!-- Collapsed Header -->
-                                                            <StackPanel x:Name="PART_CollapsedHeader"
-                                                                        Visibility="{Binding IsCollapsed, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                                        Margin="0,0,0,8"
-                                                                        HorizontalAlignment="Center"
-                                                                        VerticalAlignment="Top"
-                                                                        Spacing="4">
-                                                                <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
-                                                                                      x:Name="PART_CollapsedExpandBtn"
-                                                                                      Variant="Ghost"
-                                                                                      Shape="Square"
-                                                                                      Size="ExtraSmall"
-                                                                                      Visibility="{Binding Tag.IsCompactLayoutEnabled, ElementName=PART_BoardRoot, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}"
-                                                                                      Command="{Binding Tag.ToggleColumnCollapseCommand, ElementName=PART_BoardRoot}"
-                                                                                      CommandParameter="{Binding}"
-                                                                                      AutomationProperties.Name="{Binding DataContext[Kanban_Column_ToggleCollapse], ElementName=PART_BoardRoot}">
-                                                                    <controls:DaisyIconText IconData="{StaticResource DaisyIconChevronRight}"
-                                                                                            IconSize="12" />
-                                                                </controls:DaisyButton>
-                                                                <TextBlock x:Name="PART_CollapsedTitle"
-                                                                           Text="{Binding DisplayTitle}"
-                                                                           FontSize="18"
-                                                                           Foreground="{ThemeResource DaisyBaseContentBrush}"
-                                                                           FontWeight="Bold"
-                                                                           TextWrapping="Wrap"
-                                                                           TextTrimming="None"
-                                                                           TextAlignment="Center"
-                                                                           HorizontalAlignment="Center" />
-                                                            </StackPanel>
-                                                        </Grid>
-                                                        <!-- Add Card (top) -->
-                                                        <kanban:FlowKanbanAddCard x:Name="PART_AddCardTop"
-                                                                                  Grid.Row="1"
-                                                                                  ColumnData="{Binding}"
-                                                                                  LaneId="{Binding LaneFilterId, ElementName=PART_KanbanColumn}"
-                                                                                  InsertAtTop="True"
-                                                                                  AddCardText="{Binding DataContext[Kanban_AddCard], ElementName=PART_BoardRoot}"
-                                                                                  AddCardPlaceholderText="{Binding DataContext[Kanban_AddCardPlaceholder], ElementName=PART_BoardRoot}"
-                                                                                  AddCardConfirmText="{Binding DataContext[Common_Add], ElementName=PART_BoardRoot}"
-                                                                                  AddCardCancelText="{Binding DataContext[Common_Cancel], ElementName=PART_BoardRoot}"
-                                                                                  Margin="0,0,0,8"
-                                                                                  Visibility="{Binding ShowAddCardTop, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                        <!-- Tasks (scrollable) -->
-                                                        <Grid Grid.Row="2"
-                                                              Margin="{Binding Padding, ElementName=PART_KanbanColumn, Converter={StaticResource KanbanTasksHostMarginConverter}}"
-                                                              Visibility="{Binding ShowTasks, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                            <ListView x:Name="PART_TasksItemsControl"
-                                                                      ItemsSource="{Binding TaskViews, ElementName=PART_KanbanColumn}"
-                                                                      SelectionMode="None"
-                                                                      IsItemClickEnabled="False"
-                                                                      Padding="{Binding ColumnSize, ElementName=PART_KanbanColumn, Converter={StaticResource KanbanTasksListViewPaddingConverter}}"
-                                                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                                                      ScrollViewer.VerticalScrollMode="Enabled"
-                                                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                                      ItemContainerStyle="{StaticResource KanbanTasksListViewItemContainerStyle}">
-                                                                <ListView.ItemTemplate>
-                                                                    <DataTemplate>
-                                                                        <StackPanel Spacing="4"
-                                                                                    HorizontalAlignment="Stretch">
-                                                                            <TextBlock Text="{Binding Lane.Title}"
-                                                                                       Style="{ThemeResource CaptionTextBlockStyle}"
-                                                                                       Foreground="{ThemeResource DaisyBaseContentBrush}"
-                                                                                       Visibility="{Binding ShowLaneHeader, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                                            <kanban:FlowTaskCard Title="{Binding Task.Title}"
-                                                                                                 Task="{Binding Task}"
-                                                                                                 Palette="{Binding Task.Palette}"
-                                                                                                 CloseCommand="{Binding Tag.RemoveCardCommand, ElementName=PART_BoardRoot}"
-                                                                                                 CloseCommandParameter="{Binding Task}"
-                                                                                                 EditCommand="{Binding Tag.EditCardCommand, ElementName=PART_BoardRoot}"
-                                                                                                 Visibility="{Binding Task.IsSearchMatch, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                                                                 HorizontalAlignment="Stretch">
-                                                                                <TextBlock Text="{Binding Task.Description}"
-                                                                                           TextWrapping="Wrap"
-                                                                                           FontSize="12" />
-                                                                            </kanban:FlowTaskCard>
-                                                                        </StackPanel>
-                                                                    </DataTemplate>
-                                                                </ListView.ItemTemplate>
-                                                            </ListView>
-                                                            <Canvas x:Name="PART_TaskDropIndicatorHost"
-                                                                    IsHitTestVisible="False" />
-                                                        </Grid>
-                                                        <!-- Add Card (bottom) -->
-                                                        <kanban:FlowKanbanAddCard x:Name="PART_AddCardBottom"
-                                                                                  Grid.Row="3"
-                                                                                  ColumnData="{Binding}"
-                                                                                  LaneId="{Binding LaneFilterId, ElementName=PART_KanbanColumn}"
-                                                                                  AddCardText="{Binding DataContext[Kanban_AddCard], ElementName=PART_BoardRoot}"
-                                                                                  AddCardPlaceholderText="{Binding DataContext[Kanban_AddCardPlaceholder], ElementName=PART_BoardRoot}"
-                                                                                  AddCardConfirmText="{Binding DataContext[Common_Add], ElementName=PART_BoardRoot}"
-                                                                                  AddCardCancelText="{Binding DataContext[Common_Cancel], ElementName=PART_BoardRoot}"
-                                                                                  Margin="0,8,0,0"
-                                                                                  Visibility="{Binding ShowAddCardBottom, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                    </Grid>
-                                                </kanban:FlowKanbanColumn>
+                                                                         Visibility="{Binding IsArchiveColumnVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </controls:DaisyResizableColumnsHost>
@@ -1852,205 +1880,7 @@
                                                                          Margin="2"
                                                                          BorderBrush="{ThemeResource DaisyBase300Brush}"
                                                                          BorderThickness="1"
-                                                                         MaxHeight="{Binding Tag.CompactColumnMaxHeight, ElementName=PART_BoardRoot}">
-                                                    <Grid>
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="Auto" />
-                                                            <RowDefinition Height="Auto" />
-                                                            <RowDefinition Height="*" />
-                                                            <RowDefinition Height="Auto" />
-                                                        </Grid.RowDefinitions>
-                                                        <!-- Column Header -->
-                                                        <Grid x:Name="PART_ColumnHeaderGrid"
-                                                              Margin="0,0,0,8"
-                                                              Background="Transparent"
-                                                              Visibility="{Binding ShowColumnHeader, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                            <Grid.RowDefinitions>
-                                                                <RowDefinition Height="Auto" />
-                                                                <RowDefinition Height="Auto" />
-                                                            </Grid.RowDefinitions>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <Border x:Name="PART_ColumnGrip"
-                                                                    Grid.Row="0"
-                                                                    Background="Transparent"
-                                                                    Padding="4"
-                                                                    CornerRadius="4"
-                                                                    VerticalAlignment="Center"
-                                                                    AutomationProperties.Name="{Binding DataContext[Kanban_Column_Reorder], ElementName=PART_BoardRoot}">
-                                                                <controls:DaisyIconText IconData="{StaticResource DaisyIconNestedSquares}"
-                                                                                        IconSize="12"
-                                                                                        Foreground="{Binding ElementName=PART_ColumnTitle, Path=Foreground}" />
-                                                            </Border>
-                                                            <TextBlock x:Name="PART_ColumnTitle"
-                                                                       Grid.Row="0"
-                                                                       Grid.Column="1"
-                                                                       Text="{Binding Title}"
-                                                                       FontSize="18"
-                                                                       Foreground="{ThemeResource DaisyBaseContentBrush}"
-                                                                       FontWeight="Bold"
-                                                                       TextTrimming="CharacterEllipsis"
-                                                                       TextWrapping="NoWrap"
-                                                                       VerticalAlignment="Center" />
-                                                        <StackPanel x:Name="PART_ColumnHeaderIcons"
-                                                                    Grid.Row="0"
-                                                                    Grid.Column="1"
-                                                                    Orientation="Horizontal"
-                                                                    Spacing="8"
-                                                                    HorizontalAlignment="Right">
-                                                            <controls:DaisyBadge Variant="Neutral"
-                                                                                 Size="Small"
-                                                                                 Content="{Binding DataContext[Kanban_ArchiveColumn], ElementName=PART_BoardRoot}"
-                                                                                 Visibility="{Binding IsArchiveColumn, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                                                 AutomationProperties.Name="{Binding DataContext[Kanban_ArchiveColumn], ElementName=PART_BoardRoot}">
-                                                                <ToolTipService.ToolTip>
-                                                                    <ToolTip Content="{Binding DataContext[Kanban_ArchiveColumn], ElementName=PART_BoardRoot}"
-                                                                             IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                </ToolTipService.ToolTip>
-                                                            </controls:DaisyBadge>
-                                                            <!-- Task Count Badge -->
-                                                            <Border x:Name="PART_TaskCountBadge"
-                                                                    Background="{ThemeResource DaisySecondaryBrush}"
-                                                                    CornerRadius="10"
-                                                                    Padding="6,2"
-                                                                    VerticalAlignment="Center">
-                                                                <TextBlock x:Name="PART_TaskCountText"
-                                                                           Text="{Binding WipDisplay}"
-                                                                           FontSize="11"
-                                                                           FontWeight="SemiBold"
-                                                                           Foreground="{ThemeResource DaisySecondaryContentBrush}" />
-                                                            </Border>
-                                                            <controls:DaisyIconText IconData="{StaticResource DaisyIconWarning}"
-                                                                                    IconSize="12"
-                                                                                    Foreground="{ThemeResource DaisyWarningBrush}"
-                                                                                    VerticalAlignment="Center"
-                                                                                    Visibility="{Binding IsWipExceeded, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                <ToolTipService.ToolTip>
-                                                                    <ToolTip Content="{Binding DataContext[Kanban_WipLimitExceeded], ElementName=PART_BoardRoot}"
-                                                                             IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                </ToolTipService.ToolTip>
-                                                            </controls:DaisyIconText>
-                                                            <controls:DaisyIconText IconData="{StaticResource DaisyIconInfo}"
-                                                                                    IconSize="12"
-                                                                                    Foreground="{ThemeResource DaisyBaseContentBrush}"
-                                                                                    VerticalAlignment="Center"
-                                                                                    Visibility="{Binding HasPolicy, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                                                    AutomationProperties.Name="{Binding DataContext[Kanban_Policy_Info], ElementName=PART_BoardRoot}">
-                                                                <ToolTipService.ToolTip>
-                                                                    <ToolTip Content="{Binding PolicyText}"
-                                                                             IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                </ToolTipService.ToolTip>
-                                                            </controls:DaisyIconText>
-                                                            <!-- Edit Title Button (shown on hover) -->
-                                                            <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
-                                                                                  x:Name="PART_RenameBtn"
-                                                                                  Command="{Binding Tag.EditColumnCommand, ElementName=PART_BoardRoot}"
-                                                                                  CommandParameter="{Binding}"
-                                                                                  Variant="Ghost"
-                                                                                  Shape="Square"
-                                                                                  Size="ExtraSmall"
-                                                                                  Opacity="0"
-                                                                                  IsHitTestVisible="False"
-                                                                                  controls:DaisyNeumorphic.IsEnabled="False"
-                                                                                  VerticalAlignment="Center"
-                                                                                  AutomationProperties.Name="{Binding DataContext[Kanban_RenameSection], ElementName=PART_BoardRoot}">
-                                                                <ToolTipService.ToolTip>
-                                                                    <ToolTip Content="{Binding DataContext[Kanban_RenameSection], ElementName=PART_BoardRoot}"
-                                                                             IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                </ToolTipService.ToolTip>
-                                                                <controls:DaisyIconText IconData="{StaticResource DaisyIconPencil}"
-                                                                                        IconSize="12" />
-                                                            </controls:DaisyButton>
-                                                        </StackPanel>
-                                                        <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
-                                                                              x:Name="PART_CollapseBtn"
-                                                                              Grid.Row="0"
-                                                                              Grid.Column="2"
-                                                                              Visibility="{Binding Tag.IsCompactLayoutEnabled, ElementName=PART_BoardRoot, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}"
-                                                                              Command="{Binding Tag.ToggleColumnCollapseCommand, ElementName=PART_BoardRoot}"
-                                                                              CommandParameter="{Binding}"
-                                                                              Variant="Ghost"
-                                                                              Shape="Square"
-                                                                              Size="ExtraSmall"
-                                                                              VerticalAlignment="Center"
-                                                                              AutomationProperties.Name="{Binding DataContext[Kanban_Column_ToggleCollapse], ElementName=PART_BoardRoot}">
-                                                            <ToolTipService.ToolTip>
-                                                                <ToolTip Content="{Binding DataContext[Kanban_Column_ToggleCollapse], ElementName=PART_BoardRoot}"
-                                                                         IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                            </ToolTipService.ToolTip>
-                                                            <controls:DaisyIconText x:Name="PART_CollapseIcon"
-                                                                                    IconData="{StaticResource DaisyIconChevronLeft}"
-                                                                                    IconSize="12" />
-                                                        </controls:DaisyButton>
-                                                    </Grid>
-                                                    <!-- Add Card (top) -->
-                                                    <kanban:FlowKanbanAddCard x:Name="PART_AddCardTop"
-                                                                              Grid.Row="1"
-                                                                              ColumnData="{Binding}"
-                                                                              LaneId="{Binding LaneFilterId, ElementName=PART_KanbanColumn}"
-                                                                              InsertAtTop="True"
-                                                                              AddCardText="{Binding DataContext[Kanban_AddCard], ElementName=PART_BoardRoot}"
-                                                                              AddCardPlaceholderText="{Binding DataContext[Kanban_AddCardPlaceholder], ElementName=PART_BoardRoot}"
-                                                                              AddCardConfirmText="{Binding DataContext[Common_Add], ElementName=PART_BoardRoot}"
-                                                                              AddCardCancelText="{Binding DataContext[Common_Cancel], ElementName=PART_BoardRoot}"
-                                                                              Margin="0,0,0,8"
-                                                                              Visibility="{Binding ShowAddCardTop, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                    <!-- Tasks (scrollable) -->
-                                                    <Grid Grid.Row="2"
-                                                          Margin="{Binding Padding, ElementName=PART_KanbanColumn, Converter={StaticResource KanbanTasksHostMarginConverter}}"
-                                                          Visibility="{Binding ShowTasks, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                        <ListView x:Name="PART_TasksItemsControl"
-                                                                  ItemsSource="{Binding TaskViews, ElementName=PART_KanbanColumn}"
-                                                                  SelectionMode="None"
-                                                                  IsItemClickEnabled="False"
-                                                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                                                  ScrollViewer.VerticalScrollMode="Enabled"
-                                                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                                  ItemContainerStyle="{StaticResource KanbanTasksListViewItemContainerStyle}">
-                                                            <ListView.ItemTemplate>
-                                                                <DataTemplate>
-                                                                    <StackPanel Spacing="4"
-                                                                                HorizontalAlignment="Stretch">
-                                                                        <TextBlock Text="{Binding Lane.Title}"
-                                                                                   Style="{ThemeResource CaptionTextBlockStyle}"
-                                                                                   Foreground="{ThemeResource DaisyBaseContentBrush}"
-                                                                                   Visibility="{Binding ShowLaneHeader, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                                        <kanban:FlowTaskCard Title="{Binding Task.Title}"
-                                                                                             Task="{Binding Task}"
-                                                                                             Palette="{Binding Task.Palette}"
-                                                                                             CloseCommand="{Binding Tag.RemoveCardCommand, ElementName=PART_BoardRoot}"
-                                                                                             CloseCommandParameter="{Binding Task}"
-                                                                                             EditCommand="{Binding Tag.EditCardCommand, ElementName=PART_BoardRoot}"
-                                                                                             Visibility="{Binding Task.IsSearchMatch, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                                                             HorizontalAlignment="Stretch">
-                                                                            <TextBlock Text="{Binding Task.Description}"
-                                                                                       TextWrapping="Wrap"
-                                                                                       FontSize="12" />
-                                                                        </kanban:FlowTaskCard>
-                                                                    </StackPanel>
-                                                                </DataTemplate>
-                                                            </ListView.ItemTemplate>
-                                                        </ListView>
-                                                        <Canvas x:Name="PART_TaskDropIndicatorHost"
-                                                                IsHitTestVisible="False" />
-                                                    </Grid>
-                                                    <!-- Add Card (bottom) -->
-                                                    <kanban:FlowKanbanAddCard x:Name="PART_AddCardBottom"
-                                                                              Grid.Row="3"
-                                                                              ColumnData="{Binding}"
-                                                                              LaneId="{Binding LaneFilterId, ElementName=PART_KanbanColumn}"
-                                                                              AddCardText="{Binding DataContext[Kanban_AddCard], ElementName=PART_BoardRoot}"
-                                                                              AddCardPlaceholderText="{Binding DataContext[Kanban_AddCardPlaceholder], ElementName=PART_BoardRoot}"
-                                                                              AddCardConfirmText="{Binding DataContext[Common_Add], ElementName=PART_BoardRoot}"
-                                                                              AddCardCancelText="{Binding DataContext[Common_Cancel], ElementName=PART_BoardRoot}"
-                                                                              Margin="0,8,0,0"
-                                                                              Visibility="{Binding ShowAddCardBottom, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                </Grid>
-                                            </kanban:FlowKanbanColumn>
+                                                                         MaxHeight="{Binding Tag.CompactColumnMaxHeight, ElementName=PART_BoardRoot}" />
                                         </DataTemplate>
                                     </ContentPresenter.ContentTemplate>
                                 </ContentPresenter>
@@ -2102,226 +1932,7 @@
                                                                                  ShowTasks="False"
                                                                                  ShowAddCard="False"
                                                                                  IsDropEnabled="False"
-                                                                                 Visibility="{Binding IsArchiveColumnVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                            <Grid>
-                                                                <Grid.RowDefinitions>
-                                                                    <RowDefinition Height="Auto" />
-                                                                    <RowDefinition Height="Auto" />
-                                                                    <RowDefinition Height="*" />
-                                                                    <RowDefinition Height="Auto" />
-                                                                </Grid.RowDefinitions>
-                                                                <!-- Column Header -->
-                                                                <Grid Grid.Row="0"
-                                                                      Visibility="{Binding ShowColumnHeader, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                    <Grid x:Name="PART_ColumnHeaderGrid"
-                                                                          Margin="0,0,0,8"
-                                                                          Background="Transparent"
-                                                                          Visibility="{Binding IsCollapsed, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}">
-                                                                        <Grid.RowDefinitions>
-                                                                            <RowDefinition Height="Auto" />
-                                                                            <RowDefinition Height="Auto" />
-                                                                        </Grid.RowDefinitions>
-                                                                        <Grid.ColumnDefinitions>
-                                                                            <ColumnDefinition Width="Auto" />
-                                                                            <ColumnDefinition Width="*" />
-                                                                            <ColumnDefinition Width="Auto" />
-                                                                            <ColumnDefinition Width="Auto" />
-                                                                        </Grid.ColumnDefinitions>
-                                                                        <Border x:Name="PART_ColumnGrip"
-                                                                                Grid.Row="0"
-                                                                                Background="Transparent"
-                                                                                Padding="4"
-                                                                                CornerRadius="4"
-                                                                                VerticalAlignment="Center"
-                                                                                AutomationProperties.Name="{Binding DataContext[Kanban_Column_Reorder], ElementName=PART_BoardRoot}">
-                                                                            <controls:DaisyIconText IconData="{StaticResource DaisyIconNestedSquares}"
-                                                                                                    IconSize="12"
-                                                                                                    Foreground="{Binding ElementName=PART_ColumnTitle, Path=Foreground}" />
-                                                                        </Border>
-                                                                        <TextBlock x:Name="PART_ColumnTitle"
-                                                                                   Grid.Row="0"
-                                                                                   Grid.Column="1"
-                                                                                   Text="{Binding DisplayTitle}"
-                                                                                   FontSize="18"
-                                                                                   Foreground="{ThemeResource DaisyBaseContentBrush}"
-                                                                                   FontWeight="Bold"
-                                                                                   TextTrimming="CharacterEllipsis"
-                                                                                   TextWrapping="NoWrap"
-                                                                                   VerticalAlignment="Center" />
-                                                                        <StackPanel x:Name="PART_ColumnHeaderIcons"
-                                                                                    Grid.Row="0"
-                                                                                    Grid.Column="1"
-                                                                                    Orientation="Horizontal"
-                                                                                    Spacing="8"
-                                                                                    HorizontalAlignment="Right">
-                                                                            <controls:DaisyBadge Variant="Neutral"
-                                                                                                 Size="Small"
-                                                                                                 Content="{Binding DataContext[Kanban_ArchiveColumn], ElementName=PART_BoardRoot}"
-                                                                                                 Visibility="{Binding IsArchiveColumn, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                                                                 AutomationProperties.Name="{Binding DataContext[Kanban_ArchiveColumn], ElementName=PART_BoardRoot}">
-                                                                                <ToolTipService.ToolTip>
-                                                                                    <ToolTip Content="{Binding DataContext[Kanban_ArchiveColumn], ElementName=PART_BoardRoot}"
-                                                                                             IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                                </ToolTipService.ToolTip>
-                                                                            </controls:DaisyBadge>
-                                                                            <!-- Task Count Badge -->
-                                                                            <Border x:Name="PART_TaskCountBadge"
-                                                                                    Background="{ThemeResource DaisySecondaryBrush}"
-                                                                                    CornerRadius="10"
-                                                                                    Padding="6,2"
-                                                                                    VerticalAlignment="Center">
-                                                                                <TextBlock x:Name="PART_TaskCountText"
-                                                                                           Text="{Binding WipDisplay}"
-                                                                                           FontSize="11"
-                                                                                           FontWeight="SemiBold"
-                                                                                           Foreground="{ThemeResource DaisySecondaryContentBrush}" />
-                                                                            </Border>
-                                                                            <controls:DaisyIconText IconData="{StaticResource DaisyIconWarning}"
-                                                                                                    IconSize="12"
-                                                                                                    Foreground="{ThemeResource DaisyWarningBrush}"
-                                                                                                    VerticalAlignment="Center"
-                                                                                                    Visibility="{Binding IsWipExceeded, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                                <ToolTipService.ToolTip>
-                                                                                    <ToolTip Content="{Binding DataContext[Kanban_WipLimitExceeded], ElementName=PART_BoardRoot}"
-                                                                                             IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                                </ToolTipService.ToolTip>
-                                                                            </controls:DaisyIconText>
-                                                                            <!-- Edit Title Button (shown on hover) -->
-                                                                            <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
-                                                                                                  x:Name="PART_RenameBtn"
-                                                                                                  Command="{Binding Tag.EditColumnCommand, ElementName=PART_BoardRoot}"
-                                                                                                  CommandParameter="{Binding}"
-                                                                                                  Variant="Ghost"
-                                                                                                  Shape="Square"
-                                                                                                  Size="ExtraSmall"
-                                                                                                  Opacity="0"
-                                                                                                  IsHitTestVisible="False"
-                                                                                                  controls:DaisyNeumorphic.IsEnabled="False"
-                                                                                                  VerticalAlignment="Center"
-                                                                                                  AutomationProperties.Name="{Binding DataContext[Kanban_RenameSection], ElementName=PART_BoardRoot}">
-                                                                                <ToolTipService.ToolTip>
-                                                                                    <ToolTip Content="{Binding DataContext[Kanban_RenameSection], ElementName=PART_BoardRoot}"
-                                                                                             IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                                </ToolTipService.ToolTip>
-                                                                                <controls:DaisyIconText IconData="{StaticResource DaisyIconPencil}"
-                                                                                                        IconSize="12" />
-                                                                            </controls:DaisyButton>
-                                                                        </StackPanel>
-                                                                        <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
-                                                                                              x:Name="PART_CollapseBtn"
-                                                                                              Grid.Row="0"
-                                                                                              Grid.Column="2"
-                                                                                              Visibility="{Binding Tag.IsCompactLayoutEnabled, ElementName=PART_BoardRoot, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}"
-                                                                                              Command="{Binding Tag.ToggleColumnCollapseCommand, ElementName=PART_BoardRoot}"
-                                                                                              CommandParameter="{Binding}"
-                                                                                              Variant="Ghost"
-                                                                                              Shape="Square"
-                                                                                              Size="ExtraSmall"
-                                                                                              VerticalAlignment="Center"
-                                                                                              AutomationProperties.Name="{Binding DataContext[Kanban_Column_ToggleCollapse], ElementName=PART_BoardRoot}">
-                                                                            <ToolTipService.ToolTip>
-                                                                                <ToolTip Content="{Binding DataContext[Kanban_Column_ToggleCollapse], ElementName=PART_BoardRoot}"
-                                                                                         IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                            </ToolTipService.ToolTip>
-                                                                            <controls:DaisyIconText x:Name="PART_CollapseIcon"
-                                                                                                    IconData="{StaticResource DaisyIconChevronLeft}"
-                                                                                                    IconSize="12" />
-                                                                        </controls:DaisyButton>
-                                                                    </Grid>
-
-                                                                    <StackPanel x:Name="PART_CollapsedHeader"
-                                                                                Visibility="{Binding IsCollapsed, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                                                Margin="0,0,0,8"
-                                                                                HorizontalAlignment="Center"
-                                                                                VerticalAlignment="Top"
-                                                                                Spacing="4">
-                                                                        <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
-                                                                                              x:Name="PART_CollapsedExpandBtn"
-                                                                                              Variant="Ghost"
-                                                                                              Shape="Square"
-                                                                                              Size="ExtraSmall"
-                                                                                              Visibility="{Binding Tag.IsCompactLayoutEnabled, ElementName=PART_BoardRoot, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}"
-                                                                                              Command="{Binding Tag.ToggleColumnCollapseCommand, ElementName=PART_BoardRoot}"
-                                                                                              CommandParameter="{Binding}"
-                                                                                              AutomationProperties.Name="{Binding DataContext[Kanban_Column_ToggleCollapse], ElementName=PART_BoardRoot}">
-                                                                            <controls:DaisyIconText IconData="{StaticResource DaisyIconChevronRight}"
-                                                                                                    IconSize="12" />
-                                                                        </controls:DaisyButton>
-                                                                        <TextBlock x:Name="PART_CollapsedTitle"
-                                                                                   Text="{Binding DisplayTitle}"
-                                                                                   FontSize="18"
-                                                                                   Foreground="{ThemeResource DaisyBaseContentBrush}"
-                                                                                   FontWeight="Bold"
-                                                                                   TextWrapping="Wrap"
-                                                                                   TextTrimming="None"
-                                                                                   TextAlignment="Center"
-                                                                                   HorizontalAlignment="Center" />
-                                                                    </StackPanel>
-                                                                </Grid>
-                                                                <!-- Add Card (top) -->
-                                                                <kanban:FlowKanbanAddCard x:Name="PART_AddCardTop"
-                                                                                          Grid.Row="1"
-                                                                                          ColumnData="{Binding}"
-                                                                                          LaneId="{Binding LaneFilterId, ElementName=PART_KanbanColumn}"
-                                                                                          InsertAtTop="True"
-                                                                                          AddCardText="{Binding DataContext[Kanban_AddCard], ElementName=PART_BoardRoot}"
-                                                                                          AddCardPlaceholderText="{Binding DataContext[Kanban_AddCardPlaceholder], ElementName=PART_BoardRoot}"
-                                                                                          AddCardConfirmText="{Binding DataContext[Common_Add], ElementName=PART_BoardRoot}"
-                                                                                          AddCardCancelText="{Binding DataContext[Common_Cancel], ElementName=PART_BoardRoot}"
-                                                                                          Margin="0,0,0,8"
-                                                                                          Visibility="{Binding ShowAddCardTop, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                                <!-- Tasks (scrollable) -->
-                                                                <Grid Grid.Row="2"
-                                                                      Margin="{Binding Padding, ElementName=PART_KanbanColumn, Converter={StaticResource KanbanTasksHostMarginConverter}}"
-                                                                      Visibility="{Binding ShowTasks, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                    <ListView x:Name="PART_TasksItemsControl"
-                                                                              ItemsSource="{Binding TaskViews, ElementName=PART_KanbanColumn}"
-                                                                              SelectionMode="None"
-                                                                              IsItemClickEnabled="False"
-                                                                              ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                                                              ScrollViewer.VerticalScrollMode="Enabled"
-                                                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                                              ItemContainerStyle="{StaticResource KanbanTasksListViewItemContainerStyle}">
-                                                                        <ListView.ItemTemplate>
-                                                                            <DataTemplate>
-                                                                                <StackPanel Spacing="4"
-                                                                                            HorizontalAlignment="Stretch">
-                                                                                    <TextBlock Text="{Binding Lane.Title}"
-                                                                                               Style="{ThemeResource CaptionTextBlockStyle}"
-                                                                                               Foreground="{ThemeResource DaisyBaseContentBrush}"
-                                                                                               Visibility="{Binding ShowLaneHeader, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                                                    <kanban:FlowTaskCard Title="{Binding Task.Title}"
-                                                                                                         Task="{Binding Task}"
-                                                                                                         Palette="{Binding Task.Palette}"
-                                                                                                         CloseCommand="{Binding Tag.RemoveCardCommand, ElementName=PART_BoardRoot}"
-                                                                                                         CloseCommandParameter="{Binding Task}"
-                                                                                                         EditCommand="{Binding Tag.EditCardCommand, ElementName=PART_BoardRoot}"
-                                                                                                         Visibility="{Binding Task.IsSearchMatch, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                                                                         HorizontalAlignment="Stretch">
-                                                                                        <TextBlock Text="{Binding Task.Description}"
-                                                                                                   TextWrapping="Wrap"
-                                                                                                   FontSize="12" />
-                                                                                    </kanban:FlowTaskCard>
-                                                                                </StackPanel>
-                                                                            </DataTemplate>
-                                                                        </ListView.ItemTemplate>
-                                                                    </ListView>
-                                                                    <Canvas x:Name="PART_TaskDropIndicatorHost"
-                                                                            IsHitTestVisible="False" />
-                                                                </Grid>
-                                                                <!-- Add Card (bottom) -->
-                                                                <kanban:FlowKanbanAddCard x:Name="PART_AddCardBottom"
-                                                                                          Grid.Row="3"
-                                                                                          ColumnData="{Binding}"
-                                                                                          LaneId="{Binding LaneFilterId, ElementName=PART_KanbanColumn}"
-                                                                                          AddCardText="{Binding DataContext[Kanban_AddCard], ElementName=PART_BoardRoot}"
-                                                                                          AddCardPlaceholderText="{Binding DataContext[Kanban_AddCardPlaceholder], ElementName=PART_BoardRoot}"
-                                                                                          AddCardConfirmText="{Binding DataContext[Common_Add], ElementName=PART_BoardRoot}"
-                                                                                          AddCardCancelText="{Binding DataContext[Common_Cancel], ElementName=PART_BoardRoot}"
-                                                                                          Margin="0,8,0,0"
-                                                                                          Visibility="{Binding ShowAddCardBottom, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                            </Grid>
-                                                        </kanban:FlowKanbanColumn>
+                                                                                 Visibility="{Binding IsArchiveColumnVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </controls:DaisyResizableColumnsHost>
@@ -2394,232 +2005,8 @@
                                                                                          Margin="2"
                                                                                          BorderBrush="{ThemeResource DaisyBase300Brush}"
                                                                                          BorderThickness="1"
-                                                                                         Visibility="{Binding Column.IsArchiveColumnVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                    <Grid DataContext="{Binding Column}">
-                                                                        <Grid.RowDefinitions>
-                                                                            <RowDefinition Height="Auto" />
-                                                                            <RowDefinition Height="Auto" />
-                                                                            <RowDefinition Height="*" />
-                                                                            <RowDefinition Height="Auto" />
-                                                                        </Grid.RowDefinitions>
-                                                                        <!-- Lane WIP Badge -->
-                                                                        <StackPanel Grid.Row="0"
-                                                                                    Orientation="Horizontal"
-                                                                                    HorizontalAlignment="Right"
-                                                                                    Spacing="6"
-                                                                                    Visibility="{Binding Tag.HasLaneWipLimit, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                            <Border Background="{ThemeResource DaisySecondaryBrush}"
-                                                                                    CornerRadius="10"
-                                                                                    Padding="6,2"
-                                                                                    VerticalAlignment="Center">
-                                                                                <TextBlock Text="{Binding Tag.LaneWipDisplay, ElementName=PART_KanbanColumn}"
-                                                                                           FontSize="11"
-                                                                                           FontWeight="SemiBold"
-                                                                                           Foreground="{ThemeResource DaisySecondaryContentBrush}" />
-                                                                            </Border>
-                                                                            <controls:DaisyIconText IconData="{StaticResource DaisyIconWarning}"
-                                                                                                    IconSize="12"
-                                                                                                    Foreground="{ThemeResource DaisyWarningBrush}"
-                                                                                                    VerticalAlignment="Center"
-                                                                                                    Visibility="{Binding Tag.IsLaneWipExceeded, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                                <ToolTipService.ToolTip>
-                                                                                    <ToolTip Content="{Binding DataContext[Kanban_LaneWipLimitExceeded], ElementName=PART_BoardRoot}"
-                                                                                             IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                                </ToolTipService.ToolTip>
-                                                                            </controls:DaisyIconText>
-                                                                        </StackPanel>
-                                                                        <!-- Column Header -->
-                                                                        <Grid x:Name="PART_ColumnHeaderGrid"
-                                                                              Margin="0,0,0,8"
-                                                                              Background="Transparent"
-                                                                              Visibility="{Binding ShowColumnHeader, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                            <Grid.RowDefinitions>
-                                                                                <RowDefinition Height="Auto" />
-                                                                                <RowDefinition Height="Auto" />
-                                                                            </Grid.RowDefinitions>
-                                                                            <Grid.ColumnDefinitions>
-                                                                                <ColumnDefinition Width="Auto" />
-                                                                                <ColumnDefinition Width="*" />
-                                                                                <ColumnDefinition Width="Auto" />
-                                                                                <ColumnDefinition Width="Auto" />
-                                                                            </Grid.ColumnDefinitions>
-                                                                            <Border x:Name="PART_ColumnGrip"
-                                                                                    Grid.Row="0"
-                                                                                    Background="Transparent"
-                                                                                    Padding="4"
-                                                                                    CornerRadius="4"
-                                                                                    VerticalAlignment="Center"
-                                                                                    AutomationProperties.Name="{Binding DataContext[Kanban_Column_Reorder], ElementName=PART_BoardRoot}">
-                                                                                <controls:DaisyIconText IconData="{StaticResource DaisyIconNestedSquares}"
-                                                                                                        IconSize="12"
-                                                                                                        Foreground="{Binding ElementName=PART_ColumnTitle, Path=Foreground}" />
-                                                                            </Border>
-                                                                            <TextBlock x:Name="PART_ColumnTitle"
-                                                                                       Grid.Row="0"
-                                                                                       Grid.Column="1"
-                                                                                       Text="{Binding Title}"
-                                                                                       FontSize="18"
-                                                                                       Foreground="{ThemeResource DaisyBaseContentBrush}"
-                                                                                       FontWeight="Bold"
-                                                                                       TextTrimming="CharacterEllipsis"
-                                                                                       TextWrapping="NoWrap"
-                                                                                       VerticalAlignment="Center" />
-                                                                            <StackPanel x:Name="PART_ColumnHeaderIcons"
-                                                                                        Grid.Row="0"
-                                                                                        Grid.Column="1"
-                                                                                        Orientation="Horizontal"
-                                                                                        Spacing="8"
-                                                                                        HorizontalAlignment="Right">
-                                                                                <controls:DaisyBadge Variant="Neutral"
-                                                                                                     Size="Small"
-                                                                                                     Content="{Binding DataContext[Kanban_ArchiveColumn], ElementName=PART_BoardRoot}"
-                                                                                                     Visibility="{Binding IsArchiveColumn, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                                                                     AutomationProperties.Name="{Binding DataContext[Kanban_ArchiveColumn], ElementName=PART_BoardRoot}">
-                                                                                    <ToolTipService.ToolTip>
-                                                                                        <ToolTip Content="{Binding DataContext[Kanban_ArchiveColumn], ElementName=PART_BoardRoot}"
-                                                                                                 IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                                    </ToolTipService.ToolTip>
-                                                                                </controls:DaisyBadge>
-                                                                                <!-- Task Count Badge -->
-                                                                                <Border x:Name="PART_TaskCountBadge"
-                                                                                        Background="{ThemeResource DaisySecondaryBrush}"
-                                                                                        CornerRadius="10"
-                                                                                        Padding="6,2"
-                                                                                        VerticalAlignment="Center">
-                                                                                    <TextBlock x:Name="PART_TaskCountText"
-                                                                                               Text="{Binding WipDisplay}"
-                                                                                               FontSize="11"
-                                                                                               FontWeight="SemiBold"
-                                                                                               Foreground="{ThemeResource DaisySecondaryContentBrush}" />
-                                                                                </Border>
-                                                                                <controls:DaisyIconText IconData="{StaticResource DaisyIconWarning}"
-                                                                                                        IconSize="12"
-                                                                                                        Foreground="{ThemeResource DaisyWarningBrush}"
-                                                                                                        VerticalAlignment="Center"
-                                                                                                        Visibility="{Binding IsWipExceeded, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                                    <ToolTipService.ToolTip>
-                                                                                        <ToolTip Content="{Binding DataContext[Kanban_WipLimitExceeded], ElementName=PART_BoardRoot}"
-                                                                                                 IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                                    </ToolTipService.ToolTip>
-                                                                                </controls:DaisyIconText>
-                                                                                <controls:DaisyIconText IconData="{StaticResource DaisyIconInfo}"
-                                                                                                        IconSize="12"
-                                                                                                        Foreground="{ThemeResource DaisyBaseContentBrush}"
-                                                                                                        VerticalAlignment="Center"
-                                                                                                        Visibility="{Binding HasPolicy, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                                                                        AutomationProperties.Name="{Binding DataContext[Kanban_Policy_Info], ElementName=PART_BoardRoot}">
-                                                                                    <ToolTipService.ToolTip>
-                                                                                        <ToolTip Content="{Binding PolicyText}"
-                                                                                                 IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                                    </ToolTipService.ToolTip>
-                                                                                </controls:DaisyIconText>
-                                                                                <!-- Edit Title Button (shown on hover) -->
-                                                                                <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
-                                                                                                      x:Name="PART_RenameBtn"
-                                                                                                      Command="{Binding Tag.EditColumnCommand, ElementName=PART_BoardRoot}"
-                                                                                                      CommandParameter="{Binding}"
-                                                                                                      Variant="Ghost"
-                                                                                                      Shape="Square"
-                                                                                                      Size="ExtraSmall"
-                                                                                                      Opacity="0"
-                                                                                                      IsHitTestVisible="False"
-                                                                                                      controls:DaisyNeumorphic.IsEnabled="False"
-                                                                                                      VerticalAlignment="Center"
-                                                                                                      AutomationProperties.Name="{Binding DataContext[Kanban_RenameSection], ElementName=PART_BoardRoot}">
-                                                                                    <ToolTipService.ToolTip>
-                                                                                        <ToolTip Content="{Binding DataContext[Kanban_RenameSection], ElementName=PART_BoardRoot}"
-                                                                                                 IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                                    </ToolTipService.ToolTip>
-                                                                                    <controls:DaisyIconText IconData="{StaticResource DaisyIconPencil}"
-                                                                                                            IconSize="12" />
-                                                                                </controls:DaisyButton>
-                                                                            </StackPanel>
-                                                                            <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
-                                                                                                  x:Name="PART_CollapseBtn"
-                                                                                                  Grid.Row="0"
-                                                                                                  Grid.Column="2"
-                                                                                                  Visibility="{Binding Tag.IsCompactLayoutEnabled, ElementName=PART_BoardRoot, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}"
-                                                                                                  Command="{Binding Tag.ToggleColumnCollapseCommand, ElementName=PART_BoardRoot}"
-                                                                                                  CommandParameter="{Binding}"
-                                                                                                  Variant="Ghost"
-                                                                                                  Shape="Square"
-                                                                                                  Size="ExtraSmall"
-                                                                                                  VerticalAlignment="Center"
-                                                                                                  AutomationProperties.Name="{Binding DataContext[Kanban_Column_ToggleCollapse], ElementName=PART_BoardRoot}">
-                                                                                <ToolTipService.ToolTip>
-                                                                                    <ToolTip Content="{Binding DataContext[Kanban_Column_ToggleCollapse], ElementName=PART_BoardRoot}"
-                                                                                             IsEnabled="{Binding Tag.IsColumnTooltipsEnabled, ElementName=PART_BoardRoot}" />
-                                                                                </ToolTipService.ToolTip>
-                                                                                <controls:DaisyIconText x:Name="PART_CollapseIcon"
-                                                                                                        IconData="{StaticResource DaisyIconChevronLeft}"
-                                                                                                        IconSize="12" />
-                                                                            </controls:DaisyButton>
-                                                                        </Grid>
-                                                                        <!-- Add Card (top) -->
-                                                                        <kanban:FlowKanbanAddCard x:Name="PART_AddCardTop"
-                                                                                                  Grid.Row="1"
-                                                                                                  ColumnData="{Binding}"
-                                                                                                  LaneId="{Binding LaneFilterId, ElementName=PART_KanbanColumn}"
-                                                                                                  InsertAtTop="True"
-                                                                                                  AddCardText="{Binding DataContext[Kanban_AddCard], ElementName=PART_BoardRoot}"
-                                                                                                  AddCardPlaceholderText="{Binding DataContext[Kanban_AddCardPlaceholder], ElementName=PART_BoardRoot}"
-                                                                                                  AddCardConfirmText="{Binding DataContext[Common_Add], ElementName=PART_BoardRoot}"
-                                                                                                  AddCardCancelText="{Binding DataContext[Common_Cancel], ElementName=PART_BoardRoot}"
-                                                                                                  Margin="0,0,0,8"
-                                                                                                  Visibility="{Binding ShowAddCardTop, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                                        <!-- Tasks (scrollable) -->
-                                                                        <Grid Grid.Row="2"
-                                                                              Margin="{Binding Padding, ElementName=PART_KanbanColumn, Converter={StaticResource KanbanTasksHostMarginConverter}}"
-                                                                              Visibility="{Binding ShowTasks, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                            <ListView x:Name="PART_TasksItemsControl"
-                                                                                      ItemsSource="{Binding TaskViews, ElementName=PART_KanbanColumn}"
-                                                                                      SelectionMode="None"
-                                                                                      IsItemClickEnabled="False"
-                                                                                      MaxHeight="{Binding Tag.SwimlaneCellMaxHeight, ElementName=PART_BoardRoot}"
-                                                                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                                                                      ScrollViewer.VerticalScrollMode="Enabled"
-                                                                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                                                      ItemContainerStyle="{StaticResource KanbanTasksListViewItemContainerStyle}">
-                                                                                <ListView.ItemTemplate>
-                                                                                    <DataTemplate>
-                                                                                        <StackPanel Spacing="4"
-                                                                                                    HorizontalAlignment="Stretch">
-                                                                                            <TextBlock Text="{Binding Lane.Title}"
-                                                                                                       Style="{ThemeResource CaptionTextBlockStyle}"
-                                                                                                       Foreground="{ThemeResource DaisyBaseContentBrush}"
-                                                                                                       Visibility="{Binding ShowLaneHeader, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                                                            <kanban:FlowTaskCard Title="{Binding Task.Title}"
-                                                                                                                 Task="{Binding Task}"
-                                                                                                                 Palette="{Binding Task.Palette}"
-                                                                                                                 CloseCommand="{Binding Tag.RemoveCardCommand, ElementName=PART_BoardRoot}"
-                                                                                                                 CloseCommandParameter="{Binding Task}"
-                                                                                                                 EditCommand="{Binding Tag.EditCardCommand, ElementName=PART_BoardRoot}"
-                                                                                                                 Visibility="{Binding Task.IsSearchMatch, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                                                                                 HorizontalAlignment="Stretch">
-                                                                                                <TextBlock Text="{Binding Task.Description}"
-                                                                                                           TextWrapping="Wrap"
-                                                                                                           FontSize="12" />
-                                                                                            </kanban:FlowTaskCard>
-                                                                                        </StackPanel>
-                                                                                    </DataTemplate>
-                                                                                </ListView.ItemTemplate>
-                                                                            </ListView>
-                                                                            <Canvas x:Name="PART_TaskDropIndicatorHost"
-                                                                                    IsHitTestVisible="False" />
-                                                                        </Grid>
-                                                                        <!-- Add Card (bottom) -->
-                                                                        <kanban:FlowKanbanAddCard x:Name="PART_AddCardBottom"
-                                                                                                  Grid.Row="3"
-                                                                                                  ColumnData="{Binding}"
-                                                                                                  LaneId="{Binding LaneFilterId, ElementName=PART_KanbanColumn}"
-                                                                                                  AddCardText="{Binding DataContext[Kanban_AddCard], ElementName=PART_BoardRoot}"
-                                                                                                  AddCardPlaceholderText="{Binding DataContext[Kanban_AddCardPlaceholder], ElementName=PART_BoardRoot}"
-                                                                                                  AddCardConfirmText="{Binding DataContext[Common_Add], ElementName=PART_BoardRoot}"
-                                                                                                  AddCardCancelText="{Binding DataContext[Common_Cancel], ElementName=PART_BoardRoot}"
-                                                                                                  Margin="0,8,0,0"
-                                                                                                  Visibility="{Binding ShowAddCardBottom, ElementName=PART_KanbanColumn, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                                    </Grid>
-                                                                </kanban:FlowKanbanColumn>
+                                                                                         Visibility="{Binding Column.IsArchiveColumnVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                                         TaskListMaxHeight="{Binding Tag.SwimlaneCellMaxHeight, ElementName=PART_BoardRoot}" />
                                                             </DataTemplate>
                                                         </ItemsControl.ItemTemplate>
                                                     </ItemsControl>

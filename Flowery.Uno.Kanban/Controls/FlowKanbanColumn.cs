@@ -182,16 +182,34 @@ namespace Flowery.Uno.Kanban.Controls
             SetDragHighlightBorder(isDragActive);
         }
 
-        private void OnColumnLoaded(object sender, RoutedEventArgs e)
+        protected override void OnApplyTemplate()
         {
-            _isLoaded = true;
-#if KANBAN_DEBUG && HAS_UNO_SKIA
-            DebugLog($"KANBAN_DEBUG: Loaded. ColumnId='{ColumnData?.Id ?? "<null>"}' IsCollapsed={IsCollapsed} IsEffectiveCollapsed={IsEffectiveCollapsed} ActualSize={ActualWidth:0.##}x{ActualHeight:0.##}");
-#endif
-            SetDragHighlightBorder(isActive: false);
-            var searchRoot = Content as DependencyObject ?? this;
+            base.OnApplyTemplate();
+
+            // The column surface lives in the template. Uno Skia raises Loaded before the template is
+            // applied, so OnColumnLoaded finds no parts there; set them up once the template exists.
+            if (!_isLoaded)
+                return;
+
+            ResolveTemplateParts();
+            UpdateTabStop();
+            ApplySizing();
+            UpdateCollapsedState();
+            UpdateEditButtonVisibilityForPlatform();
+            UpdateAddCardVisibility();
+            UpdateColumnReorderState();
+        }
+
+        private void ResolveTemplateParts()
+        {
+            DependencyObject searchRoot = this;
 
             // Find the ItemsControl that contains the tasks
+            if (_tasksListView != null)
+            {
+                _tasksListView.ContainerContentChanging -= OnTaskContainerContentChanging;
+            }
+
             _tasksItemsControl = FindTasksItemsControl(searchRoot);
             _tasksListView = _tasksItemsControl as ListViewBase;
             _tasksItemsHost = _tasksItemsControl?.ItemsPanelRoot as Panel;
@@ -227,6 +245,16 @@ namespace Flowery.Uno.Kanban.Controls
             // Find header and close button for sizing
             FindHeaderElements();
             FindAddCardElements();
+        }
+
+        private void OnColumnLoaded(object sender, RoutedEventArgs e)
+        {
+            _isLoaded = true;
+#if KANBAN_DEBUG && HAS_UNO_SKIA
+            DebugLog($"KANBAN_DEBUG: Loaded. ColumnId='{ColumnData?.Id ?? "<null>"}' IsCollapsed={IsCollapsed} IsEffectiveCollapsed={IsEffectiveCollapsed} ActualSize={ActualWidth:0.##}x{ActualHeight:0.##}");
+#endif
+            SetDragHighlightBorder(isActive: false);
+            ResolveTemplateParts();
             UpdateTabStop();
 
 #if KANBAN_DEBUG && HAS_UNO_SKIA
@@ -300,7 +328,7 @@ namespace Flowery.Uno.Kanban.Controls
             if (_tasksItemsControl != null && _tasksDropIndicatorHost != null)
                 return;
 
-            var searchRoot = Content as DependencyObject ?? this;
+            DependencyObject searchRoot = this;
             _tasksItemsControl ??= FindTasksItemsControl(searchRoot);
             _tasksListView = _tasksItemsControl as ListViewBase;
             _tasksItemsHost = _tasksItemsControl?.ItemsPanelRoot as Panel;
@@ -331,7 +359,8 @@ namespace Flowery.Uno.Kanban.Controls
 
         private void FindHeaderElements()
         {
-            var searchRoot = Content as DependencyObject ?? this;
+            DetachHeaderHandlers();
+            DependencyObject searchRoot = this;
 
             // Find the column header grid
             _columnHeaderGrid = FindChild<Grid>(searchRoot, g => g.Name == "PART_ColumnHeaderGrid");
@@ -384,9 +413,42 @@ namespace Flowery.Uno.Kanban.Controls
             }
         }
 
+        private void DetachHeaderHandlers()
+        {
+            if (_columnGripElement != null)
+            {
+                _columnGripElement.DragStarting -= OnColumnGripDragStarting;
+#if HAS_UNO_SKIA
+                _columnGripElement.PointerPressed -= OnColumnGripPointerPressed;
+                _columnGripElement.PointerMoved -= OnColumnGripPointerMoved;
+                _columnGripElement.PointerReleased -= OnColumnGripPointerReleased;
+                _columnGripElement.PointerCaptureLost -= OnColumnGripPointerCaptureLost;
+#endif
+            }
+
+#if HAS_UNO_SKIA
+            if (_columnGripIconElement != null)
+            {
+                _columnGripIconElement.PointerPressed -= OnColumnGripPointerPressed;
+                _columnGripIconElement.PointerMoved -= OnColumnGripPointerMoved;
+                _columnGripIconElement.PointerReleased -= OnColumnGripPointerReleased;
+                _columnGripIconElement.PointerCaptureLost -= OnColumnGripPointerCaptureLost;
+            }
+#endif
+
+            if (_columnHeaderGrid != null)
+            {
+                _columnHeaderGrid.PointerEntered -= OnHeaderPointerEntered;
+                _columnHeaderGrid.PointerExited -= OnHeaderPointerExited;
+                _columnHeaderGrid.PointerPressed -= OnHeaderPointerPressed;
+                _columnHeaderGrid.GotFocus -= OnHeaderGotFocus;
+                _columnHeaderGrid.LostFocus -= OnHeaderLostFocus;
+            }
+        }
+
         private void FindAddCardElements()
         {
-            var searchRoot = Content as DependencyObject ?? this;
+            DependencyObject searchRoot = this;
             _addCardTop = FindChild<FlowKanbanAddCard>(searchRoot, card => card.Name == "PART_AddCardTop");
             _addCardBottom = FindChild<FlowKanbanAddCard>(searchRoot, card => card.Name == "PART_AddCardBottom");
         }
@@ -1149,6 +1211,24 @@ namespace Flowery.Uno.Kanban.Controls
         {
             get => (bool)GetValue(ShowTasksProperty);
             set => SetValue(ShowTasksProperty, value);
+        }
+        #endregion
+
+        #region TaskListMaxHeight
+        public static readonly DependencyProperty TaskListMaxHeightProperty =
+            DependencyProperty.Register(
+                nameof(TaskListMaxHeight),
+                typeof(double),
+                typeof(FlowKanbanColumn),
+                new PropertyMetadata(double.PositiveInfinity));
+
+        /// <summary>
+        /// Maximum height of the task list; swimlane cells use it to keep rows compact.
+        /// </summary>
+        public double TaskListMaxHeight
+        {
+            get => (double)GetValue(TaskListMaxHeightProperty);
+            set => SetValue(TaskListMaxHeightProperty, value);
         }
         #endregion
 

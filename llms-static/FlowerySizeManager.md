@@ -52,7 +52,12 @@ bool success = FlowerySizeManager.ApplySize("Large");
 
 // Reset to default (Small)
 FlowerySizeManager.Reset();
+
+// Standard single-line control height per size, for runtime-dynamic control heights
+double height = FlowerySizeManager.GetControlHeight(DaisySize.Medium); // 32
 ```
+
+`GetControlHeight` returns 24, 28, 32, 34 and 36 px for `ExtraSmall` to `ExtraLarge` (unknown values return 32). The values match Flowery.NET 2.3.2. They are fixed and do not follow `DaisySize*Height` overrides or the larger mobile heights from `DaisyResourceLookup.GetDefaultHeight`.
 
 ### Events
 

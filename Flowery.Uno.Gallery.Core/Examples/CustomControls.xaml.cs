@@ -8,6 +8,7 @@ using Flowery.Controls.Weather;
 using Flowery.Controls.Weather.Models;
 using Flowery.Controls.Weather.Services;
 using Flowery.Enums;
+using Flowery.Theming;
 
 namespace Flowery.Uno.Gallery.Examples
 {
@@ -18,11 +19,38 @@ namespace Flowery.Uno.Gallery.Examples
         public CustomControls()
         {
             InitializeComponent();
+            BuildControlHeightSamples();
             InitializeForecastData();
             InitializeStaticWeatherSamples();
         }
 
         protected override ScrollViewer? ScrollViewer => MainScrollViewer;
+
+        private void BuildControlHeightSamples()
+        {
+            foreach (var size in Enum.GetValues<DaisySize>())
+            {
+                var height = FlowerySizeManager.GetControlHeight(size);
+                ControlHeightPanel.Children.Add(new Border
+                {
+                    Height = height,
+                    MinWidth = 120,
+                    Margin = new Thickness(0, 0, 8, 8),
+                    Padding = new Thickness(10, 0, 10, 0),
+                    VerticalAlignment = VerticalAlignment.Bottom,
+                    CornerRadius = new CornerRadius(6),
+                    BorderThickness = new Thickness(1),
+                    Background = DaisyResourceLookup.GetBrush("DaisyBase200Brush"),
+                    BorderBrush = DaisyResourceLookup.GetBrush("DaisyBase300Brush"),
+                    Child = new TextBlock
+                    {
+                        Text = $"{size}: {height} px",
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Foreground = DaisyResourceLookup.GetBrush("DaisyBaseContentBrush")
+                    }
+                });
+            }
+        }
 
         private void InitializeForecastData()
         {

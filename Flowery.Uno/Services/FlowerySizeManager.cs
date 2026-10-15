@@ -119,6 +119,20 @@ namespace Flowery.Controls
         public static DaisySize CurrentSize => _currentSize;
 
         /// <summary>
+        /// Gets the standard single-line control height for a Daisy size.
+        /// These values are the code-side counterpart of the DaisySize*Height tokens.
+        /// </summary>
+        public static double GetControlHeight(DaisySize size) => size switch
+        {
+            DaisySize.ExtraSmall => 24d,
+            DaisySize.Small => 28d,
+            DaisySize.Medium => 32d,
+            DaisySize.Large => 34d,
+            DaisySize.ExtraLarge => 36d,
+            _ => 32d
+        };
+
+        /// <summary>
         /// Gets or sets whether controls should use the global size by default.
         /// Default is true (opt-out behavior).
         /// </summary>

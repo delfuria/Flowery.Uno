@@ -1557,7 +1557,6 @@
                                                  Grid.Column="0"
                                                  Grid.ColumnSpan="4"
                                                  Margin="0,8,0,0"
-                                                 MinWidth="200"
                                                  Width="Auto"
                                                  Variant="Bordered"
                                                  Size="Small"
@@ -2180,8 +2179,11 @@
                                 Visibility="{Binding IsBoardStatusBarVisible, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <StackPanel Orientation="Vertical"
                                         Spacing="8">
-                                <StackPanel Orientation="Horizontal"
-                                            Spacing="24">
+                                <!-- Items wrap onto further lines when the board is narrow; each separator belongs to the item after it. -->
+                                <controls:WrapPanel x:Name="PART_StatusItems"
+                                                    Orientation="Horizontal"
+                                                    HorizontalSpacing="24"
+                                                    VerticalSpacing="8">
                                     <!-- Column Count -->
                                     <StackPanel Orientation="Horizontal"
                                                 Spacing="6">
@@ -2196,77 +2198,81 @@
                                             <Run Text="{Binding [Kanban_Sections]}" />
                                         </TextBlock>
                                     </StackPanel>
-                                    <!-- Separator -->
-                                    <Border Width="1"
-                                            Background="{ThemeResource DaisyBase300Brush}" />
                                     <!-- Zoom Level -->
                                     <StackPanel Orientation="Horizontal"
-                                                Spacing="6">
-                                        <controls:DaisyIconText IconData="{StaticResource DaisyIconZoomIn}"
-                                                                IconSize="14"
-                                                                Foreground="{ThemeResource DaisyBaseContentBrush}" />
-                                        <TextBlock Foreground="{ThemeResource DaisyBaseContentBrush}"
-                                                   VerticalAlignment="Center">
-                                            <Run Text="{Binding [Kanban_Zoom]}" />
-                                            <Run Text=": " />
-                                            <Run Text="{Binding BoardSizeLabel, RelativeSource={RelativeSource TemplatedParent}}"
-                                                 FontWeight="SemiBold" />
-                                        </TextBlock>
+                                                Spacing="24">
+                                        <Border Width="1"
+                                                Background="{ThemeResource DaisyBase300Brush}" />
+                                        <StackPanel Orientation="Horizontal"
+                                                    Spacing="6">
+                                            <controls:DaisyIconText IconData="{StaticResource DaisyIconZoomIn}"
+                                                                    IconSize="14"
+                                                                    Foreground="{ThemeResource DaisyBaseContentBrush}" />
+                                            <TextBlock Foreground="{ThemeResource DaisyBaseContentBrush}"
+                                                       VerticalAlignment="Center">
+                                                <Run Text="{Binding [Kanban_Zoom]}" />
+                                                <Run Text=": " />
+                                                <Run Text="{Binding BoardSizeLabel, RelativeSource={RelativeSource TemplatedParent}}"
+                                                     FontWeight="SemiBold" />
+                                            </TextBlock>
+                                        </StackPanel>
                                     </StackPanel>
-                                    <!-- Separator -->
-                                    <Border Width="1"
-                                            Background="{ThemeResource DaisyBase300Brush}"
-                                            Visibility="{Binding HasArchiveColumnToggle, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     <!-- Archive Toggle -->
                                     <StackPanel Orientation="Horizontal"
-                                                Spacing="6"
+                                                Spacing="24"
                                                 Visibility="{Binding HasArchiveColumnToggle, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
-                                                              Command="{TemplateBinding ToggleArchiveColumnVisibilityCommand}"
-                                                              Variant="Ghost"
-                                                              Size="Small"
-                                                              Visibility="{Binding CanShowArchiveColumn, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                              AutomationProperties.Name="{Binding [Kanban_Archive_ToggleShow]}"
-                                                              >
-                                            <ToolTipService.ToolTip>
-                                                <ToolTip Content="{Binding [Kanban_Archive_ToggleShow]}" />
-                                            </ToolTipService.ToolTip>
-                                            <controls:DaisyIconText IconData="{StaticResource DaisyIconFolder}"
-                                                                    IconSize="12"
-                                                                    Text="{Binding [Kanban_Archive_ToggleShow]}" />
-                                        </controls:DaisyButton>
-                                        <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
-                                                              Command="{TemplateBinding ToggleArchiveColumnVisibilityCommand}"
-                                                              Variant="Ghost"
-                                                              Size="Small"
-                                                              Visibility="{Binding CanHideArchiveColumn, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                              AutomationProperties.Name="{Binding [Kanban_Archive_ToggleHide]}"
-                                                              >
-                                            <ToolTipService.ToolTip>
-                                                <ToolTip Content="{Binding [Kanban_Archive_ToggleHide]}" />
-                                            </ToolTipService.ToolTip>
-                                            <controls:DaisyIconText IconData="{StaticResource DaisyIconFolder}"
-                                                                    IconSize="12"
-                                                                    Text="{Binding [Kanban_Archive_ToggleHide]}" />
-                                        </controls:DaisyButton>
+                                        <Border Width="1"
+                                                Background="{ThemeResource DaisyBase300Brush}" />
+                                        <StackPanel Orientation="Horizontal"
+                                                    Spacing="6">
+                                            <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
+                                                                  Command="{TemplateBinding ToggleArchiveColumnVisibilityCommand}"
+                                                                  Variant="Ghost"
+                                                                  Size="Small"
+                                                                  Visibility="{Binding CanShowArchiveColumn, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                  AutomationProperties.Name="{Binding [Kanban_Archive_ToggleShow]}"
+                                                                  >
+                                                <ToolTipService.ToolTip>
+                                                    <ToolTip Content="{Binding [Kanban_Archive_ToggleShow]}" />
+                                                </ToolTipService.ToolTip>
+                                                <controls:DaisyIconText IconData="{StaticResource DaisyIconFolder}"
+                                                                        IconSize="12"
+                                                                        Text="{Binding [Kanban_Archive_ToggleShow]}" />
+                                            </controls:DaisyButton>
+                                            <controls:DaisyButton Style="{StaticResource KanbanFocusButtonStyle}"
+                                                                  Command="{TemplateBinding ToggleArchiveColumnVisibilityCommand}"
+                                                                  Variant="Ghost"
+                                                                  Size="Small"
+                                                                  Visibility="{Binding CanHideArchiveColumn, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                  AutomationProperties.Name="{Binding [Kanban_Archive_ToggleHide]}"
+                                                                  >
+                                                <ToolTipService.ToolTip>
+                                                    <ToolTip Content="{Binding [Kanban_Archive_ToggleHide]}" />
+                                                </ToolTipService.ToolTip>
+                                                <controls:DaisyIconText IconData="{StaticResource DaisyIconFolder}"
+                                                                        IconSize="12"
+                                                                        Text="{Binding [Kanban_Archive_ToggleHide]}" />
+                                            </controls:DaisyButton>
+                                        </StackPanel>
                                     </StackPanel>
-                                    <!-- Separator -->
-                                    <Border Width="1"
-                                            Background="{ThemeResource DaisyBase300Brush}"
-                                            Visibility="{Binding HasStatusMessage, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     <!-- Status Message -->
                                     <StackPanel Orientation="Horizontal"
-                                                Spacing="6"
+                                                Spacing="24"
                                                 Visibility="{Binding HasStatusMessage, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <controls:DaisyIconText IconData="{StaticResource DaisyIconWarning}"
-                                                                IconSize="14"
-                                                                Foreground="{ThemeResource DaisyWarningBrush}" />
-                                        <TextBlock Text="{Binding StatusMessage, RelativeSource={RelativeSource TemplatedParent}}"
-                                                   Foreground="{ThemeResource DaisyBaseContentBrush}"
-                                                   TextWrapping="Wrap"
-                                                   VerticalAlignment="Center" />
+                                        <Border Width="1"
+                                                Background="{ThemeResource DaisyBase300Brush}" />
+                                        <StackPanel Orientation="Horizontal"
+                                                    Spacing="6">
+                                            <controls:DaisyIconText IconData="{StaticResource DaisyIconWarning}"
+                                                                    IconSize="14"
+                                                                    Foreground="{ThemeResource DaisyWarningBrush}" />
+                                            <TextBlock Text="{Binding StatusMessage, RelativeSource={RelativeSource TemplatedParent}}"
+                                                       Foreground="{ThemeResource DaisyBaseContentBrush}"
+                                                       TextWrapping="Wrap"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
                                     </StackPanel>
-                                </StackPanel>
+                                </controls:WrapPanel>
                                 <!-- Bulk Actions -->
                                 <controls:WrapPanel Orientation="Horizontal"
                                                     HorizontalSpacing="8"

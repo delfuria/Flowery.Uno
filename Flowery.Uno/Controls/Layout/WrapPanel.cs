@@ -5,6 +5,10 @@ namespace Flowery.Controls
     /// </summary>
     public partial class WrapPanel : Panel
     {
+        // Layout rounding can make the arranged size up to one pixel smaller than the measured one;
+        // without this tolerance an item that fit in Measure would wrap in Arrange.
+        private const double WrapTolerance = 1.0;
+
         public static readonly DependencyProperty OrientationProperty =
             DependencyProperty.Register(
                 nameof(Orientation),
@@ -113,13 +117,17 @@ namespace Flowery.Controls
 
                 foreach (var child in Children)
                 {
+                    // Collapsed children take no space and no spacing, as in StackPanel.
+                    if (child.Visibility == Visibility.Collapsed)
+                        continue;
+
                     child.Measure(new Size(double.PositiveInfinity, availableSize.Height));
                     var desired = child.DesiredSize;
 
                     var nextWidth = anyInLine ? lineWidth + itemSpacing + desired.Width : lineWidth + desired.Width;
 
                     // If we have a finite width and this would overflow, wrap to next line.
-                    if (!double.IsInfinity(availableSize.Width) && anyInLine && nextWidth > availableSize.Width)
+                    if (!double.IsInfinity(availableSize.Width) && anyInLine && nextWidth > availableSize.Width + WrapTolerance)
                     {
                         totalHeight += lineHeight;
                         totalHeight += lineSpacing;
@@ -155,12 +163,15 @@ namespace Flowery.Controls
 
                 foreach (var child in Children)
                 {
+                    if (child.Visibility == Visibility.Collapsed)
+                        continue;
+
                     child.Measure(new Size(availableSize.Width, double.PositiveInfinity));
                     var desired = child.DesiredSize;
 
                     var nextHeight = anyInLine ? lineHeight + itemSpacing + desired.Height : lineHeight + desired.Height;
 
-                    if (!double.IsInfinity(availableSize.Height) && anyInLine && nextHeight > availableSize.Height)
+                    if (!double.IsInfinity(availableSize.Height) && anyInLine && nextHeight > availableSize.Height + WrapTolerance)
                     {
                         totalWidth += lineWidth;
                         totalWidth += lineSpacing;
@@ -202,10 +213,13 @@ namespace Flowery.Controls
 
                 foreach (var child in Children)
                 {
+                    if (child.Visibility == Visibility.Collapsed)
+                        continue;
+
                     var desired = child.DesiredSize;
                     var nextX = anyInLine ? x + itemSpacing + desired.Width : x + desired.Width;
 
-                    if (!double.IsInfinity(finalSize.Width) && anyInLine && nextX > finalSize.Width)
+                    if (!double.IsInfinity(finalSize.Width) && anyInLine && nextX > finalSize.Width + WrapTolerance)
                     {
                         // wrap
                         x = 0;
@@ -234,10 +248,13 @@ namespace Flowery.Controls
 
                 foreach (var child in Children)
                 {
+                    if (child.Visibility == Visibility.Collapsed)
+                        continue;
+
                     var desired = child.DesiredSize;
                     var nextY = anyInLine ? y + itemSpacing + desired.Height : y + desired.Height;
 
-                    if (!double.IsInfinity(finalSize.Height) && anyInLine && nextY > finalSize.Height)
+                    if (!double.IsInfinity(finalSize.Height) && anyInLine && nextY > finalSize.Height + WrapTolerance)
                     {
                         // wrap
                         y = 0;

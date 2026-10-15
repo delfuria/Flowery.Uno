@@ -55,6 +55,38 @@ namespace Flowery.Uno.RuntimeTests.Controls
         }
 
         [TestMethod]
+        public async Task When_BoardIsNarrow_StatusItemsWrapInsteadOfClipping()
+        {
+            var kanban = new FlowKanban
+            {
+                Width = 260,
+                Height = 500,
+                Board = new FlowKanbanData { Columns = { new FlowKanbanColumnData { Title = "Todo" } } }
+            };
+
+            RuntimeTestHelpers.AttachToHost(kanban);
+            await RuntimeTestHelpers.EnsureLoadedAsync(kanban);
+
+            var statusItems = await WaitForAsync(() =>
+            {
+                kanban.UpdateLayout();
+                return FindDescendants<Flowery.Controls.WrapPanel>(kanban).FirstOrDefault(panel => panel.Name == "PART_StatusItems" && panel.ActualWidth > 0);
+            });
+            Assert.IsNotNull(statusItems, "The status bar was not laid out.");
+
+            var items = statusItems.Children.OfType<FrameworkElement>().Where(item => item.Visibility == Visibility.Visible).ToList();
+            Assert.IsGreaterThanOrEqualTo(2, items.Count, "Section count and zoom level are always shown.");
+            foreach (var item in items)
+            {
+                var right = item.TransformToVisual(statusItems).TransformPoint(default).X + item.ActualWidth;
+                Assert.IsLessThanOrEqualTo(statusItems.ActualWidth + 0.5, right, $"A status item ends at {right} px in a {statusItems.ActualWidth} px status bar.");
+            }
+
+            var zoomTop = items[1].TransformToVisual(statusItems).TransformPoint(default).Y;
+            Assert.IsGreaterThan(0d, zoomTop, "The zoom level should move to a second line on a narrow board.");
+        }
+
+        [TestMethod]
         public async Task When_SidebarButtonsGrow_SidebarFitsThem()
         {
             var previousButtonWidth = 0d;

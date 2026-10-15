@@ -141,6 +141,8 @@ namespace Flowery.Services
             }
         }
 
+        [UnconditionalSuppressMessage("Trimming", "IL2122:TypeNameIsNotAssemblyQualified",
+            Justification = "ApiInformation takes the WinRT type name, which WinUI expects without an assembly; ElementCompositionPreview is referenced directly below, so trimming keeps it.")]
         public static void TrySetIsTranslationEnabled(UIElement element, bool value)
         {
             if (!ApiInformation.IsMethodPresent("Microsoft.UI.Xaml.Hosting.ElementCompositionPreview", "SetIsTranslationEnabled", 2))

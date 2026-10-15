@@ -38,6 +38,7 @@ namespace Flowery.Uno.Gallery.Examples
         private ShapeVisual? _dropShadowMaskVisual;
         private ThemeShadow? _themeShadow;
         private bool _pendingApplyTech;
+        private bool _childVisualAttached;
 
         public DaisyButtonTechMode TechMode
         {
@@ -143,13 +144,7 @@ namespace Flowery.Uno.Gallery.Examples
             // Sync corner radius manually
             _buttonBorder.CornerRadius = CornerRadius;
 
-            if (!OperatingSystem.IsWindows())
-            {
-                // WASM: Direct SetElevation path remains the Golden Path
-                global::Uno.UI.Toolkit.UIElementExtensions.SetElevation(_buttonBorder, 6);
-                return;
-            }
-
+#if WINDOWS
             switch (TechMode)
             {
                 case DaisyButtonTechMode.SetElevation:
@@ -164,6 +159,10 @@ namespace Flowery.Uno.Gallery.Examples
                 default:
                     break;
             }
+#else
+            // WASM, Desktop (Skia, also on Windows) and Android: Direct SetElevation path remains the Golden Path
+            global::Uno.UI.Toolkit.UIElementExtensions.SetElevation(_buttonBorder, 6);
+#endif
         }
 
         private void ClearTech()
@@ -174,11 +173,21 @@ namespace Flowery.Uno.Gallery.Examples
                 _buttonBorder.Translation = new Vector3(0, 0, 0);
                 global::Uno.UI.Toolkit.UIElementExtensions.SetElevation(_buttonBorder, 0);
 
-                try
+                // Only ApplyDropShadow attaches a child visual. Uno's Skia renderer throws a
+                // NullReferenceException when SetElementChildVisual gets null.
+                if (_childVisualAttached)
                 {
-                    ElementCompositionPreview.SetElementChildVisual(_buttonBorder, null!);
+                    try
+                    {
+                        ElementCompositionPreview.SetElementChildVisual(_buttonBorder, null!);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"Detaching the child visual failed: {ex.Message}");
+                    }
+
+                    _childVisualAttached = false;
                 }
-                catch { }
             }
 
             _dropShadow = null;
@@ -218,6 +227,7 @@ namespace Flowery.Uno.Gallery.Examples
 
                 _dropShadowVisual.Size = new Vector2((float)ActualWidth, (float)ActualHeight);
                 ElementCompositionPreview.SetElementChildVisual(_buttonBorder, _dropShadowVisual);
+                _childVisualAttached = true;
             }
             catch (Exception ex)
             {

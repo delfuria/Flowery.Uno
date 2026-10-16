@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -557,6 +557,8 @@ namespace Flowery.Controls
                 insetContainer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(lineThickness) });
                 insetContainer.HorizontalAlignment = HorizontalAlignment.Center;
                 insetContainer.VerticalAlignment = VerticalAlignment.Stretch;
+                // A root narrower than the container clips the left line on Skia at some scale/margin combinations
+                _rootGrid!.MinWidth = lineThickness * 2 + gap;
 
                 // Shadow line (left)
                 _line1 = new Rectangle
@@ -584,6 +586,8 @@ namespace Flowery.Controls
                 insetContainer.RowDefinitions.Add(new RowDefinition { Height = new GridLength(lineThickness) });
                 insetContainer.HorizontalAlignment = HorizontalAlignment.Stretch;
                 insetContainer.VerticalAlignment = VerticalAlignment.Center;
+                // A root lower than the container clips the top line on Skia at some scale/margin combinations
+                _rootGrid!.MinHeight = lineThickness * 2 + gap;
 
                 // Shadow line (top) - darker
                 _line1 = new Rectangle
@@ -606,7 +610,7 @@ namespace Flowery.Controls
 
             insetContainer.Children.Add(_line1);
             insetContainer.Children.Add(_line2);
-            _rootGrid!.Children.Add(insetContainer);
+            _rootGrid.Children.Add(insetContainer);
         }
 
         /// <summary>
@@ -854,6 +858,13 @@ namespace Flowery.Controls
         /// </summary>
         private void BuildTaperedVisual(double _)
         {
+            // A Path without geometry has no size on Skia, so the container provides it (as for Wave)
+            var taperedContainer = new Border
+            {
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch
+            };
+
             _linePath = new Path
             {
                 HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -862,11 +873,12 @@ namespace Flowery.Controls
                 UseLayoutRounding = false // Allow sub-pixel tapering
             };
 
-            _linePath.SizeChanged += OnTaperedPathSizeChanged;
-            _rootGrid!.Children.Add(_linePath);
+            taperedContainer.Child = _linePath;
+            taperedContainer.SizeChanged += OnTaperedContainerSizeChanged;
+            _rootGrid!.Children.Add(taperedContainer);
         }
 
-        private void OnTaperedPathSizeChanged(object sender, SizeChangedEventArgs e)
+        private void OnTaperedContainerSizeChanged(object sender, SizeChangedEventArgs e)
         {
             if (_linePath == null) return;
 

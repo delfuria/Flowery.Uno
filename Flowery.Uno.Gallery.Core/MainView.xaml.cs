@@ -42,6 +42,8 @@ namespace Flowery.Uno.Gallery
         private bool _isHeaderCollapsed;
         private bool _isLandscape;
         private bool _isHeaderNarrow;
+        private bool _isInlinePaneCollapsedByUser;
+        private bool? _isCollapsedLayout;
         private bool _hasRenderedFrame;
         private bool _isWaitingForFirstFrame;
         private string _licenseText = "2025 - MIT licensed";
@@ -76,7 +78,13 @@ namespace Flowery.Uno.Gallery
                 UpdateHeaderClip();
             }
 
+            SidebarPaneBorder?.RegisterPropertyChangedCallback(Border.PaddingProperty, OnSidebarPanePaddingChanged);
+
             _isMobilePlatform = OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
+
+            // Kept alive by its Loaded/Unloaded subscriptions on this view
+            if (_isMobilePlatform && SidebarPaneBorder != null && HeaderBorder != null && MainContentHost != null)
+                _ = new GallerySafeAreaPadding(this, SidebarPaneBorder, HeaderBorder, MainContentHost);
 
             // Show platform hint in header
             if (MitLicenseText != null)
@@ -244,6 +252,20 @@ namespace Flowery.Uno.Gallery
             _headerClip.Rect = new Rect(0, 0, width, height);
         }
 
+        // GallerySafeAreaPadding pads the pane on mobile (e.g. the camera cutout on the left in landscape). Widen the pane by that
+        // padding so the fixed-width sidebar is not clipped on the right.
+        private void OnSidebarPanePaddingChanged(DependencyObject sender, DependencyProperty dp)
+        {
+            if (MainSplitView == null || SidebarPaneBorder == null)
+                return;
+
+            var padding = SidebarPaneBorder.Padding;
+            MainSplitView.OpenPaneLength = SidebarWidth + padding.Left + padding.Right;
+
+            if (ActualWidth > 0)
+                UpdateResponsiveLayout(ActualWidth);
+        }
+
         private void OnSizeChanged(object sender, SizeChangedEventArgs e)
         {
             UpdateResponsiveLayout(e.NewSize.Width);
@@ -266,27 +288,35 @@ namespace Flowery.Uno.Gallery
 
         private void UpdateResponsiveLayout(double width)
         {
-            if (MainSplitView == null || HamburgerButton == null)
+            if (MainSplitView == null)
                 return;
 
-            var contentWidthIfInline = width - SidebarWidth;
-            var sidebarPercent = width > 0 ? SidebarWidth / width : 0;
+            var paneLength = MainSplitView.OpenPaneLength;
+            var contentWidthIfInline = width - paneLength;
+            var sidebarPercent = width > 0 ? paneLength / width : 0;
 
             var shouldCollapse = contentWidthIfInline < MinContentWidth || sidebarPercent > MaxSidebarWidthPercent;
 
             if (_hasRenderedFrame)
             {
-                // Close before switching to Overlay and switch to Inline before opening,
-                // so each change moves the pane through a single visual state transition.
-                if (shouldCollapse)
+                // Only act when the layout switches between narrow and wide; otherwise a layout update (e.g. the
+                // pane's safe-area padding changing as it opens) would close the overlay pane the user just opened.
+                if (shouldCollapse != _isCollapsedLayout)
                 {
-                    MainSplitView.IsPaneOpen = false;
-                    MainSplitView.DisplayMode = SplitViewDisplayMode.Overlay;
-                }
-                else
-                {
-                    MainSplitView.DisplayMode = SplitViewDisplayMode.Inline;
-                    MainSplitView.IsPaneOpen = true;
+                    _isCollapsedLayout = shouldCollapse;
+
+                    // Close before switching to Overlay and switch to Inline before opening,
+                    // so each change moves the pane through a single visual state transition.
+                    if (shouldCollapse)
+                    {
+                        MainSplitView.IsPaneOpen = false;
+                        MainSplitView.DisplayMode = SplitViewDisplayMode.Overlay;
+                    }
+                    else
+                    {
+                        MainSplitView.DisplayMode = SplitViewDisplayMode.Inline;
+                        MainSplitView.IsPaneOpen = !_isInlinePaneCollapsedByUser;
+                    }
                 }
             }
             else if (!_isWaitingForFirstFrame)
@@ -297,8 +327,6 @@ namespace Flowery.Uno.Gallery
                 _isWaitingForFirstFrame = true;
                 CompositionTarget.Rendering += OnFirstFrameRendering;
             }
-
-            HamburgerButton.Visibility = shouldCollapse ? Visibility.Visible : Visibility.Collapsed;
 
             SetHeaderNarrow(width > 0 && width < NarrowHeaderWidth);
         }
@@ -342,6 +370,10 @@ namespace Flowery.Uno.Gallery
             if (MainSplitView != null)
             {
                 MainSplitView.IsPaneOpen = !MainSplitView.IsPaneOpen;
+
+                // Remember a collapsed inline pane so resizing or rotating does not reopen it
+                if (MainSplitView.DisplayMode == SplitViewDisplayMode.Inline)
+                    _isInlinePaneCollapsedByUser = !MainSplitView.IsPaneOpen;
             }
         }
 

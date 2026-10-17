@@ -87,6 +87,10 @@
     <OutputType>WinExe</OutputType>
   </PropertyGroup>
 
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <CodesignKey>iPhone Developer</CodesignKey>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Flowery.Uno.Gallery.Core\Flowery.Uno.Gallery.Core.csproj" />
     <ProjectReference Include="..\Flowery.Uno\Flowery.Uno.csproj" />

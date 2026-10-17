@@ -81,6 +81,39 @@ namespace Flowery.Uno.RuntimeTests.Controls
             }
         }
 
+        [TestMethod]
+        public async Task When_ToggleResizedAfterLoad_MeasuresLikeAToggleCreatedAtThatSize()
+        {
+            // A global size change sets Size on toggles that are already loaded; nothing from the first size may stick (#70).
+            (DaisySize Initial, DaisySize Target)[] changes =
+                [(DaisySize.Medium, DaisySize.ExtraSmall), (DaisySize.ExtraSmall, DaisySize.ExtraLarge)];
+            foreach (var (initial, target) in changes)
+            {
+                var resized = await LoadToggleAsync(initial);
+                resized.Size = target;
+                await Task.Delay(100);
+                resized.UpdateLayout();
+                var resizedWidth = resized.ActualWidth;
+                var resizedHeight = resized.ActualHeight;
+
+                // Attaching the fresh toggle removes the resized one from the host, so its size is read above.
+                var fresh = await LoadToggleAsync(target);
+                Assert.AreEqual(fresh.ActualWidth, resizedWidth, 0.01, $"Toggle {initial} -> {target} width");
+                Assert.AreEqual(fresh.ActualHeight, resizedHeight, 0.01, $"Toggle {initial} -> {target} height");
+            }
+        }
+
+        private static async Task<DaisyToggle> LoadToggleAsync(DaisySize size)
+        {
+            // Top-left alignment, so ActualWidth/ActualHeight are the toggle's own size and not the host's.
+            var toggle = new DaisyToggle { Size = size, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+            RuntimeTestHelpers.AttachToHost(toggle);
+            await RuntimeTestHelpers.EnsureLoadedAsync(toggle);
+            await Task.Delay(100);
+            toggle.UpdateLayout();
+            return toggle;
+        }
+
         private static System.Collections.Generic.IEnumerable<T> Descendants<T>(DependencyObject root) where T : DependencyObject
         {
             for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)

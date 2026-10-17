@@ -303,14 +303,16 @@ namespace Flowery.Controls
                 SetFontSize(DaisyResourceLookup.GetDefaultFontSize(Size));
             }
 
-            if (ReadLocalValue(MinHeightProperty) == DependencyProperty.UnsetValue)
+            // The track has an explicit size, so the toggle already measures at least the track. A minimum
+            // written here becomes a local value and would stick after the first size (#70). The 44 px touch
+            // target on mobile does not depend on Size, so setting it once is correct there.
+            if (PlatformCompatibility.IsMobile)
             {
-                MinHeight = PlatformCompatibility.IsMobile ? 44d : _switchArea.Height;
-            }
+                if (ReadLocalValue(MinHeightProperty) == DependencyProperty.UnsetValue)
+                    MinHeight = 44d;
 
-            if (ReadLocalValue(MinWidthProperty) == DependencyProperty.UnsetValue)
-            {
-                MinWidth = PlatformCompatibility.IsMobile ? 44d : _switchArea.Width;
+                if (ReadLocalValue(MinWidthProperty) == DependencyProperty.UnsetValue)
+                    MinWidth = 44d;
             }
         }
 

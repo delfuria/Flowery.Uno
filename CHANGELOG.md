@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Toggle: `DaisyToggle` no longer keeps the `MinWidth`/`MinHeight` of its first size on desktop (#70). A toggle that follows the global size now shrinks with it; before, it reserved at least the first track size, because the control treated the minimum it had written itself as an app override. The 44 px touch target on mobile is unchanged.
 - Sidebar: `SidebarItem` has an optional `ControlName` and a `MatchesSearch` method. The `FloweryComponentSidebar` search matches the translated name and the control class name, ignoring case, spaces and punctuation (#65), so "Tag Picker", "DaisyTagPicker", "TagPicker" and "tag picker" all find the tag picker.
 - Gallery: section headers show the translated sidebar name followed by the control class, e.g. `Tag Picker (DaisyTagPicker)`, and follow language changes (#65).
 - **Breaking:** Build: moved all Windows, Desktop (Skia), Browser and tooling target frameworks from net9.0 to net10.0 (Android was already net10.0); consumers must now target net10.0. Build/run scripts, CI build, runtime test runners and developer docs updated accordingly.

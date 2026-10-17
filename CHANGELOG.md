@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.1] - 2026-10-17
 
+- Toggle: `DaisyToggle` no longer keeps the `MinWidth`/`MinHeight` of its first size on desktop (#70). A toggle that follows the global size now shrinks with it; before, it reserved at least the first track size, because the control treated the minimum it had written itself as an app override. The 44 px touch target on mobile is unchanged.
 - Sidebar: `SidebarItem` has an optional `ControlName` and a `MatchesSearch` method. The `FloweryComponentSidebar` search matches the translated name and the control class name, ignoring case, spaces and punctuation (#65), so "Tag Picker", "DaisyTagPicker", "TagPicker" and "tag picker" all find the tag picker.
 - Gallery: section headers show the translated sidebar name followed by the control class, e.g. `Tag Picker (DaisyTagPicker)`, and follow language changes (#65).
 - Button: `DaisyButton` no longer keeps the corner radius of its first size (#71). When `Size` changes later, for example through the global size, the radius follows the new tier (ExtraSmall/Small 4, Medium/Large 8, ExtraLarge 12); before, the control treated the radius it had written itself as an app override. A `CornerRadius` set by the app, `DaisyJoin` or `DaisyButtonGroup` still wins.

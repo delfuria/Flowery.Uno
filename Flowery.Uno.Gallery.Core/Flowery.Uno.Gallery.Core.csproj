@@ -45,6 +45,7 @@
        they're processed by the Gallery app project instead -->
   <ItemGroup>
     <UnoIcon Remove="Assets\app_icon.svg" />
+    <UnoIcon Remove="Assets\app_icon_foreground.svg" />
     <UnoSplashScreen Remove="Assets\splash_screen.svg" />
   </ItemGroup>
 

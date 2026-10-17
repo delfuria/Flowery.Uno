@@ -8,6 +8,8 @@ namespace Flowery.Uno.Gallery.Droid;
 
 [Application(
     Label = "@string/ApplicationName",
+    Icon = "@mipmap/app_icon",
+    RoundIcon = "@mipmap/app_icon_round",
     LargeHeap = true,
     HardwareAccelerated = true,
     Theme = "@style/AppTheme"

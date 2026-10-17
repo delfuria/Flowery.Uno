@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <!-- Same dark background as the app icon and the splash_screen.svg -->
+        <item name="android:windowSplashScreenBackground">#0A0F1F</item>
+    </style>
+</resources>

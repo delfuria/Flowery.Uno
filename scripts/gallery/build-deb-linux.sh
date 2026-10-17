@@ -2,12 +2,12 @@
 set -e
 
 # ============================================================
-# Flowery.Uno Gallery — Pacchetti .deb per Linux (x64 e arm64), net10.0-desktop
+# Flowery.Uno Gallery — Linux .deb packages (x64 and arm64), net10.0-desktop
 #
-# Prerequisiti (una volta sola):
+# Prerequisites (one time):
 #   brew install dpkg
 #
-# Il lavoro vero lo fa packaging/linux/build-deb.sh.
+# The actual work is done by packaging/linux/build-deb.sh.
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

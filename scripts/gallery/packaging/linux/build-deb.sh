@@ -26,7 +26,7 @@ TFM=net10.0-desktop
 NAME=flowery-uno-gallery
 EXE=Flowery.Uno.Gallery
 
-dotnet restore "$PROJECT" -nologo -v quiet
+dotnet restore "$PROJECT" -p:TargetFrameworks=$TFM -nologo -v quiet
 VERSION="$(dotnet msbuild "$PROJECT" -nologo -getProperty:Version -p:TargetFramework=$TFM | tr -d '[:space:]')"
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "unexpected version '$VERSION'" >&2; exit 1; }
 
@@ -39,7 +39,7 @@ DEB="${NAME}_${VERSION}_${ARCH}.deb"
 echo "==> Flowery.Uno Gallery $VERSION, $RID ($ARCH)"
 
 echo "==> dotnet publish"
-dotnet publish "$PROJECT" -f $TFM -c Release -r "$RID" --self-contained \
+dotnet publish "$PROJECT" -f $TFM -p:TargetFrameworks=$TFM -c Release -r "$RID" --self-contained \
     -p:UseMonoRuntime=false -p:DebugType=None -p:DebugSymbols=false -o "$PUBLISH_DIR" -nologo -v quiet
 
 echo "==> package tree"

@@ -2,10 +2,10 @@
 set -e
 
 # ============================================================
-# Flowery.Uno Gallery — Windows x64 + arm64 (zip portatili)
+# Flowery.Uno Gallery — Windows x64 + arm64 (portable zips)
 #
-# Cross-publish da macOS con il TFM net10.0-desktop (Skia/Win32),
-# self-contained: decomprimi e lancia Flowery.Uno.Gallery.exe.
+# Cross-published from macOS with the net10.0-desktop TFM (Skia/Win32),
+# self-contained: unzip and run Flowery.Uno.Gallery.exe.
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -18,7 +18,7 @@ echo "Pulizia output precedente..."
 mkdir -p "$OUT_DIR"
 rm -f "$OUT_DIR"/FloweryUnoGallery_win-*.zip
 
-dotnet restore "$PROJECT" -nologo -v quiet
+dotnet restore "$PROJECT" -p:TargetFrameworks=$TFM -nologo -v quiet
 VERSION="$(dotnet msbuild "$PROJECT" -nologo -getProperty:Version -p:TargetFramework=$TFM | tr -d '[:space:]')"
 echo "Versione rilevata: $VERSION"
 
@@ -30,7 +30,7 @@ for pair in "x64:win-x64" "arm64:win-arm64"; do
     echo ""
     echo "[$arch] dotnet publish ($rid)..."
     rm -r "$PUBLISH_DIR" 2>/dev/null || true
-    dotnet publish "$PROJECT" -f $TFM -c Release -r "$rid" --self-contained \
+    dotnet publish "$PROJECT" -f $TFM -p:TargetFrameworks=$TFM -c Release -r "$rid" --self-contained \
         -p:UseMonoRuntime=false -p:DebugType=None -p:DebugSymbols=false -o "$PUBLISH_DIR" -nologo
 
     echo "[$arch] zip..."

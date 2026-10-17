@@ -25,7 +25,7 @@ output/                 ignored by git
   installer/            final packages
   publish/x64, arm64    Windows publish output (intermediate, zipped afterwards)
 packaging/
-  render-icon.sh        app_icon.svg -> PNG (qlmanage + sips)
+  render-icon.sh        app_icon.svg -> PNG (rsvg-convert, or qlmanage + sips on macOS)
   linux/                build-deb.sh, control.in, .desktop
   macos/                Info.plist.in, Entitlements.plist
 ```
@@ -66,6 +66,25 @@ Each package was started on a real or emulated target and checked for a running 
 | Android `.apk` (x64 ABI) | not tested | the emulator is arm64 | - |
 
 Not covered: a real Intel Mac, installing the `.deb` with `apt` (the launcher in `/usr/bin` and the menu entry), and navigation inside the app beyond the first screen.
+
+## Release workflow (CI)
+
+`.github/workflows/release.yml` runs these scripts and attaches the packages to the GitHub release:
+
+| Job | Runner | Script | Produces |
+|---|---|---|---|
+| `build-gallery-desktop` | ubuntu | `build-windows.sh`, `build-deb-linux.sh` | Windows zips, Linux `.deb` |
+| `build-gallery-android` | ubuntu | `build-android.sh` | `.apk` |
+| `build-gallery-macos` | macos | `build-dmg-macos.sh` | `.dmg` |
+
+Optional repository secrets (without them the build still works, just unsigned):
+
+| Secret | Used for |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_KEYSTORE_PASS` | sign the APK with your own keystore instead of the debug key |
+| `MACOS_CERTIFICATE_P12_BASE64`, `MACOS_CERTIFICATE_PASSWORD`, `MACOS_DEV_ID_CERT` | Developer ID signing (`MACOS_DEV_ID_CERT` is the certificate name) |
+
+Environment variables read by the scripts: `FLOWERY_DEV_ID_CERT` (certificate name; if it is not in the Keychain the app is signed ad-hoc), `FLOWERY_NOTARIZE`, `FLOWERY_NOTARY_PROFILE`, and the `FLOWERY_ANDROID_*` variables above.
 
 ## Notes
 

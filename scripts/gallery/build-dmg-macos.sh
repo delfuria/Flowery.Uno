@@ -2,23 +2,27 @@
 set -e
 
 # ============================================================
-# Flowery.Uno Gallery — Build DMG macOS (arm64 + x64), distribuzione diretta
+# Flowery.Uno Gallery — macOS DMG build (arm64 + x64), direct distribution
 #
-# Il Gallery non ha un TFM maccatalyst: si usa net10.0-desktop (Skia) pubblicato
-# per osx-arm64 e osx-x64; un unico .app contiene entrambi i payload.
+# The Gallery has no maccatalyst TFM: net10.0-desktop (Skia) is published for
+# osx-arm64 and osx-x64, and a single .app contains both payloads.
 #
-# Prerequisiti:
+# Prerequisites:
 #   brew install create-dmg
 #
-# Certificato necessario nel Keychain:
-#   "Developer ID Application: Stefano Del Furia (VZWMBQL256)"
+# Signing (optional):
+#   FLOWERY_DEV_ID_CERT  name of the "Developer ID Application: ..." certificate in the Keychain
+#                        (default: the maintainer's). If it is not in the Keychain, the bundle
+#                        is signed ad-hoc ("-"), as in CI without secrets: the DMG opens
+#                        with right-click > Open.
+#   FLOWERY_NOTARIZE     "true" to notarize (requires FLOWERY_NOTARY_PROFILE)
 # ============================================================
 
-DEV_ID_CERT="Developer ID Application: Stefano Del Furia (VZWMBQL256)"
+DEV_ID_CERT="${FLOWERY_DEV_ID_CERT:-Developer ID Application: Stefano Del Furia (VZWMBQL256)}"
 
-# Notarizzazione disabilitata come per RadioE45 (vedi note lì).
-NOTARIZE=false
-NOTARY_PROFILE="flowery-gallery-notary"
+# Notarization is disabled by default.
+NOTARIZE="${FLOWERY_NOTARIZE:-false}"
+NOTARY_PROFILE="${FLOWERY_NOTARY_PROFILE:-flowery-gallery-notary}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -31,8 +35,8 @@ PACKAGING_DIR="$SCRIPT_DIR/packaging"
 ENTITLEMENTS="$PACKAGING_DIR/macos/Entitlements.plist"
 FINAL_DMG="$OUT_DIR/FloweryUnoGallery.dmg"
 
-# /tmp invece di OneDrive: OneDrive ri-aggiunge xattr propri dopo xattr -cr,
-# rompendo la verifica firma di codesign
+# /tmp instead of a cloud-synced folder: OneDrive re-adds its own xattrs after xattr -cr,
+# which breaks the codesign verification
 WORK_DIR="/tmp/FloweryGallery-dmg-build"
 APP="$WORK_DIR/$APP_NAME.app"
 DMG_STAGING="$WORK_DIR/dmg-staging"
@@ -43,26 +47,33 @@ echo "========================================"
 echo " Flowery.Uno Gallery — DMG (distribuzione diretta)"
 echo "========================================"
 
-# --- Verifica prerequisiti ---
+# --- Check prerequisites ---
 if ! command -v create-dmg &>/dev/null; then
     echo "[ERRORE] create-dmg non trovato. Installa con:"
     echo "  brew install create-dmg"
     exit 1
 fi
 
-if ! security find-identity -v -p codesigning | grep -q "$DEV_ID_CERT"; then
-    echo "[ERRORE] Certificato Developer ID non trovato nel Keychain:"
-    echo "  $DEV_ID_CERT"
-    exit 1
+if security find-identity -v -p codesigning | grep -q "$DEV_ID_CERT"; then
+    SIGN_ID="$DEV_ID_CERT"
+    SIGN_OPTS=(--options runtime --timestamp)
+    SIGNED=true
+else
+    echo "[AVVISO] Certificato Developer ID non trovato nel Keychain: $DEV_ID_CERT"
+    echo "         Firma ad-hoc: il DMG non sarà verificato da Gatekeeper."
+    SIGN_ID="-"
+    SIGN_OPTS=(--options runtime --timestamp=none)
+    SIGNED=false
+    NOTARIZE=false
 fi
 
-# --- Pulizia ---
+# --- Cleanup ---
 echo ""
 echo "[1/6] Pulizia output precedente..."
 rm -r "$WORK_DIR" 2>/dev/null || true
 mkdir -p "$WORK_DIR" "$OUT_DIR"
 
-dotnet restore "$PROJECT" -nologo -v quiet
+dotnet restore "$PROJECT" -p:TargetFrameworks=$TFM -nologo -v quiet
 VERSION="$(dotnet msbuild "$PROJECT" -nologo -getProperty:Version -p:TargetFramework=$TFM | tr -d '[:space:]')"
 echo "Versione rilevata: $VERSION"
 
@@ -70,24 +81,24 @@ echo "Versione rilevata: $VERSION"
 echo ""
 echo "[2/6] dotnet publish (Release, $TFM, osx-arm64 + osx-x64)..."
 for rid in osx-arm64 osx-x64; do
-    dotnet publish "$PROJECT" -f $TFM -c Release -r "$rid" --self-contained \
+    dotnet publish "$PROJECT" -f $TFM -p:TargetFrameworks=$TFM -c Release -r "$rid" --self-contained \
         -p:UseMonoRuntime=false -p:DebugType=None -p:DebugSymbols=false -o "$WORK_DIR/$rid" -nologo
 done
 
-# --- Bundle .app con due payload (arm64 + x64) ---
+# --- .app bundle with two payloads (arm64 + x64) ---
 echo ""
 echo "[3/6] Creazione .app (payload arm64 + x64, launcher che sceglie)..."
-# Niente lipo: le DLL gestite del framework (System.Private.CoreLib, ...) sono ReadyToRun
-# e specifiche per architettura, quindi un apphost universale con DLL arm64 fallisce sotto
+# No lipo: the framework managed DLLs (System.Private.CoreLib, ...) are ReadyToRun and
+# architecture-specific, so a universal apphost with arm64 DLLs fails under
 # Rosetta ("Failed to load System.Private.CoreLib.dll ... 0x8007000B").
-# Payload in Contents/Resources: le cartelle satellite (zh-Hans, ...) dentro Contents/MacOS
-# fanno fallire codesign ("code object is not signed at all").
+# Payload in Contents/Resources: satellite folders (zh-Hans, ...) inside Contents/MacOS
+# make codesign fail ("code object is not signed at all").
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 ditto "$WORK_DIR/osx-arm64" "$APP/Contents/Resources/app-arm64"
 ditto "$WORK_DIR/osx-x64" "$APP/Contents/Resources/app-x64"
 cat > "$APP/Contents/MacOS/$EXE" <<'LAUNCHER'
 #!/bin/sh
-# Sceglie il payload dall'hardware reale (hw.optional.arm64 resta 1 anche sotto Rosetta).
+# Pick the payload from the real hardware (hw.optional.arm64 stays 1 even under Rosetta).
 DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"
 if [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" = "1" ]; then
     exec /usr/bin/arch -arm64 "$DIR/app-arm64/Flowery.Uno.Gallery" "$@"
@@ -98,7 +109,7 @@ chmod +x "$APP/Contents/MacOS/$EXE"
 
 sed "s/@VERSION@/$VERSION/g" "$PACKAGING_DIR/macos/Info.plist.in" > "$APP/Contents/Info.plist"
 
-# Icona: PNG renderizzati dal SVG del Gallery -> .icns
+# Icon: PNGs rendered from the Gallery SVG -> .icns
 ICONSET="$WORK_DIR/AppIcon.iconset"
 mkdir -p "$ICONSET"
 for size in 16 32 128 256 512; do
@@ -107,24 +118,23 @@ for size in 16 32 128 256 512; do
 done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 
-# --- Firma .app con Developer ID ---
+# --- Sign the .app ---
 echo ""
-echo "[4/6] Firma .app con Developer ID Application..."
+echo "[4/6] Firma .app..."
 xattr -cr "$APP"
 
-# Prima tutti i Mach-O interni (dylib, so, eseguibili), poi il bundle.
+# First all the inner Mach-O files (dylib, so, executables), then the bundle.
 find "$APP/Contents" -type f | sort | while read -r f; do
     if is_macho "$f"; then
-        codesign --sign "$DEV_ID_CERT" --force --options runtime --timestamp \
+        codesign --sign "$SIGN_ID" --force "${SIGN_OPTS[@]}" \
             --entitlements "$ENTITLEMENTS" "$f"
     fi
 done
 
 codesign \
-    --sign "$DEV_ID_CERT" \
+    --sign "$SIGN_ID" \
     --force \
-    --options runtime \
-    --timestamp \
+    "${SIGN_OPTS[@]}" \
     --entitlements "$ENTITLEMENTS" \
     "$APP"
 
@@ -132,19 +142,19 @@ echo "Verifica firma..."
 codesign --verify --deep --strict "$APP"
 spctl --assess --type execute "$APP" 2>&1 || true
 
-# --- Creazione DMG ---
+# --- Create the DMG ---
 echo ""
 echo "[5/6] Creazione DMG con create-dmg..."
 rm -f "$FINAL_DMG"
 
-# Stacca eventuali volumi dmg temporanei residui da run precedenti falliti
+# Detach any temporary dmg volumes left over from earlier failed runs
 for stale_vol in /Volumes/dmg.*; do
     [ -d "$stale_vol" ] && hdiutil detach "$stale_vol" -force 2>/dev/null || true
 done
 rm -f "$OUT_DIR"/rw.*.FloweryUnoGallery.dmg 2>/dev/null || true
 
 mkdir -p "$DMG_STAGING"
-# ditto e non "cp -r": preserva symlink/xattr senza rompere la firma.
+# ditto instead of "cp -r": preserves symlinks/xattrs without breaking the signature.
 ditto "$APP" "$DMG_STAGING/$APP_NAME.app"
 
 create-dmg \
@@ -157,10 +167,14 @@ create-dmg \
     "$FINAL_DMG" \
     "$DMG_STAGING"
 
-codesign --sign "$DEV_ID_CERT" --timestamp "$FINAL_DMG"
-echo "DMG firmato."
+if [ "$SIGNED" = "true" ]; then
+    codesign --sign "$DEV_ID_CERT" --timestamp "$FINAL_DMG"
+    echo "DMG firmato."
+else
+    echo "DMG non firmato (solo .app con firma ad-hoc)."
+fi
 
-# --- Notarizzazione ---
+# --- Notarization ---
 if [ "$NOTARIZE" = "true" ]; then
     echo ""
     echo "[6/6] Notarizzazione DMG (può richiedere qualche minuto)..."
@@ -171,7 +185,7 @@ else
     echo "[6/6] Notarizzazione saltata (NOTARIZE=false)."
 fi
 
-# --- Output finale ---
+# --- Final output ---
 echo ""
 echo "========================================"
 echo " DMG pronto:"

@@ -3,8 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:daisy="using:Flowery.Controls"
-    xmlns:gallery="using:Flowery.Uno.Gallery"
-    xmlns:utu="using:Uno.Toolkit.UI">
+    xmlns:gallery="using:Flowery.Uno.Gallery">
 
     <Grid x:Name="RootGrid"
           Background="{ThemeResource DaisyBase100Brush}"
@@ -15,9 +14,10 @@
                    DisplayMode="Overlay"
                    OpenPaneLength="250">
             <SplitView.Pane>
-                <!-- SafeArea keeps the sidebar out of the status bar, notch and home indicator on mobile -->
-                <Border Background="{ThemeResource DaisyBase200Brush}"
-                        utu:SafeArea.Insets="Left,Top,Bottom">
+                <!-- On mobile, GallerySafeAreaPadding keeps the sidebar out of the status bar, cutout and gesture bar;
+                     MainView widens the pane by that padding so the sidebar keeps its full width -->
+                <Border x:Name="SidebarPaneBorder"
+                        Background="{ThemeResource DaisyBase200Brush}">
                     <gallery:GallerySidebar
                         x:Name="ComponentSidebar"
                         SidebarWidth="250"
@@ -27,10 +27,9 @@
             </SplitView.Pane>
             <SplitView.Content>
                 <Grid RowDefinitions="Auto,Auto,*">
-                    <!-- SafeArea pads the header below the status bar; the gradient still fills it -->
+                    <!-- On mobile, GallerySafeAreaPadding pads the header below the status bar; the gradient still fills it -->
                     <Border x:Name="HeaderBorder"
-                            Grid.Row="0"
-                            utu:SafeArea.Insets="Left,Top,Right">
+                            Grid.Row="0">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                                 <GradientStop Offset="0" Color="#0F172A" />
@@ -75,7 +74,6 @@
                                     <daisy:DaisyButton x:Name="HamburgerButton"
                                                        Size="Small"
                                                        Variant="Ghost"
-                                                       Visibility="Collapsed"
                                                        Click="HamburgerButton_Click"
                                                        Margin="0,0,8,0"
                                                        Grid.Column="0"
@@ -202,7 +200,8 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Background required for hit-testing (mouse wheel input) -->
+                    <!-- Background required for hit-testing (mouse wheel input);
+                         on mobile, GallerySafeAreaPadding keeps page content out of the gesture bar and a side cutout -->
                     <Grid x:Name="MainContentHost"
                           Grid.Row="2"
                           Background="Transparent"

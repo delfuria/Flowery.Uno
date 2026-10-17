@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.1] - 2026-10-17
 
 - Sidebar: `SidebarItem` has an optional `ControlName` and a `MatchesSearch` method. The `FloweryComponentSidebar` search matches the translated name and the control class name, ignoring case, spaces and punctuation (#65), so "Tag Picker", "DaisyTagPicker", "TagPicker" and "tag picker" all find the tag picker.
 - Gallery: section headers show the translated sidebar name followed by the control class, e.g. `Tag Picker (DaisyTagPicker)`, and follow language changes (#65).

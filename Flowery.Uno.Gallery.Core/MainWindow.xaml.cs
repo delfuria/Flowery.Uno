@@ -33,7 +33,7 @@ namespace Flowery.Uno.Gallery
             // On Mobile (Android/iOS), the OS manages window bounds entirely.
             if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
             {
-                Title = "Flowery.Uno Gallery";
+                Title = $"Flowery.Uno Gallery {GalleryInfo.Version}";
                 return;
             }
 
@@ -52,7 +52,7 @@ namespace Flowery.Uno.Gallery
             SizeChanged += OnWindowSizeChanged;
             Closed += OnWindowClosed;
 
-            Title = "Flowery.Uno Gallery";
+            Title = $"Flowery.Uno Gallery {GalleryInfo.Version}";
         }
 
         private void ApplyWindowBounds()

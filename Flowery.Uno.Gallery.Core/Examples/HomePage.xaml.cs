@@ -14,6 +14,7 @@ namespace Flowery.Uno.Gallery.Examples
         public HomePage()
         {
             InitializeComponent();
+            VersionText.Text = GalleryInfo.Version;
             Loaded += OnLoaded;
             Unloaded += OnUnloaded;
         }

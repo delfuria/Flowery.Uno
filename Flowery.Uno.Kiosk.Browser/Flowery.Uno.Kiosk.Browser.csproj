@@ -39,7 +39,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <UnoIcon Include="Assets\app_icon.svg" ForegroundBrush="#FFFFFF" />
+    <UnoIcon Include="..\Flowery.Uno.Gallery.Core\Assets\app_icon.svg"
+             ForegroundFile="..\Flowery.Uno.Gallery.Core\Assets\app_icon_foreground.svg"
+             Color="#0A0F1F" />
     <Content Include="Assets\**\*">
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

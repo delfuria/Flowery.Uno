@@ -125,11 +125,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <UnoIcon Include="..\Flowery.Uno.Gallery.Core\Assets\app_icon.svg" ForegroundBrush="#FFFFFF" />
+    <!-- Include = background layer, ForegroundFile = flower mark (kept inside the Android adaptive-icon safe zone) -->
+    <UnoIcon Include="..\Flowery.Uno.Gallery.Core\Assets\app_icon.svg"
+             ForegroundFile="..\Flowery.Uno.Gallery.Core\Assets\app_icon_foreground.svg"
+             Color="#0A0F1F" />
   </ItemGroup>
 
   <ItemGroup Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-browserwasm')) Or $([System.String]::Copy('$(TargetFramework)').Contains('-ios'))">
-    <UnoSplashScreen Include="..\Flowery.Uno.Gallery.Core\Assets\splash_screen.svg" />
+    <UnoSplashScreen Include="..\Flowery.Uno.Gallery.Core\Assets\splash_screen.svg" Color="#0A0F1F" />
   </ItemGroup>
 
   <!-- Import shared Gallery assets for Skia heads (Browser, Desktop, Android) -->

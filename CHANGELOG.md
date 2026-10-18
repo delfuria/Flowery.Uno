@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.3] 2026-10-18
 - Gallery (Desktop): the Skia Desktop head now has a `Platforms/Desktop/Package.appxmanifest` and a pre-composed `app_icon_desktop.png` (background + flower). Skia Desktop reads the window/taskbar icon from that manifest; the head had none, so the Windows taskbar showed the default icon and macOS/Linux fell back to the background-only `app_icon.svg`.
 - Gallery (Desktop): `App.OnLaunched` calls the Resizetizer-generated `Window.SetWindowIcon()` on Windows, Linux and macOS, and the `.deb` `StartupWMClass` is now the `ApplicationId` (`com.uno.flowery.gallery`). Known limitation: with Uno 6.5.x the X11 host sets no `WM_CLASS`, so the GNOME sidebar still lists the app as "unknown" on Linux; Uno 6.7.x sets it (`XSetClassHint`), so this needs a separate Uno upgrade.
 - Gallery (packaging): `scripts/gallery/packaging/render-icon.sh` now renders the background plus the flower; it used only `app_icon.svg`, so the DMG `.icns` and the `.deb` hicolor icons showed the background alone. The Desktop head sets `ApplicationIcon` to a checked-in `app_icon.ico`, because Resizetizer only generates one when building on Windows and the Windows zips are cross-published from macOS (the `.exe` had the default icon in Explorer).

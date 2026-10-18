@@ -8,4 +8,4 @@ Icon=flowery-uno-gallery
 Terminal=false
 Categories=Development;
 Keywords=uno;flowery;daisyui;gallery;
-StartupWMClass=Flowery.Uno.Gallery
+StartupWMClass=com.uno.flowery.gallery

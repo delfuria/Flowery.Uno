@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Renders the Gallery app_icon.svg to a square PNG.
+# Renders the Gallery app icon (app_icon.svg background + app_icon_foreground.svg flower) to a square PNG.
 # Uses rsvg-convert when available (Linux/CI: apt install librsvg2-bin; macOS: brew install librsvg),
 # otherwise qlmanage + sips (macOS only).
 #
@@ -9,10 +9,18 @@ set -euo pipefail
 SIZE="${1:?uso: $0 <size> <output.png>}"
 OUT="${2:?uso: $0 <size> <output.png>}"
 PROJECT_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-SVG="$PROJECT_ROOT/Flowery.Uno.Gallery.Core/Assets/app_icon.svg"
+ASSETS="$PROJECT_ROOT/Flowery.Uno.Gallery.Core/Assets"
 
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/flowery-icon.XXXXXX")"
 trap 'rm -r "$TMP"' EXIT
+
+# The background SVG has no flower: append the foreground group (the <defs> of both files are identical)
+SVG="$TMP/app_icon.svg"
+{
+    sed '/<\/svg>/d' "$ASSETS/app_icon.svg"
+    sed -n '/<g /,/<\/g>/p' "$ASSETS/app_icon_foreground.svg"
+    echo '</svg>'
+} > "$SVG"
 
 mkdir -p "$(dirname "$OUT")"
 if command -v rsvg-convert >/dev/null; then

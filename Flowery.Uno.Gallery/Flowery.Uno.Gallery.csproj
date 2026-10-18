@@ -85,6 +85,12 @@
 
   <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'desktop'">
     <OutputType>WinExe</OutputType>
+    <!-- Skia Desktop reads the window/taskbar icon from the generated Package.appxmanifest -->
+    <ApplicationTitle>Flowery.Uno Gallery</ApplicationTitle>
+    <ApplicationId>com.uno.flowery.gallery</ApplicationId>
+    <!-- Icon of the Windows .exe in Explorer. Resizetizer only generates an .ico when building on Windows,
+         and the release zips are cross-published from macOS. -->
+    <ApplicationIcon>Platforms\Desktop\Assets\app_icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -108,6 +114,12 @@
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'desktop'">
     <PackageReference Include="Uno.Toolkit.Skia.WinUI" />
     <ProjectReference Include="..\Flowery.Uno.RuntimeTests\Flowery.Uno.RuntimeTests.csproj" />
+
+    <!-- Pre-composed icon (background + flower) referenced by Platforms\Desktop\Package.appxmanifest.
+         Resizetizer only emits the appiconset on macOS, so the window icon needs a PNG that exists on every OS. -->
+    <Content Include="Platforms\Desktop\Assets\app_icon_desktop.png" Link="Assets\app_icon_desktop.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <!-- <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">

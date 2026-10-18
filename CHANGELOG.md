@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] 2026-10-18
+- Gallery (Desktop): the Skia Desktop head now has a `Platforms/Desktop/Package.appxmanifest` and a pre-composed `app_icon_desktop.png` (background + flower). Skia Desktop reads the window/taskbar icon from that manifest; the head had none, so the Windows taskbar showed the default icon and macOS/Linux fell back to the background-only `app_icon.svg`.
+- Gallery (Desktop): `App.OnLaunched` calls the Resizetizer-generated `Window.SetWindowIcon()` on Windows, Linux and macOS, and the `.deb` `StartupWMClass` is now the `ApplicationId` (`com.uno.flowery.gallery`). Known limitation: with Uno 6.5.x the X11 host sets no `WM_CLASS`, so the GNOME sidebar still lists the app as "unknown" on Linux; Uno 6.7.x sets it (`XSetClassHint`), so this needs a separate Uno upgrade.
+- Gallery (packaging): `scripts/gallery/packaging/render-icon.sh` now renders the background plus the flower; it used only `app_icon.svg`, so the DMG `.icns` and the `.deb` hicolor icons showed the background alone. The Desktop head sets `ApplicationIcon` to a checked-in `app_icon.ico`, because Resizetizer only generates one when building on Windows and the Windows zips are cross-published from macOS (the `.exe` had the default icon in Explorer).
+
 ## [1.2.2] - 2026-10-17
 - Gallery: the home page shows the Flowery.Uno library version (e.g. `v1.2.2`) in a muted line below the title, and the window title reads `Flowery.Uno Gallery v1.2.1` (#76). The version is read at runtime from the `Flowery.Uno` assembly (`GalleryInfo.Version`), so it always matches the NuGet package and nothing is hardcoded in the Gallery.
 - Gallery: new logo, a six-petal flower mark. The app icon, splash screen, favicon, README banner and the sidebar/Home banner images use it. The app icon is now a background/foreground pair (`app_icon.svg` + `app_icon_foreground.svg`, wired with `ForegroundFile` in the Gallery head) so Android gets a proper adaptive icon; the unsupported `ForegroundBrush` attribute is gone, which also stops the mark from being tinted. The splash screen and the web manifest use the same dark background color.

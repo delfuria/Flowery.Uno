@@ -14,6 +14,10 @@ using Microsoft.UI.Xaml.Markup;
 using Flowery.Uno.RuntimeTests;
 #endif
 
+#if __SKIA__
+using Uno.Resizetizer;
+#endif
+
 namespace Flowery.Uno.Gallery
 {
     public partial class App : Application
@@ -109,6 +113,13 @@ namespace Flowery.Uno.Gallery
             }
 
             _window = new MainWindow();
+#if __SKIA__
+            // Uno.Resizetizer generates SetWindowIcon (AppWindow.SetIcon with the composed app icon).
+            if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            {
+                _window.SetWindowIcon();
+            }
+#endif
             FlowerySizeManager.MainWindow = _window;
             FloweryScaleManager.MainWindow = _window;
 

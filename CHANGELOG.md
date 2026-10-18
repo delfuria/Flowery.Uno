@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- Gallery: the home page shows the Flowery.Uno library version (e.g. `v1.2.1`) in a muted line below the title, and the window title reads `Flowery.Uno Gallery v1.2.1` (#76). The version is read at runtime from the `Flowery.Uno` assembly (`GalleryInfo.Version`), so it always matches the NuGet package and nothing is hardcoded in the Gallery.
+
 ## [1.2.1] - 2026-10-17
 
 - Gallery: new logo, a six-petal flower mark. The app icon, splash screen, favicon, README banner and the sidebar/Home banner images use it. The app icon is now a background/foreground pair (`app_icon.svg` + `app_icon_foreground.svg`, wired with `ForegroundFile` in the Gallery head) so Android gets a proper adaptive icon; the unsupported `ForegroundBrush` attribute is gone, which also stops the mark from being tinted. The splash screen and the web manifest use the same dark background color.

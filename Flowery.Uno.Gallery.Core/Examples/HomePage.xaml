@@ -15,6 +15,10 @@
                        Foreground="{ThemeResource DaisyBaseContentBrush}"
                        FontSize="28"
                        FontWeight="Bold" />
+            <TextBlock x:Name="VersionText"
+                       Foreground="{ThemeResource DaisyBaseContentBrush}"
+                       FontSize="12"
+                       Opacity="0.6" />
             <TextBlock x:Name="SubtitleText"
                 Text="Beautifully themed components for Uno Platform."
                 Foreground="{ThemeResource DaisyBaseContentBrush}"

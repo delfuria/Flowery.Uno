@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- Gallery: the home page shows the Flowery.Uno library version (e.g. `v1.2.1`) in a muted line below the title, and the window title reads `Flowery.Uno Gallery v1.2.1` (#76). The version is read at runtime from the `Flowery.Uno` assembly (`GalleryInfo.Version`), so it always matches the NuGet package and nothing is hardcoded in the Gallery.
+
 ## [1.2.1] - 2026-10-17
 
 - Toggle: `DaisyToggle` no longer keeps the `MinWidth`/`MinHeight` of its first size on desktop (#70). A toggle that follows the global size now shrinks with it; before, it reserved at least the first track size, because the control treated the minimum it had written itself as an app override. The 44 px touch target on mobile is unchanged.

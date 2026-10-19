@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build: The icon and pattern generators now use the Uno Desktop target and can restore their library references (#85).
 - Build: Updated supported GitHub Actions releases and restricted write permissions to the jobs that need them (#85).
 - Build: Removed ineffective Uno.Check setup from CI and release workflows.
+- Build: Install the WebAssembly workload for the browser library's native Skia dependencies in CI.
 - Tests: Updated the MSTest framework, adapter, analyzers and metapackage to 4.5.1. HangDump and TRX extensions use 2.5.1 (#87).
 
 ## [1.3.0] 2026-10-18

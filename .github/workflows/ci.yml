@@ -26,8 +26,9 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Install Android workload
-        run: dotnet workload install android
+      # The library also targets browserwasm and references native Skia assets.
+      - name: Install required workloads
+        run: dotnet workload install android wasm-tools
 
       - name: Build Library
         run: dotnet build Flowery.Uno/Flowery.Uno.csproj -c Release -p:CheckEolWorkloads=false

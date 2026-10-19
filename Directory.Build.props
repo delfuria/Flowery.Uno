@@ -2,9 +2,9 @@
   <PropertyGroup>
     <!-- Default configuration if not specified -->
     <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
-    <Version Condition="'$(Version)' == ''">1.3.0</Version>
-    <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">1.3.0.0</AssemblyVersion>
-    <FileVersion Condition="'$(FileVersion)' == ''">1.3.0.0</FileVersion>
+    <Version Condition="'$(Version)' == ''">1.4.0</Version>
+    <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">1.4.0.0</AssemblyVersion>
+    <FileVersion Condition="'$(FileVersion)' == ''">1.4.0.0</FileVersion>
     <Authors Condition="'$(Authors)' == ''">tobitege</Authors>
     <PackageProjectUrl Condition="'$(PackageProjectUrl)' == ''">https://github.com/tobitege/Flowery.Uno</PackageProjectUrl>
     <RepositoryUrl Condition="'$(RepositoryUrl)' == ''">https://github.com/tobitege/Flowery.Uno</RepositoryUrl>

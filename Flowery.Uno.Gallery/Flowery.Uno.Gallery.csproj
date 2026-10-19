@@ -11,7 +11,7 @@
     <UnoSingleProject>true</UnoSingleProject>
 
     <OutputType>Exe</OutputType>
-    <!-- Android derives Version from ApplicationDisplayVersion (1.0); keep a single PackageVersion across target
+    <!-- Android derives Version from ApplicationDisplayVersion; keep a single PackageVersion across target
          frameworks, otherwise Visual Studio's NuGet restore fails with NU1105 -->
     <PackageVersion>$(Version)</PackageVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -37,7 +37,7 @@
   <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
     <ApplicationTitle>Flowery.Uno Gallery</ApplicationTitle>
     <ApplicationId>com.uno.flowery.gallery</ApplicationId>
-    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationDisplayVersion>$(Version)</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
     <SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
     <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
@@ -53,7 +53,7 @@
   <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
     <ApplicationTitle>Flowery.Uno Gallery</ApplicationTitle>
     <ApplicationId>com.uno.flowery.gallery</ApplicationId>
-    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationDisplayVersion>$(Version)</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
   </PropertyGroup>
 

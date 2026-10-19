@@ -20,9 +20,9 @@ jobs:
   build-library:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
@@ -41,9 +41,9 @@ jobs:
   build-gallery:
     runs-on: windows-2025-vs2026
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
@@ -68,3 +68,78 @@ jobs:
             -c Release `
             -f net10.0-windows10.0.19041 `
             --no-restore
+
+  nuget-audit:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025-vs2026, macos-15]
+        configuration: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Install required workloads
+        shell: pwsh
+        run: |
+          $workloads = @('workload', 'install', 'android', 'wasm-tools')
+          if ($IsMacOS) { $workloads += 'ios' }
+          dotnet @workloads
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Audit all projects including transitive packages
+        shell: pwsh
+        run: ./scripts/audit-nuget.ps1 -Configuration ${{ matrix.configuration }}
+
+  dependency-submission:
+    # Manual runs scan the explicitly selected branch; pushes submit main.
+    # No PR checkout or PR-controlled artifact enters this write-enabled job.
+    if: github.event_name != 'pull_request' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.event_name == 'workflow_dispatch')
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025-vs2026, macos-15]
+        configuration: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Install required workloads
+        shell: pwsh
+        run: |
+          $workloads = @('workload', 'install', 'android', 'wasm-tools')
+          if ($IsMacOS) { $workloads += 'ios' }
+          dotnet @workloads
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Restore every tracked project
+        shell: pwsh
+        env:
+          CONFIGURATION: ${{ matrix.configuration }}
+        run: |
+          $projects = @(git ls-files -- '*.csproj')
+          if ($LASTEXITCODE -ne 0 -or $projects.Count -eq 0) { throw 'No tracked C# projects found.' }
+          foreach ($project in $projects) {
+            $restoreArgs = @('restore', $project, "-p:Configuration=$env:CONFIGURATION", '-p:CheckEolWorkloads=false')
+            dotnet @restoreArgs
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Submit resolved NuGet dependencies
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SNAPSHOT_REF: ${{ github.ref }}
+        run: |
+          ./scripts/submit-dependencies.ps1 `
+            -RepositoryRoot . `
+            -Configuration ${{ matrix.configuration }} `
+            -OutputPath "$env:RUNNER_TEMP/nuget-snapshot.json" `
+            -Correlator nuget-${{ matrix.os }}-${{ matrix.configuration }} `
+            -Ref $env:SNAPSHOT_REF `
+            -Submit

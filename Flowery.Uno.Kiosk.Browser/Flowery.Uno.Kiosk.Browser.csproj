@@ -33,6 +33,7 @@
   </PropertyGroup> -->
 
   <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.Xml" />
     <ProjectReference Include="..\Flowery.Uno\Flowery.Uno.csproj" />
     <ProjectReference Include="..\Flowery.Uno.Gallery.Core\Flowery.Uno.Gallery.Core.csproj" />
     <ProjectReference Include="..\Flowery.Uno.Win2D\Flowery.Uno.Win2D.csproj" />

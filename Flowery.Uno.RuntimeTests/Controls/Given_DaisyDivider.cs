@@ -70,6 +70,8 @@ namespace Flowery.Uno.RuntimeTests.Controls
                 {
                     var (darker, lighter) = await CountChangedPixelsAsync(DaisyDividerStyle.Tapered, size, horizontal, tolerance: 0);
                     Assert.IsGreaterThan(0, darker + lighter, $"Tapered {size}, Horizontal={horizontal}: the line should be drawn.");
+                    var (backgroundDarker, backgroundLighter) = await CountChangedPixelsAsync(DaisyDividerStyle.Tapered, size, horizontal, tolerance: 0, opacity: 0);
+                    Assert.AreEqual(0, backgroundDarker + backgroundLighter, $"Tapered {size}, Horizontal={horizontal}: a transparent divider should not change the background.");
                 }
             }
         }
@@ -78,7 +80,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
             [DaisySize.ExtraSmall, DaisySize.Small, DaisySize.Medium, DaisySize.Large, DaisySize.ExtraLarge];
 
         // The tapered line is a 1 px sliver anti-aliased over two pixel rows, so its contrast depends on the Skia backend: tolerance 0 counts any changed pixel.
-        private static async Task<(int Darker, int Lighter)> CountChangedPixelsAsync(DaisyDividerStyle style, DaisySize size, bool horizontal, int tolerance = 16)
+        private static async Task<(int Darker, int Lighter)> CountChangedPixelsAsync(DaisyDividerStyle style, DaisySize size, bool horizontal, int tolerance = 16, double opacity = 1)
         {
             // Mid gray shows both the dark shadow and the light highlight of Inset.
             const byte background = 128;
@@ -87,6 +89,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
                 DividerStyle = style,
                 Size = size,
                 Horizontal = horizontal,
+                Opacity = opacity,
                 Width = horizontal ? double.NaN : 200,
                 Height = horizontal ? 60 : double.NaN
             };

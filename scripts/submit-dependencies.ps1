@@ -114,7 +114,9 @@ try {
         $response = gh @apiArgs
         if ($LASTEXITCODE -ne 0) { throw 'Dependency snapshot submission failed.' }
         $result = ($response -join [Environment]::NewLine) | ConvertFrom-Json
-        if ($result.result -ne 'SUCCESS') { throw 'GitHub did not confirm dependency snapshot submission.' }
+        if ($result.result -ne 'SUCCESS') {
+            throw ('GitHub did not update the dependency graph (result {0}, snapshot {1}): {2}' -f $result.result, $result.id, $result.message)
+        }
         Write-Host ('Dependency snapshot submitted: {0}.' -f $result.id)
     }
 }

@@ -93,9 +93,9 @@ jobs:
         run: ./scripts/audit-nuget.ps1 -Configuration ${{ matrix.configuration }}
 
   dependency-submission:
-    # Manual runs scan the explicitly selected branch; pushes submit main.
+    # GitHub only updates the repository graph from its default branch.
     # No PR checkout or PR-controlled artifact enters this write-enabled job.
-    if: github.event_name != 'pull_request' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.event_name == 'workflow_dispatch')
+    if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write

@@ -153,6 +153,7 @@ Invoke-DotnetStep -Title "Build Flowery.Uno.Win2D (windows only)" -Args (@(
 
 Invoke-DotnetStep -Title "Restore Flowery.Uno.Gallery (Windows only)" -Args (@(
     "restore", $galleryProject,
+    "-p:Configuration=$Configuration",
     "-p:TargetFramework=$windowsTfm",
     "-p:TargetFrameworks=$windowsTfm",
     "-p:RuntimeIdentifier=$RuntimeIdentifier",

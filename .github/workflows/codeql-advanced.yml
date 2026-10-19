@@ -57,9 +57,9 @@ jobs:
           build-mode: ${{ matrix.build-mode }}
           dependency-caching: true
 
-      - name: Install Android workload
+      - name: Install required workloads
         if: matrix.language == 'csharp'
-        run: dotnet workload install android
+        run: dotnet workload install android wasm-tools
 
       - name: Build library for CodeQL extraction
         if: matrix.language == 'csharp'

@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] 2026-10-18
+- **Breaking:** Build: moved from Uno.Sdk 6.5.33 to 6.7.30 (Uno packages 6.7.135) (#81). `global.json`, the `Uno.Sdk` version in every project and the `<UnoVersion>` property are updated; the SDK checks that `UnoVersion` matches it (`UNOB0004`), so consumers that pin Uno packages should move to 6.7.x as well. All heads build (Windows WinUI, Desktop Skia, Browser, Android, iOS) and the unit and Skia runtime tests pass on macOS, Windows ARM64 and Linux ARM64. Not run on a device or simulator: Android, iOS, Browser
+- Gallery (Linux): the X11 window now has `WM_CLASS` `com.uno.flowery.gallery` (checked with `xprop` on Ubuntu 24.04 ARM64 from the 1.3.0 `.deb`), which matches the `.desktop` `StartupWMClass`, so the GNOME sidebar/dock can match the window to its icon. Uno 6.7 sets it (`XSetClassHint`); the limitation noted in 1.2.3 is gone and no code change was needed. Sidebar icon itself still to be confirmed after a real `.deb` install
+- Tests: the DaisyDivider Tapered runtime test counts any pixel that differs from the background instead of requiring a 16-level luminance change. With Uno 6.7 on Linux the 1 px tapered line is drawn but fainter, so its contrast fell below that threshold and the test reported no line
+
 ## [1.2.3] 2026-10-18
 - Gallery (Desktop): the Skia Desktop head now has a `Platforms/Desktop/Package.appxmanifest` and a pre-composed `app_icon_desktop.png` (background + flower). Skia Desktop reads the window/taskbar icon from that manifest; the head had none, so the Windows taskbar showed the default icon and macOS/Linux fell back to the background-only `app_icon.svg`.
 - Gallery (Desktop): `App.OnLaunched` calls the Resizetizer-generated `Window.SetWindowIcon()` on Windows, Linux and macOS, and the `.deb` `StartupWMClass` is now the `ApplicationId` (`com.uno.flowery.gallery`). Known limitation: with Uno 6.5.x the X11 host sets no `WM_CLASS`, so the GNOME sidebar still lists the app as "unknown" on Linux; Uno 6.7.x sets it (`XSetClassHint`), so this needs a separate Uno upgrade.

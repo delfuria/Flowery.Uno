@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.4.0] - 2026-10-19
 
 - Security: Kiosk Browser uses `System.Security.Cryptography.Xml` 10.0.13 and the updated Pkcs dependency to replace vulnerable 10.0.7 packages (#85).
+- Gallery: Android and iOS `ApplicationDisplayVersion` now follows the shared release version instead of the fixed value 1.0.
 - Maintenance: Dependabot checks NuGet packages in all twelve projects and GitHub Actions each week (#85). CI checks direct and transitive NuGet packages in Debug and Release on Windows and macOS. CI also submits resolved NuGet dependencies to the repository graph.
 - Build: The icon and pattern generators now use the Uno Desktop target and can restore their library references (#85).
 - Build: Updated supported GitHub Actions releases and restricted write permissions to the jobs that need them (#85).

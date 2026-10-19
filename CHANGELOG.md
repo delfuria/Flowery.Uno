@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Maintenance: Dependabot checks NuGet packages in all twelve projects and GitHub Actions each week (#85). CI checks direct and transitive NuGet packages in Debug and Release on Windows and macOS. CI also submits resolved NuGet dependencies to the repository graph.
 - Build: The icon and pattern generators now use the Uno Desktop target and can restore their library references (#85).
 - Build: Updated supported GitHub Actions releases and restricted write permissions to the jobs that need them (#85).
+- Build: Removed ineffective Uno.Check setup from CI and release workflows.
 - Tests: Updated the MSTest framework, adapter, analyzers and metapackage to 4.5.1. HangDump and TRX extensions use 2.5.1 (#87).
 
 ## [1.3.0] 2026-10-18

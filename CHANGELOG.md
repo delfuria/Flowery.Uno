@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-10-19
+
+- Security: Kiosk Browser uses `System.Security.Cryptography.Xml` 10.0.13 and the updated Pkcs dependency to replace vulnerable 10.0.7 packages (#85).
+- Gallery: Android and iOS `ApplicationDisplayVersion` now follows the shared release version instead of the fixed value 1.0.
+- Maintenance: Dependabot checks NuGet packages in all twelve projects and GitHub Actions each week (#85). CI checks direct and transitive NuGet packages in Debug and Release on Windows and macOS. CI also submits resolved NuGet dependencies to the repository graph.
+- Build: The icon and pattern generators now use the Uno Desktop target and can restore their library references (#85).
+- Build: Updated supported GitHub Actions releases and restricted write permissions to the jobs that need them (#85).
+- Build: Removed ineffective Uno.Check setup from CI and release workflows.
+- Build: CI and CodeQL install the WebAssembly workload for the browser library's native Skia dependencies.
+- Tests: Updated the MSTest framework, adapter, analyzers and metapackage to 4.5.1. HangDump and TRX extensions use 2.5.1 (#87).
+
 ## [1.3.0] 2026-10-18
 - **Breaking:** Build: moved from Uno.Sdk 6.5.33 to 6.7.30 (Uno packages 6.7.135) (#81). `global.json`, the `Uno.Sdk` version in every project and the `<UnoVersion>` property are updated; the SDK checks that `UnoVersion` matches it (`UNOB0004`), so consumers that pin Uno packages should move to 6.7.x as well. All heads build (Windows WinUI, Desktop Skia, Browser, Android, iOS) and the unit and Skia runtime tests pass on macOS, Windows ARM64 and Linux ARM64. Not run on a device or simulator: Android, iOS, Browser
 - Gallery (Linux): the X11 window now has `WM_CLASS` `com.uno.flowery.gallery` (checked with `xprop` on Ubuntu 24.04 ARM64 from the 1.3.0 `.deb`), which matches the `.desktop` `StartupWMClass`, so the GNOME sidebar/dock can match the window to its icon. Uno 6.7 sets it (`XSetClassHint`); the limitation noted in 1.2.3 is gone and no code change was needed. Sidebar icon itself still to be confirmed after a real `.deb` install

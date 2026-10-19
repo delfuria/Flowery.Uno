@@ -26,14 +26,9 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Setup Uno Workloads
-        run: dotnet workload install uno-check || true
-
-      - name: Install Android workload
-        run: dotnet workload install android
-
-      - name: Install Uno.Check
-        run: dotnet tool install -g Uno.Check || true
+      # The library also targets browserwasm and references native Skia assets.
+      - name: Install required workloads
+        run: dotnet workload install android wasm-tools
 
       - name: Build Library
         run: dotnet build Flowery.Uno/Flowery.Uno.csproj -c Release -p:CheckEolWorkloads=false
@@ -46,9 +41,6 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
-
-      - name: Setup Uno Workloads
-        run: dotnet workload install uno-check || true
 
       - name: Install WebAssembly tools
         run: dotnet workload install wasm-tools

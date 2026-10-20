@@ -175,10 +175,21 @@ namespace Flowery.Uno.Gallery
 
 #if __WASM__
             MainSplitView.ApplyTemplate();
-            var templateRoot = (FrameworkElement)VisualTreeHelper.GetChild(MainSplitView, 0);
-            _paneDisplayStates = VisualStateManager.GetVisualStateGroups(templateRoot)
-                .Single(group => group.Name == "DisplayModeStates");
-            _paneDisplayStates.CurrentStateChanged += OnPaneDisplayStateChanged;
+            if (VisualTreeHelper.GetChildrenCount(MainSplitView) > 0 &&
+                VisualTreeHelper.GetChild(MainSplitView, 0) is FrameworkElement templateRoot)
+            {
+                _paneDisplayStates = VisualStateManager.GetVisualStateGroups(templateRoot)
+                    .FirstOrDefault(group => group.Name == "DisplayModeStates" &&
+                        group.States.Any(state => state.Name == "Closed"));
+            }
+            if (_paneDisplayStates != null)
+            {
+                _paneDisplayStates.CurrentStateChanged += OnPaneDisplayStateChanged;
+            }
+            else
+            {
+                GalleryDiagnostics.Log("SplitView display states are unavailable. GL overlays follow IsPaneOpen; closing animations cannot be observed.");
+            }
             _paneOpenCallbackToken = MainSplitView.RegisterPropertyChangedCallback(
                 SplitView.IsPaneOpenProperty, OnPaneStateChanged);
             _paneDisplayModeCallbackToken = MainSplitView.RegisterPropertyChangedCallback(
@@ -232,8 +243,9 @@ namespace Flowery.Uno.Gallery
         {
             // IsPaneOpen changes before Uno starts the closing transition.
             // Keep the overlays paused until DisplayModeStates reports its completion.
-            if (MainSplitView.DisplayMode == SplitViewDisplayMode.Overlay && !MainSplitView.IsPaneOpen &&
-                _paneDisplayStates?.CurrentState?.Name != "Closed")
+            if (_paneDisplayStates != null &&
+                MainSplitView.DisplayMode == SplitViewDisplayMode.Overlay && !MainSplitView.IsPaneOpen &&
+                _paneDisplayStates.CurrentState?.Name != "Closed")
                 return;
 
             UpdateCarouselOverlaySuspension();

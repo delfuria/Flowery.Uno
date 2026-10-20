@@ -92,6 +92,81 @@ public class Given_CarouselGalleryCycles
         }
     }
 
+    [TestMethod]
+    public async Task When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect()
+    {
+        var host = RuntimeTestContext.HostPanel
+            ?? throw new InvalidOperationException("Runtime test host is not initialized.");
+        var page = new CarouselExamples();
+        DaisyToggle? enabled = null;
+        DaisyCarousel? carousel = null;
+        var completed = new List<(int Index, FlowerySlideEffect Effect)>();
+
+        void OnSlideChanged(object? sender, FlowerySlideChangedEventArgs args)
+        {
+            var changedCarousel = (DaisyCarousel)sender!;
+            completed.Add((changedCarousel.SelectedIndex, changedCarousel.SlideEffect));
+        }
+
+        try
+        {
+            host.Children.Clear();
+            host.Children.Add(page);
+            await WaitForAsync(() => page.IsLoaded, "Gallery page did not load.");
+            enabled = Named<DaisyToggle>(page, "InteractiveCarouselEnabledToggle");
+            carousel = Named<DaisyCarousel>(page, "InteractiveCarousel");
+            var infinite = Named<DaisyToggle>(page, "CarouselInfiniteToggle");
+            enabled.IsOn = false;
+            await DrainDispatcherAsync(page.DispatcherQueue);
+            await DrainDispatcherAsync(page.DispatcherQueue);
+            SelectTag(Named<DaisySelect>(page, "CarouselModeSelect"), "Slideshow");
+            SelectTag(Named<DaisySelect>(page, "CarouselTransitionSelect"), "Fade");
+            SelectTag(Named<DaisySelect>(page, "CarouselDurationSelect"), "0.4");
+            SelectTag(Named<DaisySelect>(page, "CarouselEffectSelect"), "PanLeft");
+            Named<DaisyNumericUpDown>(page, "CarouselIntervalBox").Value = 1m;
+            infinite.IsOn = false;
+            Assert.AreEqual(3, carousel.ItemCount, "This Gallery example must have three slides.");
+            Assert.AreEqual(0, carousel.SelectedIndex, "The finite sequence must begin on the first slide.");
+
+            carousel.SlideChanged += OnSlideChanged;
+            enabled.IsOn = true;
+            Assert.IsFalse(carousel.WrapAround);
+            await WaitForAsync(() => completed.Count >= 2, "The finite slideshow did not reach its last slide.", 10);
+            Assert.HasCount(2, completed);
+            Assert.AreEqual((1, FlowerySlideEffect.PanRight), completed[0]);
+            Assert.AreEqual((2, FlowerySlideEffect.PanUp), completed[1]);
+
+            // Observe two complete timer intervals to prove that the finite sequence stays at its end.
+            var stoppedWindow = TimeSpan.FromSeconds(2 * (carousel.SlideInterval + carousel.TransitionDuration));
+            await Task.Delay(stoppedWindow);
+            Assert.HasCount(2, completed, "The finite slideshow must not advance after its last slide.");
+            Assert.AreEqual(2, carousel.SelectedIndex);
+            Assert.AreEqual(FlowerySlideEffect.PanUp, carousel.SlideEffect,
+                "A stopped timer must not consume another effect.");
+
+            infinite.IsOn = true;
+            Assert.IsTrue(carousel.WrapAround);
+            await WaitForAsync(() => completed.Count >= 3, "Enabling Infinite did not resume the slideshow.");
+            Assert.HasCount(3, completed);
+            Assert.AreEqual((0, FlowerySlideEffect.PanDown), completed[2],
+                "Resuming must wrap to the first slide and apply the next effect exactly once.");
+        }
+        finally
+        {
+            try
+            {
+                if (enabled != null)
+                    enabled.IsOn = false;
+                if (carousel != null)
+                    carousel.SlideChanged -= OnSlideChanged;
+            }
+            finally
+            {
+                host.Children.Remove(page);
+            }
+        }
+    }
+
     private static T Named<T>(FrameworkElement root, string name) where T : FrameworkElement
     {
         return root.FindName(name) as T

@@ -8,6 +8,16 @@
     <RepositoryUrl Condition="'$(RepositoryUrl)' == ''">https://github.com/tobitege/Flowery.Uno</RepositoryUrl>
   </PropertyGroup>
 
+  <!--
+    Uses internal .NET WebAssembly SDK items and targets from WasmApp.Common.targets.
+    Verified with WebAssembly SDK pack 10.0.13, Uno.Sdk 6.7.30,
+    Uno.Wasm.Bootstrap 10.0.98 and SkiaSharp 4.153.1.
+    Uno passes C sources such as profiler_flush_wasm.c to the native link step;
+    Skia's WebGPU inputs add -std=c++20 there. Compile C inputs to objects first.
+    Remove this target when upstream compiles C NativeFileReference inputs separately
+    or scopes the C++ flags so they no longer reach C sources. Recheck these internal
+    names on SDK upgrades; the CI Gallery WASM build exercises the native link step.
+  -->
   <Target Name="CompileWasmNativeCSources"
           BeforeTargets="_WasmCompileNativeSourceFiles"
           Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-browserwasm'))">

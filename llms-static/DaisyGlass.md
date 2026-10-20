@@ -28,6 +28,10 @@ DaisyGlass is a frosted-glass container with multiple blur strategies: simulated
 | `GlassSaturation` | Saturation of blurred background (0 = grayscale). |
 | `BlurredBackground` (read-only) | Captured/blurred image when backdrop blur is enabled. |
 
+Starting with 1.4.1, the corrected saturation matrix makes `GlassSaturation="0"` produce grayscale and `GlassSaturation="1"` preserve the captured colors. This affects real backdrop processing; `Simulated` continues to use layered gradients and textures.
+
+The WASM Gallery now uses the Skia renderer and SkiaSharp 4. To use real blur in its glass demos, enable `EnableBackdropBlur` and select `BitmapCapture` or `SkiaSharp`.
+
 ## Quick Examples
 
 ```xml

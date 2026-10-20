@@ -1617,8 +1617,11 @@ namespace Flowery.Helpers
             newSprite.Size = new Vector2((float)width, (float)height);
 
             _transitionResources[newElement] = new PixelateSpriteResources(oldSprite, newSprite, container);
-            AttachMaskedSprite(newElement, oldSprite, oldMaskRoot);
-            AttachMaskedSprite(newElement, newSprite, newMaskRoot);
+            if (!AttachMaskedSprite(newElement, oldSprite, oldMaskRoot) ||
+                !AttachMaskedSprite(newElement, newSprite, newMaskRoot))
+            {
+                return false;
+            }
 
             var oldSurface = compositor.CreateVisualSurface();
             oldSurface.SourceVisual = oldVisual;

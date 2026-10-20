@@ -81,6 +81,10 @@ This feature:
 | `BlurMode` | Blur rendering mode: Simulated, BitmapCapture, or SkiaSharp. |
 | `GlassSaturation` | Saturation of blur (0.0 = grayscale, 1.0 = normal). |
 
+Starting with 1.4.1, the corrected saturation matrix makes `GlassSaturation="0"` produce grayscale and `GlassSaturation="1"` preserve the captured colors. Intermediate values reduce saturation. This applies to real backdrop processing, not the `Simulated` layers.
+
+The WASM Gallery now uses the Skia renderer and SkiaSharp 4 for backdrop blur and complex carousel transitions. Enable `EnableBackdropBlur` and select `BitmapCapture` or `SkiaSharp` to see real blur.
+
 ## Typography & Layout
 
 | Property | Description |

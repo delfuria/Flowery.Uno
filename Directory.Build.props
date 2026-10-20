@@ -10,6 +10,14 @@
     <RepositoryUrl Condition="'$(RepositoryUrl)' == ''">https://github.com/tobitege/Flowery.Uno</RepositoryUrl>
   </PropertyGroup>
 
+  <!-- NuGet owns audit severity; only the dedicated audit job fails on these warnings. -->
+  <PropertyGroup Condition="'$(AuditPipeline)' == 'true'">
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+    <WarningsAsErrors>$(WarningsAsErrors);NU1900;NU1901;NU1902;NU1903;NU1904;NU1905</WarningsAsErrors>
+  </PropertyGroup>
+
   <!--
     The same checkout is often built from macOS, a Windows VM and a Linux VM. Give macOS and Linux their own
     bin/obj folders so restore output, generated XAML and absolute paths do not overwrite each other.

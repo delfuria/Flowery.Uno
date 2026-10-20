@@ -1,6 +1,5 @@
 param(
-    [string]$FixtureScenario,
-    [string]$Phase
+    [string]$FixtureScenario
 )
 
 $ErrorActionPreference = 'Stop'
@@ -8,57 +7,16 @@ $ErrorActionPreference = 'Stop'
 if ($FixtureScenario) {
     $secret = 'SYNTHETIC_AUDIT_SECRET'
     $sensitiveText = "https://user:${secret}@private.invalid/feed?token=${secret} Authorization: Bearer ${secret}"
-    if ($Phase -eq 'restore') {
-        [Console]::Out.WriteLine($sensitiveText)
-        [Console]::Error.WriteLine($sensitiveText)
-        if ($FixtureScenario -eq 'restore-failure') {
-            [Console]::Error.WriteLine('NU1301')
-            exit 7
-        }
-        if ($FixtureScenario -match '^restore-warning-(NU190[0-5])$') {
-            [Console]::Error.WriteLine(('warning {0}: {1}' -f $Matches[1], $sensitiveText))
-        }
-        exit 0
+    [Console]::Out.WriteLine($sensitiveText)
+    [Console]::Error.WriteLine($sensitiveText)
+    if ($FixtureScenario -eq 'restore-failure') {
+        [Console]::Error.WriteLine('NU1301')
+        exit 7
     }
-
-    switch ($FixtureScenario) {
-        'audit-failure' {
-            [Console]::Out.WriteLine($sensitiveText)
-            [Console]::Error.WriteLine("NU1900 $sensitiveText")
-            exit 9
-        }
-        'invalid-json' {
-            [Console]::Out.WriteLine("{ $sensitiveText")
-            exit 0
-        }
-        'audit-stderr' {
-            [Console]::Error.WriteLine($sensitiveText)
-        }
+    if ($FixtureScenario -match '^audit-error-(NU190[0-5])$') {
+        [Console]::Error.WriteLine(('error {0}: {1}' -f $Matches[1], $sensitiveText))
+        exit 1
     }
-
-    $report = @{
-        version = 1
-        projects = @(@{
-            path = $sensitiveText
-            frameworks = @(@{
-                framework = $sensitiveText
-                topLevelPackages = @()
-                transitivePackages = @()
-            })
-        })
-        problems = @()
-    }
-    if ($FixtureScenario -eq 'invalid-report') { $report.version = 2 }
-    if ($FixtureScenario -eq 'problems') {
-        $report.problems = @(@{ text = "NU1900 $sensitiveText" })
-    }
-    if ($FixtureScenario -eq 'vulnerabilities') {
-        $report.projects[0].frameworks[0].transitivePackages = @(@{
-            id = $sensitiveText
-            vulnerabilities = @(@{ advisoryurl = $sensitiveText; severity = $sensitiveText })
-        })
-    }
-    $report | ConvertTo-Json -Depth 10 -Compress
     exit 0
 }
 
@@ -67,16 +25,11 @@ $nativePwsh = (Get-Process -Id $PID).Path
 $cases = @(
     @{ Name = 'success'; Fails = $false; Expected = 'No known vulnerable packages' },
     @{ Name = 'restore-failure'; Fails = $true; Expected = 'exit code 7'; Code = 'NU1301' },
-    @{ Name = 'audit-failure'; Fails = $true; Expected = 'exit code 9'; Code = 'NU1900' },
-    @{ Name = 'invalid-json'; Fails = $true; Expected = 'Invalid NuGet audit JSON' },
-    @{ Name = 'audit-stderr'; Fails = $true; Expected = 'Invalid NuGet audit JSON' },
-    @{ Name = 'invalid-report'; Fails = $true; Expected = 'Invalid NuGet audit report' },
-    @{ Name = 'problems'; Fails = $true; Expected = 'NuGet audit reported problems'; Code = 'NU1900' },
-    @{ Name = 'vulnerabilities'; Fails = $true; Expected = 'found 1 vulnerability entries' }
+    @{ Name = 'launch-failure'; Fails = $true; Expected = 'Could not run NuGet restore' }
 )
 $cases += 0..5 | ForEach-Object {
     $code = 'NU190{0}' -f $_
-    @{ Name = 'restore-warning-' + $code; Fails = $true; Expected = 'NuGet restore reported audit warnings'; Code = $code }
+    @{ Name = 'audit-error-' + $code; Fails = $true; Expected = 'exit code 1'; Code = $code }
 }
 
 foreach ($case in $cases) {
@@ -91,8 +44,12 @@ foreach ($case in $cases) {
             'Flowery.Uno/Flowery.Uno.csproj'
         }
         function dotnet {
+            if ($args[0] -ne 'restore' -or $args -notcontains '-p:AuditPipeline=true') {
+                throw 'Unexpected audit command.'
+            }
+            if ($Case.Name -eq 'launch-failure') { throw 'SYNTHETIC_AUDIT_SECRET' }
             $fixtureArgs = @('-NoProfile', '-File', $FixtureScript,
-                '-FixtureScenario', $Case.Name, '-Phase', $args[0])
+                '-FixtureScenario', $Case.Name)
             & $NativePwsh @fixtureArgs
             $global:LASTEXITCODE = $LASTEXITCODE
         }

@@ -12,7 +12,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
-using Uno.Foundation;
+using System.Runtime.InteropServices.JavaScript;
 
 namespace Flowery.Effects
 {
@@ -397,7 +397,8 @@ namespace Flowery.Effects
 
             try
             {
-                var origin = WebAssemblyRuntime.InvokeJS("window.location.origin");
+                using var location = JSHost.GlobalThis.GetPropertyAsJSObject("location");
+                var origin = location?.GetPropertyAsString("origin");
                 if (string.IsNullOrWhiteSpace(origin) || string.Equals(origin, "null", StringComparison.OrdinalIgnoreCase))
                 {
                     return null;

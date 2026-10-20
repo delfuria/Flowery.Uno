@@ -4,6 +4,25 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$PSNativeCommandUseErrorActionPreference = $false
+
+function Write-AuditDiagnosticCodes {
+    param([object[]]$CommandOutput)
+
+    # Never print tool output: URLs and server responses can contain credentials.
+    $text = $CommandOutput -join [Environment]::NewLine
+    $knownCodes = @(
+        'NU1101', 'NU1102', 'NU1301', 'NU1302',
+        'NU1900', 'NU1901', 'NU1902', 'NU1903', 'NU1904', 'NU1905',
+        'NETSDK1004', 'NETSDK1045', 'NETSDK1147'
+    )
+    foreach ($code in $knownCodes) {
+        $pattern = '\b' + $code + '\b'
+        if ($text -match $pattern) { Write-Host ('NuGet diagnostic code: {0}' -f $code) }
+    }
+    Write-Host 'Raw command output is withheld because it can contain sensitive data.'
+}
+
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Push-Location $repoRoot
 try {
@@ -12,35 +31,20 @@ try {
         throw 'No tracked C# projects found.'
     }
 
-    $vulnerabilities = @()
     foreach ($project in $projects) {
         Write-Host ('Auditing {0} ({1})' -f $project, $Configuration)
-        $restoreArgs = @('restore', $project, "-p:Configuration=$Configuration", '-p:NuGetAudit=true', '-p:NuGetAuditMode=all', '-p:CheckEolWorkloads=false')
-        dotnet @restoreArgs
-        if ($LASTEXITCODE -ne 0) { throw ('Restore failed for {0}.' -f $project) }
-
-        $listArgs = @('list', $project, 'package', '--vulnerable', '--include-transitive', '--format', 'json', '--output-version', '1', '--no-restore')
-        $output = dotnet @listArgs
-        if ($LASTEXITCODE -ne 0) { throw ('NuGet audit failed for {0}.' -f $project) }
-        $report = ($output -join [Environment]::NewLine) | ConvertFrom-Json
-        if ($report.version -ne 1 -or $null -eq $report.projects -or @($report.projects).Count -ne 1) {
-            throw ('Invalid NuGet audit report for {0}.' -f $project)
+        $restoreArgs = @('restore', $project, "-p:Configuration=$Configuration", '-p:AuditPipeline=true', '-p:CheckEolWorkloads=false')
+        try {
+            $restoreOutput = @(dotnet @restoreArgs 2>&1)
+            $restoreExitCode = $LASTEXITCODE
         }
-        foreach ($entry in $report.projects) {
-            foreach ($framework in $entry.frameworks) {
-                foreach ($package in @($framework.topLevelPackages) + @($framework.transitivePackages)) {
-                    foreach ($vulnerability in $package.vulnerabilities) {
-                        $vulnerabilities += '{0} {1} {2}: {3} ({4})' -f $project, $framework.framework, $package.id, $vulnerability.advisoryurl, $vulnerability.severity
-                    }
-                }
-            }
+        catch {
+            throw 'Could not run NuGet restore. Raw exception details are withheld.'
         }
-        foreach ($problem in $report.problems) {
-            throw ('NuGet audit could not complete: {0}' -f $problem.text)
+        if ($restoreExitCode -ne 0) {
+            Write-AuditDiagnosticCodes -CommandOutput $restoreOutput
+            throw ('Restore failed for {0} (exit code {1}).' -f $project, $restoreExitCode)
         }
-    }
-    if ($vulnerabilities.Count -gt 0) {
-        throw ($vulnerabilities -join [Environment]::NewLine)
     }
     Write-Host ('No known vulnerable packages in {0} projects ({1}), including transitive dependencies.' -f $projects.Count, $Configuration)
 }

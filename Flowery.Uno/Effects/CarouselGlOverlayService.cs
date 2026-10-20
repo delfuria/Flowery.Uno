@@ -8,12 +8,12 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Windows.Foundation;
 #if __WASM__ || HAS_UNO_WASM
-using Uno.Foundation;
+using System.Runtime.InteropServices.JavaScript;
 #endif
 
 namespace Flowery.Effects
 {
-    public sealed class CarouselGlOverlayService
+    public sealed partial class CarouselGlOverlayService
     {
         private static readonly Lazy<CarouselGlOverlayService> InstanceValue = new(() => new CarouselGlOverlayService());
         private readonly Dictionary<FrameworkElement, OverlayEntry> _entries = new();
@@ -21,11 +21,23 @@ namespace Flowery.Effects
         private readonly TimeSpan _updateInterval = TimeSpan.FromMilliseconds(33);
         private DispatcherQueueTimer? _updateTimer;
         private bool _updatePending;
+        private bool _isSuspended;
 
         public static CarouselGlOverlayService Instance => InstanceValue.Value;
 
         private CarouselGlOverlayService()
         {
+        }
+
+        public void SetSuspended(bool isSuspended)
+        {
+            if (!OperatingSystem.IsBrowser() || _isSuspended == isSuspended)
+            {
+                return;
+            }
+
+            _isSuspended = isSuspended;
+            UpdateOverlays();
         }
 
         public void Attach(FrameworkElement host, CarouselGlEffectKind effect)
@@ -234,6 +246,12 @@ namespace Flowery.Effects
         {
             foreach (var entry in _entries.Values)
             {
+                if (_isSuspended)
+                {
+                    SetOverlayActive(entry, false);
+                    continue;
+                }
+
                 if (!entry.Host.IsLoaded)
                 {
                     continue;
@@ -579,12 +597,17 @@ namespace Flowery.Effects
             return builder.ToString();
         }
 
+#if __WASM__ || HAS_UNO_WASM
+        [JSImport("globalThis.eval")]
+        private static partial void EvaluateJavaScript(string script);
+#endif
+
         private static void InvokeJs(string script, string context)
         {
 #if __WASM__ || HAS_UNO_WASM
             try
             {
-                WebAssemblyRuntime.InvokeJS(script);
+                EvaluateJavaScript(script);
             }
             catch (Exception ex)
             {

@@ -14,8 +14,6 @@ namespace Flowery.Uno.Gallery.Examples
 {
     public sealed partial class CardsExamples : ScrollableExamplePage
     {
-        public Visibility SkiaMatrixVisibility => OperatingSystem.IsBrowser() ? Visibility.Collapsed : Visibility.Visible;
-
         private Grid? _cardStackContainer;
         private StackPanel? _skiaMatrixContainer;
         private int _currentCardIndex;
@@ -186,11 +184,6 @@ namespace Flowery.Uno.Gallery.Examples
 
         private void InitializeSkiaMatrix()
         {
-            if (OperatingSystem.IsBrowser())
-            {
-                return;
-            }
-
             _skiaMatrixContainer = SkiaMatrixContainer;
             if (_skiaMatrixContainer == null || _skiaMatrixContainer.Children.Count > 0)
                 return;

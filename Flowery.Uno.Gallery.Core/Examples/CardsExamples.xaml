@@ -572,11 +572,10 @@
                 </Border>
             </StackPanel>
 
-            <daisy:DaisyDivider Visibility="{x:Bind SkiaMatrixVisibility}" />
+            <daisy:DaisyDivider />
 
             <!-- DaisyGlass Control - SkiaSharp Mode (Experimental) -->
-            <StackPanel Style="{StaticResource GallerySectionStyle}"
-                        Visibility="{x:Bind SkiaMatrixVisibility}">
+            <StackPanel Style="{StaticResource GallerySectionStyle}">
                 <local:SectionHeader SectionId="daisyglass-skia-matrix" Title="DaisyGlass (SkiaSharp Mode Matrix)" />
                 <TextBlock Text="BlurMode=SkiaSharp. GPU-accelerated blur with Saturation control. Matrix shows Blur (B0-B100) vs Saturation (S0%-S100%)."
                            Opacity="0.7"

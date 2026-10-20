@@ -1,10 +1,11 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <SkiaSharpVersion>4.153.1</SkiaSharpVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageVersion Include="SkiaSharp" Version="3.119.2" />
+    <PackageVersion Include="SkiaSharp" Version="$(SkiaSharpVersion)" />
     <PackageVersion Include="Uno.UI" Version="$(UnoVersion)" />
     <PackageVersion Include="Uno.Toolkit.WinUI" Version="8.4.2" />
     <PackageVersion Include="Uno.Toolkit.Skia.WinUI" Version="8.4.2" />

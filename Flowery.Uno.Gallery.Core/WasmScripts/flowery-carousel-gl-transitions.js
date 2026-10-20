@@ -2,7 +2,6 @@
     "use strict";
 
     const DOCUMENT_BASE = new URL(".", document.baseURI).toString();
-    const FRAMEWORK_BASE = new URL("_framework/", DOCUMENT_BASE).toString();
     const DEFAULT_OVERLAY_Z_INDEX = 1000;
     const DEFAULT_TRANSITION_SEC = 0.6;
     const TRANSITION_DURATION_SCALE = 1.25;
@@ -57,7 +56,8 @@
             return path;
         }
         const cleaned = path.startsWith("/") ? path.slice(1) : path;
-        return new URL(cleaned, FRAMEWORK_BASE).toString();
+        const appBase = new URL(globalThis.config.uno_app_base + "/", DOCUMENT_BASE);
+        return new URL(cleaned, appBase).toString();
     }
 
     const DEFAULT_IMAGES = [
@@ -354,17 +354,34 @@
     }
 
     function drawFallback(canvas, message) {
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
+        if (!canvas.isConnected) {
             return;
         }
-        resizeCanvasToDisplaySize(canvas, null);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#666";
-        ctx.font = "16px sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+        if (!canvas._floweryFallback) {
+            const fallback = document.createElement("div");
+            Object.assign(fallback.style, {
+                position: "fixed", alignItems: "center", justifyContent: "center",
+                pointerEvents: "none", color: "#fff", background: "rgba(0,0,0,0.75)",
+                font: "16px sans-serif", textAlign: "center", boxSizing: "border-box", padding: "12px"
+            });
+            document.body.appendChild(fallback);
+            canvas._floweryFallback = fallback;
+        }
+        canvas._floweryFallback.textContent = message;
+        updateFallback(canvas);
+    }
+
+    function updateFallback(canvas) {
+        if (!canvas._floweryFallback) {
+            return;
+        }
+        const rect = canvas.getBoundingClientRect();
+        Object.assign(canvas._floweryFallback.style, {
+            left: rect.left + "px", top: rect.top + "px",
+            width: rect.width + "px", height: rect.height + "px",
+            zIndex: canvas.style.zIndex || String(getOverlayZIndex()),
+            display: canvas.style.display === "none" ? "none" : "flex"
+        });
     }
 
     function startLoop(state, render) {
@@ -378,10 +395,13 @@
                 state.raf = requestAnimationFrame(state._frame);
             };
         }
-        resumeState(state);
+        if (!state.paused) {
+            resumeState(state);
+        }
     }
 
     function pauseState(state) {
+        state.paused = true;
         if (!state.running) {
             return;
         }
@@ -393,6 +413,7 @@
     }
 
     function resumeState(state) {
+        state.paused = false;
         if (state.running && state.raf) {
             return;
         }
@@ -639,7 +660,7 @@
             return shaderCache.get(entry.path);
         }
 
-        const promise = fetch(resolveAssetPath(entry.path))
+        const promise = fetch(resolveAssetPath("Flowery.Uno.Gallery.Core/" + entry.path))
             .then((response) => {
                 if (!response.ok) {
                     throw new Error("Shader fetch failed: " + entry.path);
@@ -1035,6 +1056,9 @@
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             });
         }).catch((err) => {
+            if (!state.alive) {
+                return;
+            }
             console.error("[CarouselGLTransitions] init failed", err);
             drawFallback(canvas, "Not supported (shader load failed)");
         });
@@ -1043,6 +1067,10 @@
     }
 
     function stop(canvas) {
+        if (canvas && canvas._floweryFallback) {
+            canvas._floweryFallback.remove();
+            canvas._floweryFallback = null;
+        }
         if (!canvas || !canvas._floweryGlTransitions) {
             return;
         }
@@ -1054,6 +1082,9 @@
     }
 
     function resize(canvas) {
+        if (canvas) {
+            updateFallback(canvas);
+        }
         if (!canvas || !canvas._floweryGlTransitions) {
             return;
         }
@@ -1089,6 +1120,7 @@
             state = initTransition(canvas, assets, transitionName, transitionSec, intervalSec, previousIndex);
         } catch (err) {
             console.error("[CarouselGLTransitions] init failed", err);
+            drawFallback(canvas, "Not supported (WebGL initialization failed)");
         }
 
         if (state) {
@@ -1233,6 +1265,7 @@
                 entry.canvas._floweryGlTransitions.pause();
             }
             entry.canvas.style.display = "none";
+            updateFallback(entry.canvas);
         }
     }
 

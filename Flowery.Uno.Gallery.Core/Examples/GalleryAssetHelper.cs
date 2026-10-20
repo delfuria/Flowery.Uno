@@ -1,9 +1,6 @@
 using System;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
-#if (__WASM__ || HAS_UNO_WASM) && !(HAS_UNO_SKIA || __UNO_SKIA__ || __SKIA__)
-using Uno.Foundation;
-#endif
 
 namespace Flowery.Uno.Gallery.Examples
 {
@@ -28,53 +25,8 @@ namespace Flowery.Uno.Gallery.Examples
         private static BitmapImage CreateImageSource(string assetPath)
         {
             var trimmed = assetPath.TrimStart('/');
-            Uri uri;
-#if (__WASM__ || HAS_UNO_WASM) && !(HAS_UNO_SKIA || __UNO_SKIA__ || __SKIA__)
-            if (OperatingSystem.IsBrowser())
-            {
-                var origin = GetBrowserOrigin();
-                if (!string.IsNullOrEmpty(origin))
-                {
-                    uri = new Uri($"{origin}/_framework/{trimmed}", UriKind.Absolute);
-                    return new BitmapImage(uri);
-                }
-            }
-#endif
-            uri = new Uri($"ms-appx:///{trimmed}", UriKind.Absolute);
+            var uri = new Uri($"ms-appx:///{trimmed}", UriKind.Absolute);
             return new BitmapImage(uri);
         }
-
-#if (__WASM__ || HAS_UNO_WASM) && !(HAS_UNO_SKIA || __UNO_SKIA__ || __SKIA__)
-        private static string? _browserOrigin;
-
-        private static string? GetBrowserOrigin()
-        {
-            if (!OperatingSystem.IsBrowser())
-            {
-                return null;
-            }
-
-            if (_browserOrigin != null)
-            {
-                return _browserOrigin;
-            }
-
-            try
-            {
-                var origin = WebAssemblyRuntime.InvokeJS("window.location.origin");
-                if (string.IsNullOrWhiteSpace(origin) || string.Equals(origin, "null", StringComparison.OrdinalIgnoreCase))
-                {
-                    return null;
-                }
-
-                _browserOrigin = origin.Trim().TrimEnd('/');
-                return _browserOrigin;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-#endif
     }
 }

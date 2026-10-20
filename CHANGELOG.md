@@ -6,6 +6,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-10-20
+
+- Dependencies: updated SkiaSharp and its native assets to 4.153.1, with matching Views packages for Browser and Desktop.
+- Build (WASM): native C sources compile separately from the C++ WebGPU inputs before the link step.
+- Gallery (Browser): the WASM build now uses the Skia renderer, with real blur in the Glass demos (#92).
+- Gallery (Carousel): image and shader paths now use the Uno application package directory, including sites hosted under a subdirectory (#92).
+- Carousel: complex transitions now animate their masks on Skia (#92).
+- Gallery (Carousel): automatic transitions preserve the animated position and shape of the outgoing image. The next image effect starts after the transition (#92).
+- Gallery (Carousel): the infinite-loop toggle now has a visible localized label (#92).
+- Glass: corrected the saturation matrix so zero saturation produces grayscale.
+- Carousel GL: pending image loads no longer restart a detached or replaced renderer.
+- Gallery (Browser): GL overlays pause while the overlay navigation pane is open or closing, so they cannot cover the sidebar.
+- CI: pull requests now build the Gallery on Linux, macOS 15 (Apple Silicon), and Android. Linux and macOS also run the Gallery runtime suite.
+- CI: Chromium checks both normal and missing drawer state groups, including closing animations and reopening during closure. Test reports remain available as artifacts.
+- CI: use native NuGet restore auditing for direct and transitive dependencies, with an explicit advisory source and audit warnings treated as errors in audit jobs. Raw tool output remains private.
+
 ## [1.4.0] - 2026-10-19
 
 - Security: Kiosk Browser uses `System.Security.Cryptography.Xml` 10.0.13 and the updated Pkcs dependency to replace vulnerable 10.0.7 packages (#85).

@@ -10,11 +10,11 @@ using Flowery.Uno.Gallery.Localization;
 using Flowery.Services;
 using Microsoft.UI.Xaml.Markup;
 
-#if WINDOWS || __SKIA__
+#if WINDOWS || (__SKIA__ && !__WASM__)
 using Flowery.Uno.RuntimeTests;
 #endif
 
-#if __SKIA__
+#if __SKIA__ && !__WASM__
 using Uno.Resizetizer;
 #endif
 
@@ -70,7 +70,7 @@ namespace Flowery.Uno.Gallery
 
         private void RunAppLaunch(LaunchActivatedEventArgs args)
         {
-#if WINDOWS || __SKIA__
+#if WINDOWS || (__SKIA__ && !__WASM__)
             RuntimeArguments ??= Environment.GetCommandLineArgs();
 #endif
 
@@ -84,7 +84,7 @@ namespace Flowery.Uno.Gallery
                 StartRuntimeTestsIfRequested(args);
                 return;
             }
-#elif __SKIA__
+#elif __SKIA__ && !__WASM__
             var isRuntimeTests = RuntimeTestArguments.TryGetRuntimeTestsPath(args.Arguments, RuntimeArguments, out _);
             EnsureGalleryResources();
 #else
@@ -113,7 +113,7 @@ namespace Flowery.Uno.Gallery
             }
 
             _window = new MainWindow();
-#if __SKIA__
+#if __SKIA__ && !__WASM__
             // Uno.Resizetizer generates SetWindowIcon (AppWindow.SetIcon with the composed app icon).
             if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
             {
@@ -124,7 +124,7 @@ namespace Flowery.Uno.Gallery
             FloweryScaleManager.MainWindow = _window;
 
             // Apply remaining persisted settings AFTER MainWindow is set (for visual tree propagation).
-#if __SKIA__
+#if __SKIA__ && !__WASM__
             // Runtime tests must not inherit user-persisted theme/size (nondeterministic
             // assertions) and must not write back to the user's settings.
             if (isRuntimeTests)
@@ -141,7 +141,7 @@ namespace Flowery.Uno.Gallery
 
             _window.Activate();
 
-#if WINDOWS || __SKIA__
+#if WINDOWS || (__SKIA__ && !__WASM__)
             StartRuntimeTestsIfRequested(args);
 #endif
         }
@@ -157,7 +157,7 @@ namespace Flowery.Uno.Gallery
 #endif
         }
 
-#if WINDOWS || __SKIA__
+#if WINDOWS || (__SKIA__ && !__WASM__)
         private async void StartRuntimeTestsIfRequested(LaunchActivatedEventArgs args)
         {
             if (_window == null)
@@ -172,7 +172,7 @@ namespace Flowery.Uno.Gallery
 
             try
             {
-                var exitCode = await RuntimeTestRunner.RunAsync(_window, resultPath);
+                var exitCode = await RuntimeTestRunner.RunAsync(_window, resultPath, typeof(App).Assembly);
                 Environment.Exit(exitCode);
             }
             catch (Exception ex)
@@ -281,8 +281,9 @@ namespace Flowery.Uno.Gallery
                 TryAddXamlControlsResources();
                 var runtimeFloweryOk = TryAddDictionary("ms-appx:///Flowery.Uno/Themes/Generic.xaml");
                 var runtimeKanbanOk = TryAddDictionary("ms-appx:///Flowery.Uno.Kanban/Themes/Generic.xaml");
+                var runtimeGalleryOk = TryAddDictionary("ms-appx:///Flowery.Uno.Gallery.Core/GalleryResources.xaml");
 
-                if (!runtimeFloweryOk || !runtimeKanbanOk)
+                if (!runtimeFloweryOk || !runtimeKanbanOk || !runtimeGalleryOk)
                 {
                     throw new InvalidOperationException("Failed to load runtime test resource dictionaries.");
                 }

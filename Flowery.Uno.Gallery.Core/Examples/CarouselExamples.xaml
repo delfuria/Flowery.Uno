@@ -151,6 +151,16 @@
                                 <daisy:DaisySelectItem LocalizationKey="Gallery_Carousel_Transition_WipeRight" Tag="WipeRight" />
                                 <daisy:DaisySelectItem LocalizationKey="Gallery_Carousel_Transition_WipeUp" Tag="WipeUp" />
                                 <daisy:DaisySelectItem LocalizationKey="Gallery_Carousel_Transition_WipeDown" Tag="WipeDown" />
+                                <daisy:DaisySelectItem LocalizationKey="Gallery_Carousel_Transition_BlindsH" Tag="BlindsHorizontal" />
+                                <daisy:DaisySelectItem LocalizationKey="Gallery_Carousel_Transition_BlindsV" Tag="BlindsVertical" />
+                                <daisy:DaisySelectItem LocalizationKey="Gallery_Carousel_Transition_SlicesH" Tag="SlicesHorizontal" />
+                                <daisy:DaisySelectItem LocalizationKey="Gallery_Carousel_Transition_SlicesV" Tag="SlicesVertical" />
+                                <daisy:DaisySelectItem LocalizationKey="Gallery_Carousel_Transition_Checkerboard" Tag="Checkerboard" />
+                                <daisy:DaisySelectItem LocalizationKey="Gallery_Carousel_Transition_Spiral" Tag="Spiral" />
+                                <daisy:DaisySelectItem LocalizationKey="Gallery_Carousel_Transition_MatrixRain" Tag="MatrixRain" />
+                                <daisy:DaisySelectItem LocalizationKey="Gallery_Carousel_Transition_Wormhole" Tag="Wormhole" />
+                                <daisy:DaisySelectItem LocalizationKey="Gallery_Carousel_Transition_Dissolve" Tag="Dissolve" />
+                                <daisy:DaisySelectItem LocalizationKey="Gallery_Carousel_Transition_Pixelate" Tag="Pixelate" />
                                 <daisy:DaisySelectItem LocalizationKey="Gallery_Carousel_Transition_Random" Tag="Random" />
                             </daisy:DaisySelect>
                         </StackPanel>
@@ -204,10 +214,14 @@
                                        Foreground="{ThemeResource DaisyBaseContentBrush}" />
                             <daisy:DaisyNumericUpDown x:Name="CarouselIntervalBox" Width="90" />
                         </StackPanel>
-                        <daisy:DaisyToggle x:Name="CarouselInfiniteToggle" Content="{Binding [Gallery_Carousel_Infinite_Label]}"
-                                           VerticalAlignment="Bottom" Margin="0,0,0,2"
-                                           Checked="CarouselInfiniteToggle_Changed"
-                                           Unchecked="CarouselInfiniteToggle_Changed" />
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding [Gallery_Carousel_Infinite_Label]}" FontSize="12" Opacity="0.7"
+                                       Foreground="{ThemeResource DaisyBaseContentBrush}" />
+                            <daisy:DaisyToggle x:Name="CarouselInfiniteToggle"
+                                               AutomationProperties.Name="{Binding [Gallery_Carousel_Infinite_Label]}"
+                                               Checked="CarouselInfiniteToggle_Changed"
+                                               Unchecked="CarouselInfiniteToggle_Changed" />
+                        </StackPanel>
                     </daisy:WrapPanel>
 
                     <daisy:WrapPanel Orientation="Horizontal" Spacing="16" Margin="0,12,0,0">
@@ -246,35 +260,45 @@
                     </daisy:WrapPanel>
 
                     <daisy:DaisyCard Variant="Compact" Size="Small" Margin="0,12,0,0">
-                        <StackPanel Spacing="6">
+                        <StackPanel Spacing="12">
                             <TextBlock Text="{Binding [Gallery_Carousel_Guide_Title]}" FontWeight="Bold"
-                                       Foreground="{ThemeResource DaisyPrimaryBrush}" Opacity="0.9"/>
+                                       Foreground="{ThemeResource DaisyPrimaryBrush}" Opacity="0.9" TextWrapping="Wrap"/>
 
-                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding [Gallery_Carousel_Guide_GridLabel]}"
-                                           FontWeight="SemiBold" Width="100"/>
-                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding [Gallery_Carousel_Guide_GridDesc]}" Opacity="0.8"/>
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding [Gallery_Carousel_Guide_GridLabel]}"
+                                           FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding [Gallery_Carousel_Guide_GridDesc]}" Opacity="0.8" TextWrapping="Wrap"/>
+                            </StackPanel>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding [Gallery_Carousel_Guide_StaggerMsLabel]}"
-                                           FontWeight="SemiBold" Width="100"/>
-                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding [Gallery_Carousel_Guide_StaggerMsDesc]}" Opacity="0.8"/>
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding [Gallery_Carousel_Guide_StaggerMsLabel]}"
+                                           FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding [Gallery_Carousel_Guide_StaggerMsDesc]}" Opacity="0.8" TextWrapping="Wrap"/>
+                            </StackPanel>
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding [Gallery_Carousel_Guide_StaggerToggleLabel]}"
-                                           FontWeight="SemiBold" Width="100"/>
-                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding [Gallery_Carousel_Guide_StaggerToggleDesc]}" Opacity="0.8"/>
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding [Gallery_Carousel_Guide_StaggerToggleLabel]}"
+                                           FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding [Gallery_Carousel_Guide_StaggerToggleDesc]}" Opacity="0.8" TextWrapping="Wrap"/>
+                            </StackPanel>
 
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding [Gallery_Carousel_Guide_PixelSizeLabel]}"
-                                           FontWeight="SemiBold" Width="100"/>
-                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding [Gallery_Carousel_Guide_PixelSizeDesc]}" Opacity="0.8"/>
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding [Gallery_Carousel_Guide_PixelSizeLabel]}"
+                                           FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding [Gallery_Carousel_Guide_PixelSizeDesc]}" Opacity="0.8" TextWrapping="Wrap"/>
+                            </StackPanel>
 
-                                <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding [Gallery_Carousel_Guide_DissolveDensityLabel]}"
-                                           FontWeight="SemiBold" Width="100"/>
-                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding [Gallery_Carousel_Guide_DissolveDensityDesc]}" Opacity="0.8"/>
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding [Gallery_Carousel_Guide_DissolveDensityLabel]}"
+                                           FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding [Gallery_Carousel_Guide_DissolveDensityDesc]}" Opacity="0.8" TextWrapping="Wrap"/>
+                            </StackPanel>
 
-                                <TextBlock Grid.Row="5" Grid.Column="0" Text="{Binding [Gallery_Carousel_Guide_FlipAngleLabel]}"
-                                           FontWeight="SemiBold" Width="100"/>
-                                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding [Gallery_Carousel_Guide_FlipAngleDesc]}" Opacity="0.8"/>
-                            </Grid>
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding [Gallery_Carousel_Guide_FlipAngleLabel]}"
+                                           FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding [Gallery_Carousel_Guide_FlipAngleDesc]}" Opacity="0.8" TextWrapping="Wrap"/>
+                            </StackPanel>
                         </StackPanel>
                     </daisy:DaisyCard>
                 </StackPanel>

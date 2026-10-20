@@ -124,6 +124,7 @@ namespace Flowery.Helpers
 
             if (!applied)
             {
+                CleanupTransitionResources(newElement, container);
                 ResetElementTransforms(oldElement);
                 ResetElementTransforms(newElement);
 
@@ -150,31 +151,7 @@ namespace Flowery.Helpers
                     _fadeThroughContainers.Remove(newElement);
                 }
 
-                // Clean up transition resources (clips, masks, proxy visuals)
-                if (_transitionResources.TryGetValue(newElement, out var resource))
-                {
-                    if (resource is RectangleGeometry)
-                    {
-                        newElement.Clip = null;
-                    }
-                    else if (resource is SpriteVisual sprite)
-                    {
-                        // Remove proxy visual from container
-                        if (ElementCompositionPreview.GetElementVisual(container) is ContainerVisual containerVisual)
-                        {
-                            containerVisual.Children.Remove(sprite);
-                        }
-
-                        // Restore original element visibility
-                        newElement.Opacity = 1;
-                    }
-                    else if (resource is PixelateSpriteResources pixelateResources)
-                    {
-                        pixelateResources.Restore();
-                    }
-
-                    _transitionResources.Remove(newElement);
-                }
+                CleanupTransitionResources(newElement, container);
 
                 // Hide old element after transition
                 if (oldElement != null)
@@ -189,6 +166,31 @@ namespace Flowery.Helpers
 
             storyboard.Begin();
             return resolvedTransition;
+        }
+
+        private static void CleanupTransitionResources(UIElement element, Grid container)
+        {
+            if (!_transitionResources.Remove(element, out var resource))
+            {
+                return;
+            }
+
+            if (resource is RectangleGeometry)
+            {
+                element.Clip = null;
+            }
+            else if (resource is SpriteVisual sprite)
+            {
+                if (ElementCompositionPreview.GetElementVisual(container) is ContainerVisual containerVisual)
+                {
+                    containerVisual.Children.Remove(sprite);
+                }
+                element.Opacity = 1;
+            }
+            else if (resource is PixelateSpriteResources pixelateResources)
+            {
+                pixelateResources.Restore();
+            }
         }
 
         /// <summary>
@@ -875,6 +877,24 @@ namespace Flowery.Helpers
             return ApplySlicesTransition(oldElement, newElement, duration, easing, storyboard, width, height, horizontal, sliceCount, stagger ? staggerMs : 0, randomize: false);
         }
 
+        private static bool AttachMaskedSprite(UIElement element, SpriteVisual sprite, ContainerVisual maskRoot)
+        {
+            if (VisualTreeHelper.GetParent(element) is not Grid container ||
+                ElementCompositionPreview.GetElementVisual(container) is not ContainerVisual containerVisual)
+            {
+                return false;
+            }
+
+            // Mask animations need a live CompositionTarget before they start.
+            // Hide their host from the scene; the visual surface renders maskRoot independently.
+            var maskHost = sprite.Compositor.CreateContainerVisual();
+            maskHost.Opacity = 0;
+            maskHost.Children.InsertAtTop(maskRoot);
+            sprite.Children.InsertAtTop(maskHost);
+            containerVisual.Children.InsertAtTop(sprite);
+            return true;
+        }
+
         private static bool ApplySlicesTransition(
             UIElement? oldElement,
             UIElement newElement,
@@ -898,6 +918,12 @@ namespace Flowery.Helpers
 
             var sprite = compositor.CreateSpriteVisual();
             sprite.Size = new Vector2((float)width, (float)height);
+
+            _transitionResources[newElement] = sprite;
+            if (!AttachMaskedSprite(newElement, sprite, maskRoot))
+            {
+                return false;
+            }
 
             var surface = compositor.CreateVisualSurface();
             surface.SourceVisual = visual;
@@ -960,19 +986,12 @@ namespace Flowery.Helpers
             Canvas.SetZIndex(newElement, -10);
             if (oldElement != null) Canvas.SetZIndex(oldElement, 0);
 
-            if (VisualTreeHelper.GetParent(newElement) is Grid container &&
-                ElementCompositionPreview.GetElementVisual(container) is ContainerVisual containerVisual)
-            {
-                containerVisual.Children.InsertAtTop(sprite);
-            }
-
             if (oldElement != null)
             {
                 var fadeOut = CreateOpacityAnimation(oldElement, 1, 0, duration, easing);
                 storyboard.Children.Add(fadeOut);
             }
 
-            _transitionResources[newElement] = sprite;
             return true;
         }
 
@@ -999,6 +1018,12 @@ namespace Flowery.Helpers
             // 2. Create the proxy sprite for the new slide
             var sprite = compositor.CreateSpriteVisual();
             sprite.Size = new Vector2((float)width, (float)height);
+
+            _transitionResources[newElement] = sprite;
+            if (!AttachMaskedSprite(newElement, sprite, maskRoot))
+            {
+                return false;
+            }
 
             var surface = compositor.CreateVisualSurface();
             surface.SourceVisual = visual;
@@ -1078,14 +1103,8 @@ namespace Flowery.Helpers
             Canvas.SetZIndex(newElement, -10);
             if (oldElement != null) Canvas.SetZIndex(oldElement, 0);
 
-            if (VisualTreeHelper.GetParent(newElement) is Grid container &&
-                ElementCompositionPreview.GetElementVisual(container) is ContainerVisual containerVisual)
-            {
-                containerVisual.Children.InsertAtTop(sprite);
-            }
-
             // 7. KEEP STORYBOARD ALIVE
-            // IMPORTANT: Since Checkerboard uses detached Composition animations,
+            // IMPORTANT: Since Checkerboard uses Composition animations,
             // we must add a 'Ghost' animation to the XAML Storyboard that matches
             // the full total duration, otherwise the cleanup fires too early.
             // Tier 2 Fix: Must be 1 to 1 to preserve surface rendering.
@@ -1098,7 +1117,6 @@ namespace Flowery.Helpers
                 storyboard.Children.Add(fadeOut);
             }
 
-            _transitionResources[newElement] = sprite;
             return true;
         }
 
@@ -1125,6 +1143,12 @@ namespace Flowery.Helpers
             // 2. Create the proxy sprite for the new slide
             var sprite = compositor.CreateSpriteVisual();
             sprite.Size = new Vector2((float)width, (float)height);
+
+            _transitionResources[newElement] = sprite;
+            if (!AttachMaskedSprite(newElement, sprite, maskRoot))
+            {
+                return false;
+            }
 
             var surface = compositor.CreateVisualSurface();
             surface.SourceVisual = visual;
@@ -1227,12 +1251,6 @@ namespace Flowery.Helpers
             Canvas.SetZIndex(newElement, -10);
             if (oldElement != null) Canvas.SetZIndex(oldElement, 0);
 
-            if (VisualTreeHelper.GetParent(newElement) is Grid container &&
-                ElementCompositionPreview.GetElementVisual(container) is ContainerVisual containerVisual)
-            {
-                containerVisual.Children.InsertAtTop(sprite);
-            }
-
             // Tier 2 Fix: Hold must be 1 to 1 to preserve surface.
             var storyboardHold = CreateOpacityAnimation(newElement, 1, 1, totalRequiredDuration, null);
             storyboard.Children.Add(storyboardHold);
@@ -1243,7 +1261,6 @@ namespace Flowery.Helpers
                 storyboard.Children.Add(fadeOut);
             }
 
-            _transitionResources[newElement] = sprite;
             return true;
         }
 
@@ -1268,6 +1285,12 @@ namespace Flowery.Helpers
 
             var sprite = compositor.CreateSpriteVisual();
             sprite.Size = new Vector2((float)width, (float)height);
+
+            _transitionResources[newElement] = sprite;
+            if (!AttachMaskedSprite(newElement, sprite, maskRoot))
+            {
+                return false;
+            }
 
             var surface = compositor.CreateVisualSurface();
             surface.SourceVisual = visual;
@@ -1347,12 +1370,6 @@ namespace Flowery.Helpers
             Canvas.SetZIndex(newElement, -10);
             if (oldElement != null) Canvas.SetZIndex(oldElement, 0);
 
-            if (VisualTreeHelper.GetParent(newElement) is Grid containerView &&
-                ElementCompositionPreview.GetElementVisual(containerView) is ContainerVisual containerVisual)
-            {
-                containerVisual.Children.InsertAtTop(sprite);
-            }
-
             // Tier 2 Fix: Hold must be 1 to 1 to preserve surface.
             var storyboardHold = CreateOpacityAnimation(newElement, 1, 1, totalRequiredDuration, null);
             storyboard.Children.Add(storyboardHold);
@@ -1363,7 +1380,6 @@ namespace Flowery.Helpers
                 storyboard.Children.Add(fadeOut);
             }
 
-            _transitionResources[newElement] = sprite;
             return true;
         }
 
@@ -1386,6 +1402,12 @@ namespace Flowery.Helpers
 
             var sprite = compositor.CreateSpriteVisual();
             sprite.Size = new Vector2((float)width, (float)height);
+
+            _transitionResources[newElement] = sprite;
+            if (!AttachMaskedSprite(newElement, sprite, maskRoot))
+            {
+                return false;
+            }
 
             var surface = compositor.CreateVisualSurface();
             surface.SourceVisual = visual;
@@ -1480,12 +1502,6 @@ namespace Flowery.Helpers
             Canvas.SetZIndex(newElement, -10);
             if (oldElement != null) Canvas.SetZIndex(oldElement, 0);
 
-            if (VisualTreeHelper.GetParent(newElement) is Grid containerView &&
-                ElementCompositionPreview.GetElementVisual(containerView) is ContainerVisual containerVisual)
-            {
-                containerVisual.Children.InsertAtTop(sprite);
-            }
-
             var totalTime = TimeSpan.FromMilliseconds(maxDelayFound + cellDuration.TotalMilliseconds);
             var fillDurationMs = Math.Max(80.0, cellDuration.TotalMilliseconds * 0.4);
             var fillDelayMs = Math.Max(0.0, totalTime.TotalMilliseconds - fillDurationMs);
@@ -1505,7 +1521,6 @@ namespace Flowery.Helpers
                 storyboard.Children.Add(fadeOut);
             }
 
-            _transitionResources[newElement] = sprite;
             return true;
         }
 
@@ -1601,6 +1616,13 @@ namespace Flowery.Helpers
             var newSprite = compositor.CreateSpriteVisual();
             newSprite.Size = new Vector2((float)width, (float)height);
 
+            _transitionResources[newElement] = new PixelateSpriteResources(oldSprite, newSprite, container);
+            if (!AttachMaskedSprite(newElement, oldSprite, oldMaskRoot) ||
+                !AttachMaskedSprite(newElement, newSprite, newMaskRoot))
+            {
+                return false;
+            }
+
             var oldSurface = compositor.CreateVisualSurface();
             oldSurface.SourceVisual = oldVisual;
             oldSurface.SourceSize = new Vector2((float)width, (float)height);
@@ -1675,13 +1697,9 @@ namespace Flowery.Helpers
 
             var totalTime = TimeSpan.FromMilliseconds(maxDelay + cellDuration.TotalMilliseconds + halfMs);
 
-            containerVisual.Children.InsertAtTop(oldSprite);
-            containerVisual.Children.InsertAtTop(newSprite);
-
             var hold = CreateOpacityAnimation(newElement, 1, 1, totalTime, null);
             storyboard.Children.Add(hold);
 
-            _transitionResources[newElement] = new PixelateSpriteResources(oldSprite, newSprite, container);
             return true;
         }
 
@@ -1706,6 +1724,12 @@ namespace Flowery.Helpers
 
             var sprite = compositor.CreateSpriteVisual();
             sprite.Size = new Vector2((float)width, (float)height);
+
+            _transitionResources[newElement] = sprite;
+            if (!AttachMaskedSprite(newElement, sprite, maskRoot))
+            {
+                return false;
+            }
 
             var surface = compositor.CreateVisualSurface();
             surface.SourceVisual = visual;
@@ -1756,19 +1780,11 @@ namespace Flowery.Helpers
             maskBrush.Mask = maskSurfaceBrush;
             sprite.Brush = maskBrush;
 
-            if (VisualTreeHelper.GetParent(newElement) is not Grid container ||
-                ElementCompositionPreview.GetElementVisual(container) is not ContainerVisual containerVisual)
-            {
-                return false;
-            }
-
-            newElement.Opacity = 0;
+            newElement.Opacity = 1;
             Canvas.SetZIndex(newElement, -1);
             if (oldElement != null) Canvas.SetZIndex(oldElement, 0);
 
-            containerVisual.Children.InsertAtTop(sprite);
-
-            var storyboardHold = CreateOpacityAnimation(newElement, 0, 0, totalTime, null);
+            var storyboardHold = CreateOpacityAnimation(newElement, 1, 1, totalTime, null);
             storyboard.Children.Add(storyboardHold);
 
             if (oldElement != null)
@@ -1777,7 +1793,6 @@ namespace Flowery.Helpers
                 storyboard.Children.Add(fadeOut);
             }
 
-            _transitionResources[newElement] = sprite;
             return true;
         }
 

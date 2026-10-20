@@ -16,6 +16,9 @@ using Flowery.Uno.Gallery.Localization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+#if __WASM__
+using Microsoft.UI.Xaml.Media.Animation;
+#endif
 using Windows.Foundation;
 using Windows.Storage;
 
@@ -56,6 +59,12 @@ namespace Flowery.Uno.Gallery
         private bool _initialRestoreQueued;
         private string? _deferredInitialTabHeader;
         private string? _deferredInitialSectionId;
+#if __WASM__
+        private long _paneOpenCallbackToken;
+        private long _paneDisplayModeCallbackToken;
+        private VisualStateGroup? _paneDisplayStates;
+        private bool _isWaitingForPaneClosure;
+#endif
 
         public MainView()
         {
@@ -165,6 +174,30 @@ namespace Flowery.Uno.Gallery
             DaisyThemeManager.ThemeChanged += OnThemeChanged;
             ApplyTheme();
 
+#if __WASM__
+            MainSplitView.ApplyTemplate();
+            if (VisualTreeHelper.GetChildrenCount(MainSplitView) > 0 &&
+                VisualTreeHelper.GetChild(MainSplitView, 0) is FrameworkElement templateRoot)
+            {
+                PreparePaneStateTest(templateRoot);
+                _paneDisplayStates = VisualStateManager.GetVisualStateGroups(templateRoot)
+                    .FirstOrDefault(group => group.Name == "DisplayModeStates" &&
+                        group.States.Any(state => state.Name == "Closed"));
+            }
+            if (_paneDisplayStates != null)
+            {
+                _paneDisplayStates.CurrentStateChanged += OnPaneDisplayStateChanged;
+            }
+            else
+            {
+                GalleryDiagnostics.Log("SplitView display states are unavailable. GL overlays remain paused until the pane is collapsed.");
+            }
+            _paneOpenCallbackToken = MainSplitView.RegisterPropertyChangedCallback(
+                SplitView.IsPaneOpenProperty, OnPaneStateChanged);
+            _paneDisplayModeCallbackToken = MainSplitView.RegisterPropertyChangedCallback(
+                SplitView.DisplayModeProperty, OnPaneStateChanged);
+            UpdateCarouselOverlaySuspension();
+#endif
             UpdateResponsiveLayout(ActualWidth);
 
             if (_isMobilePlatform)
@@ -185,6 +218,21 @@ namespace Flowery.Uno.Gallery
         private void OnUnloaded(object sender, RoutedEventArgs e)
         {
             DaisyThemeManager.ThemeChanged -= OnThemeChanged;
+#if __WASM__
+            MainSplitView.UnregisterPropertyChangedCallback(SplitView.IsPaneOpenProperty, _paneOpenCallbackToken);
+            MainSplitView.UnregisterPropertyChangedCallback(SplitView.DisplayModeProperty, _paneDisplayModeCallbackToken);
+            StopWatchingPaneClosure();
+            ReleasePaneStateTest();
+            if (_paneDisplayStates != null)
+            {
+                _paneDisplayStates.CurrentStateChanged -= OnPaneDisplayStateChanged;
+                _paneDisplayStates = null;
+            }
+            Flowery.Effects.CarouselGlOverlayService.Instance.SetSuspended(false);
+#if FLOWERY_GL_TRANSITIONS
+            Effects.CarouselGlTransitionOverlayService.Instance.SetSuspended(false);
+#endif
+#endif
             if (EnableCentralDiagnosticsLog)
             {
                 GalleryDiagnostics.MessageLogged -= OnDiagnosticsMessageLogged;
@@ -193,6 +241,83 @@ namespace Flowery.Uno.Gallery
         }
 
         private void OnThemeChanged(object? sender, string themeName) => ApplyTheme();
+
+#if __WASM__
+        partial void PreparePaneStateTest(FrameworkElement templateRoot);
+        partial void ReleasePaneStateTest();
+
+        private void OnPaneStateChanged(DependencyObject sender, DependencyProperty property)
+        {
+            // IsPaneOpen changes before Uno starts the closing transition.
+            // Keep the overlays paused until DisplayModeStates reports its completion.
+            if (_paneDisplayStates != null &&
+                MainSplitView.DisplayMode == SplitViewDisplayMode.Overlay && !MainSplitView.IsPaneOpen &&
+                _paneDisplayStates.CurrentState?.Name != "Closed")
+                return;
+
+            UpdateCarouselOverlaySuspension();
+        }
+
+        private void OnPaneDisplayStateChanged(object? sender, VisualStateChangedEventArgs e)
+        {
+            if (e.NewState?.Name == "Closed")
+                UpdateCarouselOverlaySuspension();
+        }
+
+        private void UpdateCarouselOverlaySuspension()
+        {
+            // DOM overlays cannot be covered by a pane drawn inside the Skia canvas.
+            // A reloaded view can still have an active closing storyboard.
+            var closing = _paneDisplayStates?.Transitions.Any(transition =>
+                transition.To == "Closed" && transition.Storyboard?.GetCurrentState() == ClockState.Active) == true;
+            if (_paneDisplayStates == null)
+                closing = IsPaneVisible();
+            var suspended = MainSplitView.DisplayMode == SplitViewDisplayMode.Overlay && (MainSplitView.IsPaneOpen || closing);
+            if (_paneDisplayStates == null && suspended && !MainSplitView.IsPaneOpen)
+            {
+                if (!_isWaitingForPaneClosure)
+                {
+                    _isWaitingForPaneClosure = true;
+                    CompositionTarget.Rendering += OnPaneClosureRendering;
+                }
+            }
+            else
+            {
+                StopWatchingPaneClosure();
+            }
+            Flowery.Effects.CarouselGlOverlayService.Instance.SetSuspended(suspended);
+#if FLOWERY_GL_TRANSITIONS
+            Effects.CarouselGlTransitionOverlayService.Instance.SetSuspended(suspended);
+#endif
+        }
+
+        private bool IsPaneVisible()
+        {
+            if (!SidebarPaneBorder.IsLoaded)
+                return false;
+
+            for (DependencyObject? element = SidebarPaneBorder; element != null; element = VisualTreeHelper.GetParent(element))
+            {
+                if (element is UIElement { Visibility: Visibility.Collapsed })
+                    return false;
+                if (ReferenceEquals(element, MainSplitView))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private void OnPaneClosureRendering(object? sender, object e) => UpdateCarouselOverlaySuspension();
+
+        private void StopWatchingPaneClosure()
+        {
+            if (!_isWaitingForPaneClosure)
+                return;
+
+            CompositionTarget.Rendering -= OnPaneClosureRendering;
+            _isWaitingForPaneClosure = false;
+        }
+#endif
 
         private void ApplyTheme()
         {

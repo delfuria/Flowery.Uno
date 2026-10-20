@@ -1,12 +1,36 @@
 <Project>
   <PropertyGroup>
-    <Version Condition="'$(Version)' == '' or '$(Version)' == '1.0.0'">1.4.0</Version>
-    <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">1.4.0.0</AssemblyVersion>
-    <FileVersion Condition="'$(FileVersion)' == ''">1.4.0.0</FileVersion>
+    <Version Condition="'$(Version)' == '' or '$(Version)' == '1.0.0'">1.4.1</Version>
+    <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">1.4.1.0</AssemblyVersion>
+    <FileVersion Condition="'$(FileVersion)' == ''">1.4.1.0</FileVersion>
     <Authors Condition="'$(Authors)' == '' or '$(Authors)' == '$(MSBuildProjectName)'">tobitege</Authors>
     <PackageProjectUrl Condition="'$(PackageProjectUrl)' == ''">https://github.com/tobitege/Flowery.Uno</PackageProjectUrl>
     <RepositoryUrl Condition="'$(RepositoryUrl)' == ''">https://github.com/tobitege/Flowery.Uno</RepositoryUrl>
   </PropertyGroup>
+
+  <!--
+    Uses internal .NET WebAssembly SDK items and targets from WasmApp.Common.targets.
+    Verified with WebAssembly SDK pack 10.0.13, Uno.Sdk 6.7.30,
+    Uno.Wasm.Bootstrap 10.0.98 and SkiaSharp 4.153.1.
+    Uno passes C sources such as profiler_flush_wasm.c to the native link step;
+    Skia's WebGPU inputs add -std=c++20 there. Compile C inputs to objects first.
+    Remove this target when upstream compiles C NativeFileReference inputs separately
+    or scopes the C++ flags so they no longer reach C sources. Recheck these internal
+    names on SDK upgrades; the CI Gallery WASM build exercises the native link step.
+  -->
+  <Target Name="CompileWasmNativeCSources"
+          BeforeTargets="_WasmCompileNativeSourceFiles"
+          Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-browserwasm'))">
+    <ItemGroup>
+      <!-- Compile C sources before linking, where Skia's WebGPU inputs require C++ flags. -->
+      <_FloweryWasmCSource Include="@(_WasmNativeFileForLinking)"
+                           Condition="'%(Extension)' == '.c'">
+        <ObjectFile>$(_WasmIntermediateOutputPath)%(Filename).o</ObjectFile>
+      </_FloweryWasmCSource>
+      <_WasmNativeFileForLinking Remove="@(_FloweryWasmCSource)" />
+      <_WasmRuntimePackSrcFile Include="@(_FloweryWasmCSource)" />
+    </ItemGroup>
+  </Target>
 
   <!-- Android: remove resizetizer outputs with scale-125 to avoid unsupported DPI mapping -->
   <Target Name="RemoveAndroidScale125ResizetizerOutputs"

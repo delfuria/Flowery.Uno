@@ -40,6 +40,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Test Carousel GL resources and lifecycle
+        run: node --test scripts/tests/carousel-gl.test.cjs
+
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
@@ -66,6 +69,13 @@ jobs:
       - name: Install Android workload
         run: dotnet workload install android
 
+      - name: Build Gallery WASM with Skia 4
+        shell: pwsh
+        run: |
+          $buildArgs = @('build', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj', '-c', 'Release', '-f', 'net10.0-browserwasm')
+          dotnet @buildArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Restore (Windows only)
         run: |
           dotnet restore Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj `
@@ -80,6 +90,210 @@ jobs:
             -f net10.0-windows10.0.19041 `
             --no-restore
 
+      - name: Test Gallery rendering and automatic carousel cycles
+        timeout-minutes: 10
+        shell: pwsh
+        run: |
+          $frameworks = @('net10.0-windows10.0.19041', 'net10.0-desktop')
+          $requiredTests = @(
+            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
+            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
+            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
+            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect',
+            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
+          )
+          foreach ($framework in $frameworks) {
+            $result = Join-Path $env:RUNNER_TEMP ('flowery-runtime-{0}.xml' -f $framework)
+            $runArgs = @('run', '--project', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj', '-c', 'Release', '-f', $framework)
+            if ($framework -eq 'net10.0-windows10.0.19041') { $runArgs += '--no-build' }
+            $runArgs += @('--', '--runtime-tests', $result)
+            dotnet @runArgs
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            [xml]$report = Get-Content -LiteralPath $result -Raw
+            if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed.' }
+            if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
+            foreach ($name in $requiredTests) {
+              $test = @($report.tests.test | Where-Object name -EQ $name)
+              if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
+            }
+            Write-Host ('{0}: {1} runtime tests passed' -f $framework, $report.tests.passed)
+          }
+
+  test-gallery-drawer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Install required workloads
+        run: dotnet workload install android wasm-tools
+
+      # The browser probe is deliberately absent from Release builds.
+      - name: Build Debug Gallery WASM with Skia 4
+        run: dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Debug -f net10.0-browserwasm
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10.32.1'
+          run_install: false
+
+      - name: Install browser test dependencies
+        working-directory: scripts/tests/browser
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+
+      - name: Test normal and missing drawer state groups
+        working-directory: scripts/tests/browser
+        run: pnpm test
+
+      - name: Upload drawer browser test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gallery-drawer-browser
+          path: scripts/tests/browser/test-results/
+          if-no-files-found: warn
+
+  build-gallery-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Install required workloads
+        run: dotnet workload install android wasm-tools
+
+      - name: Install X11 runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth dbus-x11 libfontconfig1 libgl1 libegl1 libx11-dev libxi-dev libxrandr2 fonts-dejavu-core
+
+      - name: Build Gallery Linux Desktop with Skia 4
+        run: dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-desktop
+
+      - name: Test Gallery rendering and automatic carousel cycles on Linux
+        timeout-minutes: 10
+        shell: pwsh
+        env:
+          LIBGL_ALWAYS_SOFTWARE: 'true'
+        run: |
+          $result = Join-Path $env:RUNNER_TEMP 'flowery-runtime-linux.xml'
+          $runArgs = @('-a', '--server-args=-screen 0 1280x1024x24', 'dbus-run-session', '--', 'dotnet', 'run',
+            '--project', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj', '-c', 'Release', '-f', 'net10.0-desktop',
+            '--no-build', '--', '--runtime-tests', $result)
+          xvfb-run @runArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          [xml]$report = Get-Content -LiteralPath $result -Raw
+          if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed.' }
+          if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
+          $requiredTests = @(
+            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
+            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
+            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
+            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect',
+            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
+          )
+          foreach ($name in $requiredTests) {
+            $test = @($report.tests.test | Where-Object name -EQ $name)
+            if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
+          }
+          Write-Host ('Linux Desktop: {0} runtime tests passed' -f $report.tests.passed)
+
+      - name: Upload Linux runtime test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gallery-runtime-linux
+          path: ${{ runner.temp }}/flowery-runtime-linux.xml
+          if-no-files-found: warn
+
+  build-gallery-macos:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      # Restore evaluates the Gallery's Android, WASM and macOS-only iOS targets.
+      - name: Install required workloads
+        run: dotnet workload install android wasm-tools ios
+
+      - name: Build Gallery macOS Desktop with Skia 4
+        run: dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-desktop
+
+      - name: Test Gallery rendering and automatic carousel cycles on macOS
+        timeout-minutes: 10
+        shell: pwsh
+        run: |
+          $result = Join-Path $env:RUNNER_TEMP 'flowery-runtime-macos.xml'
+          $runArgs = @('run', '--project', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj',
+            '-c', 'Release', '-f', 'net10.0-desktop', '--no-build', '--', '--runtime-tests', $result)
+          dotnet @runArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          [xml]$report = Get-Content -LiteralPath $result -Raw
+          if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed.' }
+          if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
+          $requiredTests = @(
+            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
+            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
+            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
+            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect',
+            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
+          )
+          foreach ($name in $requiredTests) {
+            $test = @($report.tests.test | Where-Object name -EQ $name)
+            if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
+          }
+          Write-Host ('macOS Desktop: {0} runtime tests passed' -f $report.tests.passed)
+
+      - name: Upload macOS runtime test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gallery-runtime-macos
+          path: ${{ runner.temp }}/flowery-runtime-macos.xml
+          if-no-files-found: warn
+
+  build-gallery-android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install required workloads
+        run: dotnet workload install android wasm-tools
+
+      # Build both configured Android ABIs; emulator startup is not covered by this job.
+      - name: Build Gallery Android with Skia 4
+        run: |
+          dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-android36.0 \
+            -p:InstallAndroidDependencies=true -p:AcceptAndroidSDKLicenses=true
+
   nuget-audit:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -89,6 +303,9 @@ jobs:
         configuration: [Debug, Release]
     steps:
       - uses: actions/checkout@v7
+      - name: Test audit output confidentiality
+        shell: pwsh
+        run: ./scripts/tests/audit-nuget.test.ps1
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json

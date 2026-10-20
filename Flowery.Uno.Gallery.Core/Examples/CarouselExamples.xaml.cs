@@ -43,6 +43,7 @@ namespace Flowery.Uno.Gallery.Examples
         private FlowerySlideshowMode _carouselMode = FlowerySlideshowMode.Manual;
         private FlowerySlideEffect _lastRandomEffect = FlowerySlideEffect.None;
         private FlowerySlideTransition _lastRandomTransition = FlowerySlideTransition.None;
+        private FlowerySlideEffect? _nextCarouselEffect;
         private FlowerySlideshowMode _textFillCarouselMode;
         private bool _textFillCarouselHasSnapshot;
 
@@ -510,6 +511,7 @@ namespace Flowery.Uno.Gallery.Examples
             if (_isUpdatingEffectDropdown || _isApplyingSettings)
                 return;
 
+            _nextCarouselEffect = null;
             PersistCarouselSettings();
 
             if (InteractiveCarouselEnabledToggle?.IsOn != true)
@@ -670,6 +672,7 @@ namespace Flowery.Uno.Gallery.Examples
 
         private void StopCarouselTimer()
         {
+            _nextCarouselEffect = null;
             if (_carouselTimer == null)
                 return;
 
@@ -686,8 +689,11 @@ namespace Flowery.Uno.Gallery.Examples
                 return;
             }
 
+            if (_nextCarouselEffect.HasValue)
+                return;
+
             UpdateCarouselTimerInterval();
-            ApplyCarouselCycleSelection();
+            _nextCarouselEffect = SelectCarouselCycle();
             InteractiveCarousel?.Next();
         }
 
@@ -725,24 +731,25 @@ namespace Flowery.Uno.Gallery.Examples
             return 0.4d;
         }
 
-        private void ApplyCarouselCycleSelection()
+        private FlowerySlideEffect? SelectCarouselCycle()
         {
             if (InteractiveCarousel == null)
-                return;
+                return null;
 
             switch (_carouselMode)
             {
                 case FlowerySlideshowMode.Slideshow:
-                    SetCarouselEffect(GetNextSequentialEffect());
-                    break;
+                    return GetNextSequentialEffect();
                 case FlowerySlideshowMode.Kiosk:
-                    SetCarouselEffect(GetNextSequentialEffect());
+                    var sequentialEffect = GetNextSequentialEffect();
                     SetCarouselTransition(PickRandomTransition(avoidRepeat: false));
-                    break;
+                    return sequentialEffect;
                 case FlowerySlideshowMode.Random:
-                    SetCarouselEffect(PickRandomEffect(avoidRepeat: true));
+                    var randomEffect = PickRandomEffect(avoidRepeat: true);
                     SetCarouselTransition(PickRandomTransition(avoidRepeat: true));
-                    break;
+                    return randomEffect;
+                default:
+                    return null;
             }
         }
 
@@ -1366,11 +1373,18 @@ namespace Flowery.Uno.Gallery.Examples
         private void OnCarouselSlideChanged(object? sender, FlowerySlideChangedEventArgs e)
         {
             _ = sender;
-            _ = e;
+
+            // Select the next effect without restarting the still-visible outgoing slide.
+            // Apply it only after the transition has released that slide.
+            if (_nextCarouselEffect is { } effect)
+            {
+                _nextCarouselEffect = null;
+                SetCarouselEffect(effect);
+            }
 
             if (_carouselMode == FlowerySlideshowMode.Random)
             {
-                _lastRandomEffect = e.AppliedEffect;
+                _lastRandomEffect = InteractiveCarousel?.SlideEffect ?? e.AppliedEffect;
                 if (InteractiveCarousel != null)
                 {
                     _lastRandomTransition = InteractiveCarousel.LastAppliedTransition;
@@ -1387,9 +1401,6 @@ namespace Flowery.Uno.Gallery.Examples
             foreach (var transition in Enum.GetValues<FlowerySlideTransition>())
             {
                 if (transition is FlowerySlideTransition.None or FlowerySlideTransition.Random)
-                    continue;
-
-                if (FlowerySlideTransitionHelpers.IsWasmCompositionTransition(transition))
                     continue;
 
                 var item = new CarouselDemoItem

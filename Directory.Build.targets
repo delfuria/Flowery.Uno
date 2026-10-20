@@ -1,12 +1,26 @@
 <Project>
   <PropertyGroup>
-    <Version Condition="'$(Version)' == '' or '$(Version)' == '1.0.0'">1.4.0</Version>
-    <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">1.4.0.0</AssemblyVersion>
-    <FileVersion Condition="'$(FileVersion)' == ''">1.4.0.0</FileVersion>
+    <Version Condition="'$(Version)' == '' or '$(Version)' == '1.0.0'">1.4.1</Version>
+    <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">1.4.1.0</AssemblyVersion>
+    <FileVersion Condition="'$(FileVersion)' == ''">1.4.1.0</FileVersion>
     <Authors Condition="'$(Authors)' == '' or '$(Authors)' == '$(MSBuildProjectName)'">tobitege</Authors>
     <PackageProjectUrl Condition="'$(PackageProjectUrl)' == ''">https://github.com/tobitege/Flowery.Uno</PackageProjectUrl>
     <RepositoryUrl Condition="'$(RepositoryUrl)' == ''">https://github.com/tobitege/Flowery.Uno</RepositoryUrl>
   </PropertyGroup>
+
+  <Target Name="CompileWasmNativeCSources"
+          BeforeTargets="_WasmCompileNativeSourceFiles"
+          Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-browserwasm'))">
+    <ItemGroup>
+      <!-- Compile C sources before linking, where Skia's WebGPU inputs require C++ flags. -->
+      <_FloweryWasmCSource Include="@(_WasmNativeFileForLinking)"
+                           Condition="'%(Extension)' == '.c'">
+        <ObjectFile>$(_WasmIntermediateOutputPath)%(Filename).o</ObjectFile>
+      </_FloweryWasmCSource>
+      <_WasmNativeFileForLinking Remove="@(_FloweryWasmCSource)" />
+      <_WasmRuntimePackSrcFile Include="@(_FloweryWasmCSource)" />
+    </ItemGroup>
+  </Target>
 
   <!-- Android: remove resizetizer outputs with scale-125 to avoid unsupported DPI mapping -->
   <Target Name="RemoveAndroidScale125ResizetizerOutputs"

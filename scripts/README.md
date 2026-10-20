@@ -312,6 +312,27 @@ pwsh ./scripts/build_nuget.ps1 -OutputDir ./packages
 
 ## Troubleshooting
 
+### Carousel regression tests
+
+Run the JavaScript resource and lifecycle tests with Node.js. No npm packages are required:
+
+```powershell
+node --test scripts/tests/carousel-gl.test.cjs
+```
+
+The Gallery runtime suite includes pixel tests for composition masks, frozen outgoing
+image transforms, native glass processing, and the automatic Gallery effect sequence.
+Build the Windows or Desktop Gallery, then run its executable with
+`--runtime-tests <absolute-result.xml>`. The process returns a nonzero exit code on failure.
+The Windows and Desktop runtime suites and JavaScript tests also run in CI.
+CI also builds the WASM Gallery, including its native link step.
+
+For the live WASM path, open **Carousel GL Transitions**, enable **Slideshow**,
+and set **Interval** to 1 second. Run `tests/carousel-gl-continuity.browser.js`
+in that page's browser console. Keep the navigation closed or in Inline mode.
+The expression returns a report after four shader changes, with a 30-second timeout.
+`passed` must be `true`: no hidden, paused or replaced renderer frames are allowed.
+
 ### Build fails with missing SDK
 
 Ensure you have .NET 10.0 SDK installed:

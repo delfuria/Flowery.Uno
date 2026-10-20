@@ -281,9 +281,9 @@ namespace Flowery.Skia
             // Each row: [R, G, B, A, Offset]
             float[] matrix =
             [
-                sr + saturation, sr, sr, 0, 0,
-                sg, sg + saturation, sg, 0, 0,
-                sb, sb, sb + saturation, 0, 0,
+                sr + saturation, sg, sb, 0, 0,
+                sr, sg + saturation, sb, 0, 0,
+                sr, sg, sb + saturation, 0, 0,
                 0, 0, 0, 1, 0
             ];
 

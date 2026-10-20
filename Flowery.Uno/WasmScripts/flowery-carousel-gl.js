@@ -2,7 +2,6 @@
     "use strict";
 
     const DOCUMENT_BASE = new URL(".", document.baseURI).toString();
-    const FRAMEWORK_BASE = new URL("_framework/", DOCUMENT_BASE).toString();
     const DEFAULT_OVERLAY_Z_INDEX = 1000;
 
     function getOverlayZIndex() {
@@ -37,7 +36,8 @@
             return path;
         }
         const cleaned = path.startsWith("/") ? path.slice(1) : path;
-        return new URL(cleaned, FRAMEWORK_BASE).toString();
+        const appBase = new URL(globalThis.config.uno_app_base + "/", DOCUMENT_BASE);
+        return new URL(cleaned, appBase).toString();
     }
 
     const DEFAULT_IMAGES = {};
@@ -390,17 +390,34 @@
     }
 
     function drawFallback(canvas, message) {
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
+        if (!canvas.isConnected) {
             return;
         }
-        resizeCanvasToDisplaySize(canvas, null);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#666";
-        ctx.font = "16px sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+        if (!canvas._floweryFallback) {
+            const fallback = document.createElement("div");
+            Object.assign(fallback.style, {
+                position: "fixed", alignItems: "center", justifyContent: "center",
+                pointerEvents: "none", color: "#fff", background: "rgba(0,0,0,0.75)",
+                font: "16px sans-serif", textAlign: "center", boxSizing: "border-box", padding: "12px"
+            });
+            document.body.appendChild(fallback);
+            canvas._floweryFallback = fallback;
+        }
+        canvas._floweryFallback.textContent = message;
+        updateFallback(canvas);
+    }
+
+    function updateFallback(canvas) {
+        if (!canvas._floweryFallback) {
+            return;
+        }
+        const rect = canvas.getBoundingClientRect();
+        Object.assign(canvas._floweryFallback.style, {
+            left: rect.left + "px", top: rect.top + "px",
+            width: rect.width + "px", height: rect.height + "px",
+            zIndex: canvas.style.zIndex || String(getOverlayZIndex()),
+            display: canvas.style.display === "none" ? "none" : "flex"
+        });
     }
 
     function startLoop(state, render) {
@@ -414,7 +431,9 @@
                 state.raf = requestAnimationFrame(state._frame);
             };
         }
-        resumeState(state);
+        if (!state.paused) {
+            resumeState(state);
+        }
     }
 
     function computeTransitionProgress(elapsedSec, transitionSec, intervalSec) {
@@ -500,6 +519,7 @@
     }
 
     function pauseState(state) {
+        state.paused = true;
         if (!state.running) {
             return;
         }
@@ -511,6 +531,7 @@
     }
 
     function resumeState(state) {
+        state.paused = false;
         if (state.running && state.raf) {
             return;
         }
@@ -723,6 +744,7 @@
         const state = {
             canvas,
             gl,
+            alive: true,
             running: false,
             raf: 0,
             intervalSec: 0,
@@ -770,6 +792,9 @@
         const settings = getMaskSettings(variant);
         const effectSettings = effectVariant ? getEffectSettings(effectVariant) : null;
         Promise.all([loadImage(images.maskA), loadImage(images.maskB)]).then(([imgA, imgB]) => {
+            if (!state.alive) {
+                return;
+            }
             const texA = createTexture(gl, imgA);
             const texB = createTexture(gl, imgB);
 
@@ -896,6 +921,9 @@
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             });
         }).catch((err) => {
+            if (!state.alive) {
+                return;
+            }
             console.error("[CarouselGL] mask init failed", err);
             drawFallback(canvas, "Not supported (asset load failed)");
         });
@@ -1000,6 +1028,7 @@
         const state = {
             canvas,
             gl,
+            alive: true,
             running: false,
             raf: 0,
             intervalSec: 0,
@@ -1038,6 +1067,9 @@
         const settings = getFlipSettings(variant);
         const effectSettings = effectVariant ? getEffectSettings(effectVariant) : null;
         Promise.all([loadImage(images.flipA), loadImage(images.flipB)]).then(([imgA, imgB]) => {
+            if (!state.alive) {
+                return;
+            }
             const texA = createTexture(gl, imgA);
             const texB = createTexture(gl, imgB);
 
@@ -1088,6 +1120,9 @@
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             });
         }).catch((err) => {
+            if (!state.alive) {
+                return;
+            }
             console.error("[CarouselGL] flip init failed", err);
             drawFallback(canvas, "Not supported (asset load failed)");
         });
@@ -1253,6 +1288,7 @@
         const state = {
             canvas,
             gl,
+            alive: true,
             running: false,
             raf: 0,
             intervalSec: 0,
@@ -1290,6 +1326,9 @@
         const settings = getTransitionSettings(variant);
         const effectSettings = effectVariant ? getEffectSettings(effectVariant) : null;
         Promise.all([loadImage(images.transitionA), loadImage(images.transitionB)]).then(([imgA, imgB]) => {
+            if (!state.alive) {
+                return;
+            }
             const texA = createTexture(gl, imgA);
             const texB = createTexture(gl, imgB);
 
@@ -1336,6 +1375,9 @@
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             });
         }).catch((err) => {
+            if (!state.alive) {
+                return;
+            }
             console.error("[CarouselGL] transition init failed", err);
             drawFallback(canvas, "Not supported (asset load failed)");
         });
@@ -1391,6 +1433,7 @@
         const state = {
             canvas,
             gl,
+            alive: true,
             running: false,
             raf: 0,
             intervalSec: 0,
@@ -1417,6 +1460,9 @@
         }
         const settings = getEffectSettings(variant);
         loadImage(images.effect).then((img) => {
+            if (!state.alive) {
+                return;
+            }
             const imageTexture = createTexture(gl, img);
 
             gl.clearColor(0, 0, 0, 0);
@@ -1444,6 +1490,9 @@
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             });
         }).catch((err) => {
+            if (!state.alive) {
+                return;
+            }
             console.error("[CarouselGL] effect init failed", err);
             drawFallback(canvas, "Not supported (asset load failed)");
         });
@@ -1503,6 +1552,7 @@
         const state = {
             canvas,
             gl,
+            alive: true,
             running: false,
             raf: 0,
             intervalSec: 0,
@@ -1554,6 +1604,9 @@
             return state;
         }
         loadImage(images.text).then((img) => {
+            if (!state.alive) {
+                return;
+            }
             const imageTexture = createTexture(gl, img);
 
             gl.clearColor(0, 0, 0, 0);
@@ -1585,6 +1638,9 @@
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             });
         }).catch((err) => {
+            if (!state.alive) {
+                return;
+            }
             console.error("[CarouselGL] text init failed", err);
             drawFallback(canvas, "Not supported (asset load failed)");
         });
@@ -1593,10 +1649,15 @@
     }
 
     function stop(canvas) {
+        if (canvas && canvas._floweryFallback) {
+            canvas._floweryFallback.remove();
+            canvas._floweryFallback = null;
+        }
         if (!canvas || !canvas._floweryGl) {
             return;
         }
         const state = canvas._floweryGl;
+        state.alive = false;
         if (state.stop) {
             state.stop();
         }
@@ -1604,6 +1665,9 @@
     }
 
     function resize(canvas) {
+        if (canvas) {
+            updateFallback(canvas);
+        }
         if (!canvas || !canvas._floweryGl) {
             return;
         }
@@ -1659,6 +1723,7 @@
             }
         } catch (err) {
             console.error("[CarouselGL] init failed", err);
+            drawFallback(canvas, "Not supported (WebGL initialization failed)");
         }
 
         if (state) {
@@ -1985,6 +2050,7 @@
                 entry.canvas._floweryGl.pause();
             }
             entry.canvas.style.display = "none";
+            updateFallback(entry.canvas);
         }
     }
 

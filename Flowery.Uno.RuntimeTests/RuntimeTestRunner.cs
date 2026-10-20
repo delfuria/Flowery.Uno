@@ -14,7 +14,7 @@ namespace Flowery.Uno.RuntimeTests
 {
     public static class RuntimeTestRunner
     {
-        public static async Task<int> RunAsync(Window window, string resultPath)
+        public static async Task<int> RunAsync(Window window, string resultPath, params Assembly[] additionalTestAssemblies)
         {
             var dispatcher = window.DispatcherQueue ?? DispatcherQueue.GetForCurrentThread();
             var results = new List<RuntimeTestCaseResult>();
@@ -34,7 +34,8 @@ namespace Flowery.Uno.RuntimeTests
                 await EnsureLoadedAsync(host);
             }).ConfigureAwait(false);
 
-            var testCases = DiscoverTests();
+            var testAssemblies = new[] { typeof(RuntimeTestRunner).Assembly }.Concat(additionalTestAssemblies).Distinct();
+            var testCases = testAssemblies.SelectMany(DiscoverTests);
             foreach (var testCase in testCases)
             {
                 var result = await ExecuteTestCaseAsync(dispatcher, testCase).ConfigureAwait(false);
@@ -52,9 +53,8 @@ namespace Flowery.Uno.RuntimeTests
             return host;
         }
 
-        private static IEnumerable<RuntimeTestCase> DiscoverTests()
+        private static IEnumerable<RuntimeTestCase> DiscoverTests(Assembly assembly)
         {
-            var assembly = typeof(RuntimeTestRunner).Assembly;
             var testClasses = assembly.GetTypes()
                 .Where(type => type.GetCustomAttribute<TestClassAttribute>() != null);
 

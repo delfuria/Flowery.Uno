@@ -6,13 +6,13 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Windows.Foundation;
-#if __WASM__ || HAS_UNO_WASM
-using Uno.Foundation;
+#if FLOWERY_GL_TRANSITIONS && (__WASM__ || HAS_UNO_WASM)
+using System.Runtime.InteropServices.JavaScript;
 #endif
 
 namespace Flowery.Uno.Gallery.Effects
 {
-    public sealed class CarouselGlTransitionOverlayService
+    public sealed partial class CarouselGlTransitionOverlayService
     {
         private static readonly Lazy<CarouselGlTransitionOverlayService> InstanceValue =
             new(() => new CarouselGlTransitionOverlayService());
@@ -22,11 +22,23 @@ namespace Flowery.Uno.Gallery.Effects
         private readonly TimeSpan _updateInterval = TimeSpan.FromMilliseconds(33);
         private DispatcherQueueTimer? _updateTimer;
         private bool _updatePending;
+        private bool _isSuspended;
 
         public static CarouselGlTransitionOverlayService Instance => InstanceValue.Value;
 
         private CarouselGlTransitionOverlayService()
         {
+        }
+
+        public void SetSuspended(bool isSuspended)
+        {
+            if (!OperatingSystem.IsBrowser() || _isSuspended == isSuspended)
+            {
+                return;
+            }
+
+            _isSuspended = isSuspended;
+            UpdateOverlays();
         }
 
         public void Attach(FrameworkElement host, string? transitionName)
@@ -47,7 +59,6 @@ namespace Flowery.Uno.Gallery.Effects
                 if (!string.Equals(entry.TransitionName, transitionName, StringComparison.Ordinal))
                 {
                     entry.LastRect = null;
-                    entry.IsActive = false;
                 }
 
                 entry.TransitionName = transitionName;
@@ -191,6 +202,12 @@ namespace Flowery.Uno.Gallery.Effects
         {
             foreach (var entry in _entries.Values)
             {
+                if (_isSuspended)
+                {
+                    SetOverlayActive(entry, false);
+                    continue;
+                }
+
                 if (!entry.Host.IsLoaded)
                 {
                     continue;
@@ -407,12 +424,17 @@ namespace Flowery.Uno.Gallery.Effects
             return value.Replace("'", "\\'", StringComparison.Ordinal);
         }
 
+#if FLOWERY_GL_TRANSITIONS && (__WASM__ || HAS_UNO_WASM)
+        [JSImport("globalThis.eval")]
+        private static partial void EvaluateJavaScript(string script);
+#endif
+
         private static void InvokeJs(string script, string context)
         {
 #if FLOWERY_GL_TRANSITIONS && (__WASM__ || HAS_UNO_WASM)
             try
             {
-                WebAssemblyRuntime.InvokeJS(script);
+                EvaluateJavaScript(script);
             }
             catch (Exception ex)
             {

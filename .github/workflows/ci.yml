@@ -22,6 +22,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Test Carousel GL resources and lifecycle
+        run: node --test scripts/tests/carousel-gl.test.cjs
+
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
@@ -48,6 +51,13 @@ jobs:
       - name: Install Android workload
         run: dotnet workload install android
 
+      - name: Build Gallery WASM with Skia 4
+        shell: pwsh
+        run: |
+          $buildArgs = @('build', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj', '-c', 'Release', '-f', 'net10.0-browserwasm')
+          dotnet @buildArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Restore (Windows only)
         run: |
           dotnet restore Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj `
@@ -61,6 +71,34 @@ jobs:
             -c Release `
             -f net10.0-windows10.0.19041 `
             --no-restore
+
+      - name: Test Gallery rendering and automatic carousel cycles
+        timeout-minutes: 10
+        shell: pwsh
+        run: |
+          $frameworks = @('net10.0-windows10.0.19041', 'net10.0-desktop')
+          $requiredTests = @(
+            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
+            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
+            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
+            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect'
+          )
+          foreach ($framework in $frameworks) {
+            $result = Join-Path $env:RUNNER_TEMP ('flowery-runtime-{0}.xml' -f $framework)
+            $runArgs = @('run', '--project', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj', '-c', 'Release', '-f', $framework)
+            if ($framework -eq 'net10.0-windows10.0.19041') { $runArgs += '--no-build' }
+            $runArgs += @('--', '--runtime-tests', $result)
+            dotnet @runArgs
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            [xml]$report = Get-Content -LiteralPath $result -Raw
+            if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed.' }
+            if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
+            foreach ($name in $requiredTests) {
+              $test = @($report.tests.test | Where-Object name -EQ $name)
+              if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
+            }
+            Write-Host ('{0}: {1} runtime tests passed' -f $framework, $report.tests.passed)
+          }
 
   nuget-audit:
     runs-on: ${{ matrix.os }}

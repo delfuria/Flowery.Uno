@@ -220,6 +220,56 @@ jobs:
           path: ${{ runner.temp }}/flowery-runtime-linux.xml
           if-no-files-found: warn
 
+  build-gallery-macos:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      # Restore evaluates the Gallery's Android, WASM and macOS-only iOS targets.
+      - name: Install required workloads
+        run: dotnet workload install android wasm-tools ios
+
+      - name: Build Gallery macOS Desktop with Skia 4
+        run: dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-desktop
+
+      - name: Test Gallery rendering and automatic carousel cycles on macOS
+        timeout-minutes: 10
+        shell: pwsh
+        run: |
+          $result = Join-Path $env:RUNNER_TEMP 'flowery-runtime-macos.xml'
+          $runArgs = @('run', '--project', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj',
+            '-c', 'Release', '-f', 'net10.0-desktop', '--no-build', '--', '--runtime-tests', $result)
+          dotnet @runArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          [xml]$report = Get-Content -LiteralPath $result -Raw
+          if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed.' }
+          if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
+          $requiredTests = @(
+            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
+            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
+            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
+            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect',
+            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
+          )
+          foreach ($name in $requiredTests) {
+            $test = @($report.tests.test | Where-Object name -EQ $name)
+            if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
+          }
+          Write-Host ('macOS Desktop: {0} runtime tests passed' -f $report.tests.passed)
+
+      - name: Upload macOS runtime test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gallery-runtime-macos
+          path: ${{ runner.temp }}/flowery-runtime-macos.xml
+          if-no-files-found: warn
+
   build-gallery-android:
     runs-on: ubuntu-24.04
     timeout-minutes: 30

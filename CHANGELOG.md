@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Glass: corrected the saturation matrix so zero saturation produces grayscale.
 - Carousel GL: pending image loads no longer restart a detached or replaced renderer.
 - Gallery (Browser): GL overlays pause while the overlay navigation pane is open or closing, so they cannot cover the sidebar.
+- CI: pull requests now build the Gallery on Linux, macOS 15 (Apple Silicon), and Android. Linux and macOS also run the Gallery runtime suite.
+- CI: Chromium checks both normal and missing drawer state groups, including closing animations and reopening during closure. Test reports remain available as artifacts.
 
 ## [1.4.0] - 2026-10-19
 

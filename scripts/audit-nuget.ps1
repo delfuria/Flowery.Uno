@@ -21,7 +21,11 @@ try {
 
         $listArgs = @('list', $project, 'package', '--vulnerable', '--include-transitive', '--format', 'json', '--output-version', '1', '--no-restore')
         $output = dotnet @listArgs
-        if ($LASTEXITCODE -ne 0) { throw ('NuGet audit failed for {0}.' -f $project) }
+        $auditExitCode = $LASTEXITCODE
+        if ($auditExitCode -ne 0) {
+            $output | ForEach-Object { Write-Host $_ }
+            throw ('NuGet audit failed for {0} (exit code {1}).' -f $project, $auditExitCode)
+        }
         $report = ($output -join [Environment]::NewLine) | ConvertFrom-Json
         if ($report.version -ne 1 -or $null -eq $report.projects -or @($report.projects).Count -ne 1) {
             throw ('Invalid NuGet audit report for {0}.' -f $project)

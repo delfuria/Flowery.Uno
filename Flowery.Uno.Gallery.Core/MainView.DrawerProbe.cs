@@ -14,6 +14,7 @@ public sealed partial class MainView
 {
     private static WeakReference<MainView>? _drawerProbe;
     private readonly List<Storyboard> _probeClosingStoryboards = new();
+    private readonly Dictionary<DoubleAnimation, TimeSpan> _probeClosingDurations = new();
     private VisualStateGroup? _probeDisplayStates;
     private bool _probeMissingGroup;
     private double _probeCompletedAt = -1;
@@ -42,6 +43,15 @@ public sealed partial class MainView
         }
         if (_probeClosingStoryboards.Count == 0)
             throw new InvalidOperationException("The probe requires real closing storyboards.");
+        foreach (var animation in _probeClosingStoryboards.SelectMany(storyboard => storyboard.Children)
+                     .OfType<DoubleAnimation>())
+        {
+            if (!animation.Duration.HasTimeSpan || animation.Duration.TimeSpan <= TimeSpan.Zero)
+                throw new InvalidOperationException("The probe requires explicit positive closing durations.");
+            _probeClosingDurations.TryAdd(animation, animation.Duration.TimeSpan);
+        }
+        if (_probeClosingDurations.Count == 0)
+            throw new InvalidOperationException("The probe requires real closing DoubleAnimations.");
         _drawerProbe = new WeakReference<MainView>(this);
     }
 
@@ -50,6 +60,9 @@ public sealed partial class MainView
         foreach (var storyboard in _probeClosingStoryboards)
             storyboard.Completed -= OnProbeClosingCompleted;
         _probeClosingStoryboards.Clear();
+        foreach (var (animation, originalDuration) in _probeClosingDurations)
+            animation.Duration = new Duration(originalDuration);
+        _probeClosingDurations.Clear();
         if (_probeDisplayStates != null)
             _probeDisplayStates.Name = "DisplayModeStates";
         _probeDisplayStates = null;
@@ -89,8 +102,10 @@ public sealed partial class MainView
     {
         if (speed <= 0 || speed > 1)
             throw new ArgumentOutOfRangeException(nameof(speed));
-        foreach (var storyboard in ProbeView()._probeClosingStoryboards)
-            storyboard.SpeedRatio = speed;
+        // Uno 6.7 does not implement Timeline.SpeedRatio on WASM/Skia.
+        // Scale the real closing animations, preserving their targets and easing.
+        foreach (var (animation, originalDuration) in ProbeView()._probeClosingDurations)
+            animation.Duration = new Duration(TimeSpan.FromTicks((long)(originalDuration.Ticks / speed)));
     }
 
     [JSExport]

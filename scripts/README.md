@@ -333,6 +333,37 @@ in that page's browser console. Keep the navigation closed or in Inline mode.
 The expression returns a report after four shader changes, with a 30-second timeout.
 `passed` must be `true`: no hidden, paused or replaced renderer frames are allowed.
 
+### Drawer browser regression tests
+
+The `test-gallery-drawer` CI job runs Chromium against the Debug WASM Gallery.
+It checks both the normal state group and a renamed group that the production lookup cannot find.
+Both cases use real Uno animations and GL renderers at a 600 × 800 viewport.
+The test checks pause state, animation completion, renderer visibility, and reopening during closure.
+The slow cases extend the real closing animation durations. Uno 6.7 does not implement `Timeline.SpeedRatio` on WASM/Skia.
+
+For a local run, first build the Debug Gallery:
+
+```powershell
+pwsh ./scripts/build_browser.ps1 -Configuration Debug -NoRun -Cli
+```
+
+Then install the test dependencies and run the tests:
+
+```powershell
+cd scripts/tests/browser
+pnpm install --frozen-lockfile
+pnpm exec playwright install chromium
+pnpm test
+```
+
+The runner starts and stops the Gallery server on port 5280. The port must be free.
+Each case uses a fresh browser context. Retries are disabled.
+CI uploads JSON results, console logs, and a JUnit report in the `gallery-drawer-browser` artifact.
+Failed tests also include a screenshot and a Playwright trace.
+Unavailable Uno Debug remote-control WebSockets (`/rc`) remain in the logs but do not fail the test.
+Other console errors and all unhandled page errors fail the test.
+Chromium uses SwiftShader for WebGL. This job does not test a physical GPU.
+
 ### Build fails with missing SDK
 
 Ensure you have .NET 10.0 SDK installed:

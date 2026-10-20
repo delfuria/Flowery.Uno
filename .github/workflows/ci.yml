@@ -119,6 +119,50 @@ jobs:
             Write-Host ('{0}: {1} runtime tests passed' -f $framework, $report.tests.passed)
           }
 
+  test-gallery-drawer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Install required workloads
+        run: dotnet workload install android wasm-tools
+
+      # The browser probe is deliberately absent from Release builds.
+      - name: Build Debug Gallery WASM with Skia 4
+        run: dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Debug -f net10.0-browserwasm
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10.32.1'
+          run_install: false
+
+      - name: Install browser test dependencies
+        working-directory: scripts/tests/browser
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+
+      - name: Test normal and missing drawer state groups
+        working-directory: scripts/tests/browser
+        run: pnpm test
+
+      - name: Upload drawer browser test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gallery-drawer-browser
+          path: scripts/tests/browser/test-results/
+          if-no-files-found: warn
+
   build-gallery-linux:
     runs-on: ubuntu-24.04
     timeout-minutes: 30

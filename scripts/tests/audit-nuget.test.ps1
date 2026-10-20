@@ -15,6 +15,9 @@ if ($FixtureScenario) {
             [Console]::Error.WriteLine('NU1301')
             exit 7
         }
+        if ($FixtureScenario -match '^restore-warning-(NU190[0-5])$') {
+            [Console]::Error.WriteLine(('warning {0}: {1}' -f $Matches[1], $sensitiveText))
+        }
         exit 0
     }
 
@@ -71,6 +74,10 @@ $cases = @(
     @{ Name = 'problems'; Fails = $true; Expected = 'NuGet audit reported problems'; Code = 'NU1900' },
     @{ Name = 'vulnerabilities'; Fails = $true; Expected = 'found 1 vulnerability entries' }
 )
+$cases += 0..5 | ForEach-Object {
+    $code = 'NU190{0}' -f $_
+    @{ Name = 'restore-warning-' + $code; Fails = $true; Expected = 'NuGet restore reported audit warnings'; Code = $code }
+}
 
 foreach ($case in $cases) {
     $state = @{ Failed = $false }

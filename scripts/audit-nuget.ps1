@@ -41,6 +41,11 @@ try {
             Write-AuditDiagnosticCodes -CommandOutput $restoreOutput
             throw ('Restore failed for {0} (exit code {1}).' -f $project, $restoreExitCode)
         }
+        # Restore can return zero after an audit-data failure or vulnerability warning.
+        if (($restoreOutput -join [Environment]::NewLine) -match '\bNU190[0-5]\b') {
+            Write-AuditDiagnosticCodes -CommandOutput $restoreOutput
+            throw ('NuGet restore reported audit warnings for {0}.' -f $project)
+        }
 
         $listArgs = @('list', $project, 'package', '--vulnerable', '--include-transitive', '--format', 'json', '--output-version', '1', '--no-restore')
         $output = @(dotnet @listArgs 2>&1)

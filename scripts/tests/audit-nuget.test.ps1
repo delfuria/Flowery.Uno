@@ -74,3 +74,6 @@ foreach ($case in $cases) {
     }
     Write-Host ('Passed: {0}' -f $case.Name)
 }
+
+# GitHub's pwsh wrapper must not inherit the last expected failing fixture's exit code.
+exit 0

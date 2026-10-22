@@ -205,18 +205,23 @@
                         Background="{ThemeResource DaisyBase300Brush}"
                         BorderBrush="{ThemeResource DaisyBase300Brush}"
                         BorderThickness="1">
-                    <Grid>
-                        <Ellipse x:Name="Knob"
-                            Width="{ThemeResource DaisyToggleKnobMediumSize}"
-                            Height="{ThemeResource DaisyToggleKnobMediumSize}"
-                            Fill="White"
-                            HorizontalAlignment="Left"
-                            VerticalAlignment="Center"
-                            Margin="0">
-                            <Ellipse.RenderTransform>
+                    <Grid x:Name="PART_TrackSurface">
+                        <!-- The transform sits on a wrapper so the neumorphic shadow layer next to the knob
+                             moves with it; ZIndex keeps the knob above the track's inset layer. -->
+                        <Grid HorizontalAlignment="Left"
+                              VerticalAlignment="Center"
+                              Canvas.ZIndex="2">
+                            <Grid.RenderTransform>
                                 <TranslateTransform x:Name="KnobTransform" X="0" />
-                            </Ellipse.RenderTransform>
-                        </Ellipse>
+                            </Grid.RenderTransform>
+                            <Border x:Name="Knob"
+                                    Width="{ThemeResource DaisyToggleKnobMediumSize}"
+                                    Height="{ThemeResource DaisyToggleKnobMediumSize}"
+                                    CornerRadius="8"
+                                    Background="White"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center" />
+                        </Grid>
                     </Grid>
                 </Border>
 
@@ -261,10 +266,14 @@
                             <Border x:Name="PART_IndicatorBorder"
                                     BorderThickness="2"
                                     VerticalAlignment="Center">
-                                <Ellipse x:Name="PART_InnerDot"
-                                         HorizontalAlignment="Center"
-                                         VerticalAlignment="Center"
-                                         Visibility="Collapsed" />
+                                <!-- The Grid hosts the neumorphic inset layer below the dot. -->
+                                <Grid>
+                                    <Ellipse x:Name="PART_InnerDot"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center"
+                                             Canvas.ZIndex="2"
+                                             Visibility="Collapsed" />
+                                </Grid>
                             </Border>
                             <ContentPresenter Content="{TemplateBinding Content}"
                                               ContentTemplate="{TemplateBinding ContentTemplate}"
@@ -339,26 +348,32 @@
                                        TextWrapping="NoWrap"
                                        FontWeight="Bold"
                                        FontSize="11" />
-                            <!-- Handle positioned via TranslateTransform for smooth animation -->
-                            <Border x:Name="PART_Handle"
-                                    CornerRadius="20"
-                                    Width="40"
-                                    Height="40"
-                                    HorizontalAlignment="Left"
-                                    VerticalAlignment="Center">
-                                <Border.RenderTransform>
+                            <!-- Handle positioned via TranslateTransform for smooth animation.
+                                 The transform sits on a wrapper so the neumorphic shadow layer next to the
+                                 handle moves with it; ZIndex keeps the handle above the track's inset layer. -->
+                            <Grid HorizontalAlignment="Left"
+                                  VerticalAlignment="Center"
+                                  Canvas.ZIndex="2">
+                                <Grid.RenderTransform>
                                     <TranslateTransform x:Name="PART_HandleTransform" X="0" />
-                                </Border.RenderTransform>
-                                <Viewbox x:Name="PART_IconViewbox"
-                                         Width="20" Height="20"
-                                         HorizontalAlignment="Center"
-                                         VerticalAlignment="Center"
-                                         Stretch="Uniform">
-                                    <Path x:Name="PART_Icon"
-                                          Data="{TemplateBinding IconData}"
-                                          Stretch="Uniform" />
-                                </Viewbox>
-                            </Border>
+                                </Grid.RenderTransform>
+                                <Border x:Name="PART_Handle"
+                                        CornerRadius="20"
+                                        Width="40"
+                                        Height="40"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center">
+                                    <Viewbox x:Name="PART_IconViewbox"
+                                             Width="20" Height="20"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center"
+                                             Stretch="Uniform">
+                                        <Path x:Name="PART_Icon"
+                                              Data="{TemplateBinding IconData}"
+                                              Stretch="Uniform" />
+                                    </Viewbox>
+                                </Border>
+                            </Grid>
                         </Grid>
                     </Border>
                 </ControlTemplate>

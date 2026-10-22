@@ -386,21 +386,6 @@ namespace Flowery.Controls
                                 db.IsExternallyControlled = true;
                             }
                         }
-
-                        // IMPORTANT: Disable neumorphic on ALL child controls.
-                        // The GROUP itself is the single neumorphic surface - it draws ONE unified
-                        // shadow/border around all children. If we let each child have its own
-                        // neumorphic effect, we'd get overlapping shadows and borders between
-                        // adjacent buttons, which looks wrong. The children are flat visual
-                        // segments inside the container's neumorphic shell.
-                        if (fe is DaisyBaseContentControl dbcc)
-                        {
-                            DaisyNeumorphic.SetIsEnabled(dbcc, false);
-                        }
-                        else if (fe is DaisyButton db2)
-                        {
-                            DaisyNeumorphic.SetIsEnabled(db2, false);
-                        }
                     }
                 }
             }
@@ -423,21 +408,6 @@ namespace Flowery.Controls
                     {
                         db.IsExternallyControlled = true;
                     }
-                }
-
-                // IMPORTANT: Disable neumorphic on ALL child controls.
-                // The GROUP itself is the single neumorphic surface - it draws ONE unified
-                // shadow/border around all children. If we let each child have its own
-                // neumorphic effect, we'd get overlapping shadows and borders between
-                // adjacent buttons, which looks wrong. The children are flat visual
-                // segments inside the container's neumorphic shell.
-                if (singleElement is DaisyBaseContentControl dbcc)
-                {
-                    DaisyNeumorphic.SetIsEnabled(dbcc, false);
-                }
-                else if (singleElement is DaisyButton db2)
-                {
-                    DaisyNeumorphic.SetIsEnabled(db2, false);
                 }
             }
 
@@ -553,14 +523,6 @@ namespace Flowery.Controls
                 button.BorderBrush = _segmentBorderBrush;
                 button.BorderThickness = new Thickness(1);
 
-                // IMPORTANT: Keep neumorphic disabled on child buttons during visual updates.
-                // See collection phase comments for full explanation: the GROUP is the single
-                // neumorphic surface, children must remain flat segments inside it.
-                if (button is DaisyButton db)
-                {
-                    DaisyNeumorphic.SetIsEnabled(db, false);
-                }
-
                 button.RenderTransformOrigin = new Point(0.5, 0.5);
                 button.RenderTransform = isPressed ? new ScaleTransform { ScaleX = 0.98, ScaleY = 0.98 } : null;
             }
@@ -573,14 +535,6 @@ namespace Flowery.Controls
                     border.Background = _segmentNormalBackground;
                     border.BorderBrush = _segmentBorderBrush;
                     border.BorderThickness = new Thickness(1);
-                }
-
-                // IMPORTANT: Keep neumorphic disabled on all children during visual updates.
-                // See collection phase comments for full explanation: the GROUP is the single
-                // neumorphic surface, children must remain flat segments inside it.
-                if (seg is DaisyBaseContentControl dbcc)
-                {
-                    DaisyNeumorphic.SetIsEnabled(dbcc, false);
                 }
             }
         }
@@ -632,7 +586,12 @@ namespace Flowery.Controls
                 }
 
                 var seg = _segmentItems[i];
-                if (seg is Button button)
+                if (seg is DaisyButton daisyButton)
+                {
+                    // DaisyButton re-applies its size token's radius; the group's radius has to win every time.
+                    daisyButton.SegmentCornerRadius = cornerRadius;
+                }
+                else if (seg is Button button)
                 {
                     button.CornerRadius = cornerRadius;
                 }

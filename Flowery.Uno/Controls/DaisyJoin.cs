@@ -191,14 +191,12 @@ namespace Flowery.Controls
                         {
                             _joinItems.Add(nested);
                             _itemsPanel.Children.Add(nested);
-                            DisableChildNeumorphic(nested);
                         }
                     }
                     else
                     {
                         _joinItems.Add(child);
                         _itemsPanel.Children.Add(child);
-                        DisableChildNeumorphic(child);
                     }
                 }
             }
@@ -212,7 +210,6 @@ namespace Flowery.Controls
 
                 _joinItems.Add(singleElement);
                 _itemsPanel.Children.Add(singleElement);
-                DisableChildNeumorphic(singleElement);
             }
 
             // Now safe to set Content to the new panel
@@ -255,19 +252,22 @@ namespace Flowery.Controls
                     // Apply corner radius based on position for common joinable controls.
                     var cr = GetJoinCornerRadius(isFirst, isLast, isHorizontal);
 
-                    if (fe is Button button)
+                    if (fe is DaisyButton daisyButton)
                     {
-                        button.CornerRadius = cr;
+                        // DaisyButton re-applies its own radius and border on load, size and theme changes and hover,
+                        // so the join's values go through properties it keeps every time.
+                        daisyButton.SegmentCornerRadius = cr;
 
                         // DaisyButton default/soft styles use Transparent border brush; joins look "separated" without dividers.
                         // Preserve outline/dash styling (they already have meaningful border colors).
-                        if (button is DaisyButton daisyButton &&
-                            (daisyButton.ButtonStyle == DaisyButtonStyle.Default || daisyButton.ButtonStyle == DaisyButtonStyle.Soft) &&
-                            IsTransparent(daisyButton.BorderBrush))
-                        {
-                            daisyButton.BorderBrush = base300Brush;
-                            daisyButton.BorderThickness = new Thickness(1);
-                        }
+                        daisyButton.SegmentBorderBrush =
+                            daisyButton.ButtonStyle is DaisyButtonStyle.Default or DaisyButtonStyle.Soft
+                                ? base300Brush
+                                : null;
+                    }
+                    else if (fe is Button button)
+                    {
+                        button.CornerRadius = cr;
                     }
                     else if (fe is ToggleButton toggleButton)
                     {
@@ -403,29 +403,6 @@ namespace Flowery.Controls
         /// Gets the list of joined items for external access (read-only).
         /// </summary>
         public IReadOnlyList<UIElement> JoinedItems => _joinItems;
-
-        /// <summary>
-        /// IMPORTANT: Disables neumorphic on child controls.
-        ///
-        /// The JOIN itself is the single neumorphic surface - it draws ONE unified shadow/border
-        /// around all joined children. If we let each child have its own neumorphic effect, we'd
-        /// get overlapping shadows and borders between adjacent items, which looks wrong.
-        /// The children are flat visual segments inside the container's neumorphic shell.
-        ///
-        /// This applies to both DaisyButton (which has its own neumorphic implementation)
-        /// and DaisyBaseContentControl (which is the base class for neumorphic-enabled controls).
-        /// </summary>
-        private static void DisableChildNeumorphic(UIElement element)
-        {
-            if (element is DaisyButton db)
-            {
-                DaisyNeumorphic.SetIsEnabled(db, false);
-            }
-            else if (element is DaisyBaseContentControl dbcc)
-            {
-                DaisyNeumorphic.SetIsEnabled(dbcc, false);
-            }
-        }
 
         private static bool DetachFromParent(UIElement element)
         {

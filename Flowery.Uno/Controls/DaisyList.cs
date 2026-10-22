@@ -295,10 +295,10 @@ namespace Flowery.Controls
             Size = size;
         }
 
-        protected override FrameworkElement? GetNeumorphicHostElement()
-        {
-            return _rootBorder ?? base.GetNeumorphicHostElement();
-        }
+        /// <summary>
+        /// Rows are flat parts of the list surface; only the list draws the neumorphic effect.
+        /// </summary>
+        protected override bool IsNeumorphicEffectivelyEnabled() => false;
 
         #endregion
 
@@ -455,6 +455,11 @@ namespace Flowery.Controls
             VerticalAlignment = VerticalAlignment.Center;
             IsTabStop = false;
         }
+
+        /// <summary>
+        /// Columns are flat parts of the list surface; only the list draws the neumorphic effect.
+        /// </summary>
+        protected override bool IsNeumorphicEffectivelyEnabled() => false;
 
         #region Dependency Properties
 

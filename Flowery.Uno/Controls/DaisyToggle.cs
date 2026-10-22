@@ -5,7 +5,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
-using Microsoft.UI.Xaml.Shapes;
 
 namespace Flowery.Controls
 {
@@ -13,10 +12,11 @@ namespace Flowery.Controls
     /// A toggle control styled after DaisyUI's Toggle component (Uno/WinUI).
     /// Features neutral track + moving knob; knob color varies by Variant when checked.
     /// </summary>
-    public partial class DaisyToggle : ToggleButton
+    public partial class DaisyToggle : ToggleButton, IDaisyNeumorphicTarget
     {
         private Border? _switchArea;
-        private Ellipse? _knob;
+        private Grid? _trackSurface;
+        private Border? _knob;
         private TranslateTransform? _knobTransform;
 
         private bool _isSyncing;
@@ -29,10 +29,13 @@ namespace Flowery.Controls
         private long _foregroundCallbackToken;
         private long _fontSizeCallbackToken;
         private readonly DaisyControlLifecycle _lifecycle;
+        private readonly DaisyNeumorphicParticipant _neumorphic;
 
         public DaisyToggle()
         {
             DefaultStyleKey = typeof(DaisyToggle);
+
+            _neumorphic = DaisyNeumorphicParticipant.Create(this, GetNeumorphicSurfaces, () => Size);
 
             _lifecycle = new DaisyControlLifecycle(
                 this,
@@ -85,7 +88,8 @@ namespace Flowery.Controls
             base.OnApplyTemplate();
 
             _switchArea = GetTemplateChild("SwitchArea") as Border;
-            _knob = GetTemplateChild("Knob") as Ellipse;
+            _trackSurface = GetTemplateChild("PART_TrackSurface") as Grid;
+            _knob = GetTemplateChild("Knob") as Border;
             _knobTransform = GetTemplateChild("KnobTransform") as TranslateTransform;
 
             EnsureForegroundOverrideInitialized();
@@ -282,6 +286,7 @@ namespace Flowery.Controls
             ApplySizing(resources);
             ApplyTheme(resources);
             ApplyKnobPosition(animateKnob);
+            _neumorphic.RequestRefresh();
         }
 
         private void ApplySizing(ResourceDictionary? resources)
@@ -295,6 +300,13 @@ namespace Flowery.Controls
 
             _knob.Width = DaisyResourceLookup.GetSizeDouble(resources, "DaisyToggleKnob", Size, "Size", fallback: 16d);
             _knob.Height = _knob.Width;
+            _knob.CornerRadius = new CornerRadius(_knob.Width / 2);
+
+            // The inset layer fills the area inside the track's 1 px border.
+            if (_trackSurface != null)
+            {
+                _trackSurface.CornerRadius = new CornerRadius(Math.Max(0, _switchArea.Height / 2 - 1));
+            }
             // No margin needed - vertical centering via VerticalAlignment="Center" in XAML,
             // horizontal positioning via TranslateTransform.X
 
@@ -353,11 +365,11 @@ namespace Flowery.Controls
 
                 if (knobOverride != null)
                 {
-                    _knob.Fill = knobOverride;
+                    _knob.Background = knobOverride;
                 }
                 else
                 {
-                    _knob.Fill = Variant switch
+                    _knob.Background = Variant switch
                     {
                         DaisyToggleVariant.Primary => DaisyResourceLookup.GetBrush(resources, "DaisyPrimaryBrush", fallback: new SolidColorBrush(Microsoft.UI.Colors.White)),
                         DaisyToggleVariant.Secondary => DaisyResourceLookup.GetBrush(resources, "DaisySecondaryBrush", fallback: new SolidColorBrush(Microsoft.UI.Colors.White)),
@@ -374,7 +386,7 @@ namespace Flowery.Controls
             {
                 // Unchecked knob: check for override, else use Base100
                 var uncheckedKnobOverride = DaisyResourceLookup.TryGetControlBrush(this, "DaisyToggle", "KnobBrushUnchecked");
-                _knob.Fill = uncheckedKnobOverride ?? DaisyResourceLookup.GetBrush(resources, "DaisyBase100Brush", fallback: new SolidColorBrush(Microsoft.UI.Colors.White));
+                _knob.Background = uncheckedKnobOverride ?? DaisyResourceLookup.GetBrush(resources, "DaisyBase100Brush", fallback: new SolidColorBrush(Microsoft.UI.Colors.White));
             }
 
             var labelBrush = _hasForegroundOverride
@@ -499,5 +511,28 @@ namespace Flowery.Controls
 
             return DaisyResourceLookup.GetBrush(key);
         }
+
+        #region Neumorphic
+
+        void IDaisyNeumorphicTarget.RefreshNeumorphicEffect() => _neumorphic.Refresh();
+
+        void IDaisyNeumorphicTarget.RequestNeumorphicRefresh() => _neumorphic.RequestRefresh();
+
+        /// <summary>
+        /// The track is always inset and the knob always raised, whatever the effective mode.
+        /// </summary>
+        private IReadOnlyList<DaisyNeumorphicSurface> GetNeumorphicSurfaces()
+        {
+            if (_trackSurface == null || _knob == null)
+                return [];
+
+            return
+            [
+                new DaisyNeumorphicSurface(_trackSurface, DaisyNeumorphicMode.Inset),
+                new DaisyNeumorphicSurface(_knob, DaisyNeumorphicMode.Raised)
+            ];
+        }
+
+        #endregion
     }
 }

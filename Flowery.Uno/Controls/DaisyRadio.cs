@@ -12,7 +12,7 @@ namespace Flowery.Controls
     /// A RadioButton control styled after DaisyUI's Radio component.
     /// Supports variant colors and multiple sizes.
     /// </summary>
-    public partial class DaisyRadio : RadioButton
+    public partial class DaisyRadio : RadioButton, IDaisyNeumorphicTarget
     {
         private Border? _indicatorBorder;
         private Ellipse? _innerDot;
@@ -25,10 +25,12 @@ namespace Flowery.Controls
         private bool _hasFontSizeOverride;
         private bool _fontSizeOverrideInitialized;
         private bool _isApplyingFontSize;
+        private readonly DaisyNeumorphicParticipant _neumorphic;
 
         public DaisyRadio()
         {
             DefaultStyleKey = typeof(DaisyRadio);
+            _neumorphic = DaisyNeumorphicParticipant.Create(this, GetNeumorphicSurfaces, () => Size);
 
             _lifecycle = new DaisyControlLifecycle(
                 this,
@@ -135,6 +137,7 @@ namespace Flowery.Controls
 
             ApplySizing();
             ApplyColors();
+            _neumorphic.RequestRefresh();
         }
 
         private void ApplySizing()
@@ -308,5 +311,23 @@ namespace Flowery.Controls
 
             return DaisyResourceLookup.GetBrush(key);
         }
+
+        #region Neumorphic
+
+        void IDaisyNeumorphicTarget.RefreshNeumorphicEffect() => _neumorphic.Refresh();
+
+        void IDaisyNeumorphicTarget.RequestNeumorphicRefresh() => _neumorphic.RequestRefresh();
+
+        /// <summary>
+        /// The indicator is an inset well, whatever the effective mode.
+        /// </summary>
+        private IReadOnlyList<DaisyNeumorphicSurface> GetNeumorphicSurfaces()
+        {
+            return _indicatorBorder == null
+                ? []
+                : [new DaisyNeumorphicSurface(_indicatorBorder, DaisyNeumorphicMode.Inset)];
+        }
+
+        #endregion
     }
 }

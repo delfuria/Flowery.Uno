@@ -471,8 +471,8 @@ namespace Flowery.Controls
                 // and only mutate their Color values on each apply.
                 ApplyPaletteToApplicationResources(app.Resources, newPalette);
 
-                // Update neumorphic shadow colors based on theme
-                UpdateNeumorphicShadowColors(app.Resources, def.Info.IsDark);
+                // Neumorphic shadow colors are derived from the new theme on next use
+                DaisyNeumorphic.InvalidateThemeShadowColors();
 
                 // Optional WinUI mappings:
                 // Some resource keys / theme properties can throw COMException on certain Uno backends.
@@ -691,6 +691,7 @@ namespace Flowery.Controls
                 return;
 
             _currentThemeName = themeName;
+            DaisyNeumorphic.InvalidateThemeShadowColors();
             ThemeChanged?.Invoke(null, themeName);
         }
 
@@ -701,60 +702,6 @@ namespace Flowery.Controls
         {
             var info = GetThemeInfo(themeName);
             return info?.IsDark ?? false;
-        }
-
-        /// <summary>
-        /// Updates the global neumorphic shadow colors based on the current theme's base colors.
-        /// </summary>
-        private static void UpdateNeumorphicShadowColors(ResourceDictionary appResources, bool isDark)
-        {
-            try
-            {
-                // Get Base300 (darkest surface) from theme for shadow derivation
-                Windows.UI.Color base300 = Windows.UI.Color.FromArgb(255, 128, 128, 128); // Fallback gray
-
-                if (appResources.TryGetValue("DaisyBase300Color", out var base300Obj) && base300Obj is Windows.UI.Color c300)
-                    base300 = c300;
-
-                // Derive shadow colors based on theme brightness
-                Windows.UI.Color darkShadow;
-                Windows.UI.Color lightShadow;
-
-                if (isDark)
-                {
-                    // Dark theme: use a deep dark color (not pure black, which blends into dark backgrounds)
-                    // Darken Base300 significantly for contrast against dark surfaces
-                    darkShadow = DarkenColor(base300, 0.7);
-                    lightShadow = Windows.UI.Color.FromArgb(255, 255, 255, 255);
-                }
-                else
-                {
-                    // Light theme: dark shadow is darkened Base300, light shadow is white
-                    darkShadow = DarkenColor(base300, 0.5);
-                    lightShadow = Windows.UI.Color.FromArgb(255, 255, 255, 255);
-                }
-
-                // Update global neumorphic settings
-                DaisyBaseContentControl.GlobalNeumorphicDarkShadowColor = darkShadow;
-                DaisyBaseContentControl.GlobalNeumorphicLightShadowColor = lightShadow;
-            }
-            catch (Exception)
-            {
-            }
-        }
-
-        /// <summary>
-        /// Darkens a color by a specified factor (0.0 = no change, 1.0 = black).
-        /// Always returns a fully opaque color (A=255).
-        /// </summary>
-        private static Windows.UI.Color DarkenColor(Windows.UI.Color color, double factor)
-        {
-            factor = Math.Clamp(factor, 0.0, 1.0);
-            return Windows.UI.Color.FromArgb(
-                255, // Always fully opaque
-                (byte)(color.R * (1.0 - factor)),
-                (byte)(color.G * (1.0 - factor)),
-                (byte)(color.B * (1.0 - factor)));
         }
     }
 }

@@ -12,7 +12,7 @@ namespace Flowery.Controls
     /// A CheckBox control styled after DaisyUI's Checkbox component.
     /// Supports variant colors and multiple sizes.
     /// </summary>
-    public partial class DaisyCheckBox : CheckBox
+    public partial class DaisyCheckBox : CheckBox, IDaisyNeumorphicTarget
     {
         private Border? _controlBorder;
         private Border? _checkboxBorder;
@@ -30,10 +30,12 @@ namespace Flowery.Controls
         private bool _fontSizeOverrideInitialized;
         private bool _isApplyingFontSize;
         private readonly DaisyControlLifecycle _lifecycle;
+        private readonly DaisyNeumorphicParticipant _neumorphic;
 
         public DaisyCheckBox()
         {
             DefaultStyleKey = typeof(DaisyCheckBox);
+            _neumorphic = DaisyNeumorphicParticipant.Create(this, GetNeumorphicSurfaces, () => Size);
             // Override base CheckBox template to prevent conflicts with our code-driven visual tree
             HorizontalAlignment = HorizontalAlignment.Left;
             VerticalAlignment = VerticalAlignment.Center;
@@ -157,7 +159,7 @@ namespace Flowery.Controls
                 if (_checkboxBorder == null && existingRoot.Children.Count > 0 && existingRoot.Children[0] is Border existingBorder)
                 {
                     _checkboxBorder = existingBorder;
-                    _checkmark = existingBorder.Child as Microsoft.UI.Xaml.Shapes.Path;
+                    _checkmark = (existingBorder.Child as Panel)?.Children.OfType<Microsoft.UI.Xaml.Shapes.Path>().FirstOrDefault();
                 }
                 return;
             }
@@ -185,7 +187,9 @@ namespace Flowery.Controls
                 Visibility = Visibility.Collapsed
             };
 
-            _checkboxBorder.Child = _checkmark;
+            // The Grid hosts the neumorphic inset layer below the checkmark.
+            Canvas.SetZIndex(_checkmark, 2);
+            _checkboxBorder.Child = new Grid { Children = { _checkmark } };
             root.Children.Add(_checkboxBorder);
 
             if (_userContent is string labelText)
@@ -245,6 +249,7 @@ namespace Flowery.Controls
             ApplyColors();
             ApplyControlChrome();
             ApplyLabelTypography();
+            _neumorphic.RequestRefresh();
         }
 
         private void ApplySizing()
@@ -514,5 +519,23 @@ namespace Flowery.Controls
 
             return DaisyResourceLookup.GetBrush(key);
         }
+
+        #region Neumorphic
+
+        void IDaisyNeumorphicTarget.RefreshNeumorphicEffect() => _neumorphic.Refresh();
+
+        void IDaisyNeumorphicTarget.RequestNeumorphicRefresh() => _neumorphic.RequestRefresh();
+
+        /// <summary>
+        /// The box is an inset well, whatever the effective mode.
+        /// </summary>
+        private IReadOnlyList<DaisyNeumorphicSurface> GetNeumorphicSurfaces()
+        {
+            return _checkboxBorder == null
+                ? []
+                : [new DaisyNeumorphicSurface(_checkboxBorder, DaisyNeumorphicMode.Inset)];
+        }
+
+        #endregion
     }
 }

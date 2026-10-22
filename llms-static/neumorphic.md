@@ -410,10 +410,13 @@ Neumorphic effects are integrated directly into the `DaisyBaseContentControl` cl
 Global settings provide **default values** for controls that don't have local overrides. They are **opt-in**, not forced:
 
 - Controls with explicit local `NeumorphicEnabled`, `NeumorphicMode`, etc. ignore the global settings.
-- `DaisyButton` has a **heuristic** that excludes certain buttons from global neumorphic:
-  - Transparent variants (Ghost, Link) are excluded
-  - Default variant + Default style buttons are excluded (protects sidebars, menus)
-- Container controls (`DaisyButtonGroup`, `DaisyJoin`) explicitly disable neumorphic on their children.
+- `DaisyButton` only draws the effect on an opaque face: Ghost, Link, Outline, Dash and Soft buttons never draw it, since the shadows would show through. Changing `Variant` or `ButtonStyle` re-evaluates this.
+- Children of segment containers (`DaisyButtonGroup`, `DaisyJoin`) never draw the effect, whatever a scope says.
+- Table rows and cells, and list rows and columns, never draw the effect; the table or list is the one surface.
+- A control that is its own host and paints no visible background has no surface and stays flat (`DaisyLoading`, `DaisyStack`, …). Surfaces a control declares get a Base200 surface when their host paints none.
+
+**Precedence:** segment container (structural) → `NeumorphicScopeEnabled` → `NeumorphicEnabled` → `GlobalNeumorphicEnabled`.
+Mode and intensity resolve as own value → `NeumorphicScopeMode` / `NeumorphicScopeIntensity` → global.
 
 **Automatic state synchronization:**
 
@@ -472,6 +475,28 @@ DaisyBaseContentControl.GlobalNeumorphicEnabled = true;
 | `NeumorphicDarkShadowColor` | `Color?` | `null` | Override dark shadow color. Falls back to theme-derived global. |
 | `NeumorphicLightShadowColor` | `Color?` | `null` | Override light shadow color. Falls back to theme-derived global. |
 
+### Scope Properties (attached, on any ancestor)
+
+| Property | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `DaisyBaseContentControl.NeumorphicScopeEnabled` | `bool?` | `null` | Enables/disables the effect for a subtree. Wins over a control's own `NeumorphicEnabled`. |
+| `DaisyBaseContentControl.NeumorphicScopeMode` | `DaisyNeumorphicMode?` | `null` | Mode for a subtree. A control's own `NeumorphicMode` still wins. |
+| `DaisyBaseContentControl.NeumorphicScopeIntensity` | `double?` | `null` | Intensity for a subtree. A control's own `NeumorphicIntensity` still wins. |
+
+### Controls With Fixed Modes
+
+Some controls have several surfaces with a fixed mode, independent of the effective mode:
+
+| Control | Surfaces |
+| :--- | :--- |
+| `DaisySlideToConfirm` | Inset track, raised handle |
+| `DaisyToggle` | Inset track, raised knob |
+| `DaisyCheckBox` | Inset box |
+| `DaisyRadio` | Inset indicator |
+
+`DaisyTimelineItem` draws the effect on its boxes only (`IsBoxed`). `DaisyKbd` (and the keys of
+`DaisyModifierKeys`) and `DaisyWeatherForecastItem` tiles draw one surface each.
+
 ### Windows-Specific Properties
 
 | Property | Type | Default | Description |
@@ -509,24 +534,22 @@ This pattern isolates platform-specific code without risking regressions on othe
 
 ### Theme Integration (Shadow Colors)
 
-Shadow colors are **automatically derived from the theme** when `DaisyThemeManager.ApplyTheme()` is called:
+Shadow colors follow the theme unless the app sets them. The global colors are nullable:
 
-| Theme Type | Dark Shadow | Light Shadow |
+| Setting | `null` (default) | Set by the app |
 | :--- | :--- | :--- |
-| **Dark themes** | Pure black `#000000` | Pure white `#FFFFFF` |
-| **Light themes** | Darkened Base300 (40%) | Pure white `#FFFFFF` |
+| `GlobalNeumorphicDarkShadowColor` | Theme's Base300, darkened by 50% (light themes) or 70% (dark themes) | Used as is, survives theme changes |
+| `GlobalNeumorphicLightShadowColor` | White | Used as is, survives theme changes |
 
-The derivation happens in `DaisyThemeManager.UpdateNeumorphicShadowColors()` and updates:
+The theme color is derived when the effect is drawn and cached until the next theme change
+(`DaisyThemeManager.ApplyTheme()` or `SetCurrentTheme()`).
 
-- `DaisyBaseContentControl.GlobalNeumorphicDarkShadowColor`
-- `DaisyBaseContentControl.GlobalNeumorphicLightShadowColor`
-
-**Override Chain** (per-element → global):
+**Override Chain** (per-element → global → theme):
 
 ```csharp
-// Per-element via attached property (highest priority)
 var darkColor = DaisyNeumorphic.GetDarkShadowColor(element)
-    ?? DaisyBaseContentControl.GlobalNeumorphicDarkShadowColor; // Theme-derived fallback
+    ?? DaisyBaseContentControl.GlobalNeumorphicDarkShadowColor
+    ?? /* derived from the current theme */;
 ```
 
 ### Platform Considerations
@@ -541,13 +564,18 @@ var darkColor = DaisyNeumorphic.GetDarkShadowColor(element)
 
 **IMPORTANT**: Container controls like `DaisyButtonGroup` and `DaisyJoin` are the **single neumorphic surface** - they draw ONE unified shadow/border around all children.
 
-Child controls inside these containers have neumorphic **explicitly disabled** via `DaisyNeumorphic.SetIsEnabled(child, false)`. This prevents:
+Child controls inside these containers never draw the effect. This is a structural rule, checked before the scope,
+so `NeumorphicScopeEnabled="True"` on an ancestor cannot raise the segments again. It prevents:
 
 - Overlapping shadows between adjacent buttons
 - Duplicate borders that look wrong
 - Visual artifacts from multiple neumorphic effects competing
 
+The rule applies to the nearest Daisy control above an element: a button inside a segment's own template
+(e.g. a dropdown inside a join) follows the normal rules again.
+
 The children are flat visual segments inside the container's neumorphic shell. The container itself (which inherits from `DaisyBaseContentControl`) provides the neumorphic effect for the whole group.
+`DaisyTable` and `DaisyList` work the same way: their rows, cells and columns opt out, the table or list is the surface.
 
 ### Lifecycle Management
 

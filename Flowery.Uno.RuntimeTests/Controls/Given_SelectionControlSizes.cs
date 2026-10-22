@@ -5,7 +5,6 @@ using Flowery.Enums;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Shapes;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Flowery.Uno.RuntimeTests.Controls
@@ -70,12 +69,14 @@ namespace Flowery.Uno.RuntimeTests.Controls
                 await RuntimeTestHelpers.EnsureLoadedAsync(toggle);
                 await Task.Delay(300); // let the knob animation finish
 
-                var knob = Descendants<Ellipse>(toggle).Single();
+                var knob = Descendants<Border>(toggle).Single(b => b.Name == "Knob");
                 var track = Descendants<Border>(toggle).First(b => b.Width == widths[i]);
                 Assert.AreEqual(heights[i], track.Height, $"Toggle {Tiers[i]} height");
                 Assert.AreEqual(knobs[i], knob.Width, $"Toggle {Tiers[i]} knob");
 
-                var offset = ((TranslateTransform)knob.RenderTransform).X;
+                // The transform sits on the knob's wrapper, so its neumorphic shadow layer moves along.
+                var knobWrapper = (FrameworkElement)VisualTreeHelper.GetParent(knob);
+                var offset = ((TranslateTransform)knobWrapper.RenderTransform).X;
                 Assert.AreEqual(widths[i] - knobs[i] - toggle.TogglePadding, offset, 0.01, $"Toggle {Tiers[i]} checked knob offset");
                 Assert.IsTrue(offset + knob.Width <= track.Width, $"Toggle {Tiers[i]} knob must stay inside the track");
             }

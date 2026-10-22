@@ -20,9 +20,10 @@ namespace Flowery.Controls
         private double _dragOffsetX;
         private bool _slideCompleted;
         private SolidColorBrush? _originalTrackBrush;
+        private SolidColorBrush? _dragTrackBrush;
+        private bool _drawsNeumorphicEffect;
         private SolidColorBrush? _originalLabelBrush;
         private Color _targetLabelColor;
-        private DaisyNeumorphicHelper? _handleNeumorphicHelper;
 
         public DaisySlideToConfirm()
         {
@@ -47,13 +48,6 @@ namespace Flowery.Controls
             // Re-apply colors when loaded
             ApplyAll();
             UpdateAutomationName();
-        }
-
-        protected override void OnUnloaded()
-        {
-            base.OnUnloaded();
-            _handleNeumorphicHelper?.Dispose();
-            _handleNeumorphicHelper = null;
         }
 
         protected override void OnThemeChanged(string themeName)
@@ -447,14 +441,9 @@ namespace Flowery.Controls
             _targetLabelColor = GetContrastingTextColor(variantColor);
 
             // Apply track background from theme (DaisyBase300Brush)
-            // Apply border in variant color for immediate visual identity
-            // In neumorphic mode, we use the helper instead of manual borders
-            if (NeumorphicEnabled == true && _track != null)
-            {
-                _track.BorderThickness = new Thickness(0);
-                _track.Background = new SolidColorBrush(Colors.Transparent);
-            }
-            else if (_track != null)
+            // Apply border in variant color for immediate visual identity.
+            // In neumorphic mode the track keeps this look; the inset effect is drawn on top of it.
+            if (_track != null)
             {
                 // Apply depth style with visual effect
                 var shadowColor = FloweryColorHelpers.Darken(variantColor, 0.4);
@@ -509,10 +498,10 @@ namespace Flowery.Controls
             // Apply HandleBackground: variant color at 20% opacity for a subtle tint
             if (HandleBackground == null && _handle != null)
             {
-                if (NeumorphicEnabled == true)
+                if (_drawsNeumorphicEffect)
                 {
-                     // In neumorphic mode, handle is typically the material color
-                    _handle.Background = new SolidColorBrush(Colors.Transparent);
+                    // A raised handle needs an opaque face; the shadows would show through the tint.
+                    _handle.Background = Theming.DaisyResourceLookup.GetBrush("DaisyBase100Brush");
                 }
                 else
                 {
@@ -807,15 +796,11 @@ namespace Flowery.Controls
             
             var currentColor = Color.FromArgb(255, trackR, trackG, trackB);
             
-            if (NeumorphicEnabled == true)
-            {
-                // In Neumorphic mode, we update the composition surface color
-                RefreshNeumorphicEffect(currentColor);
-            }
-            else
-            {
-                _track.Background = new SolidColorBrush(currentColor);
-            }
+            // One brush serves the whole drag, so a pointer move changes its color without replacing the
+            // track background (which would re-apply the neumorphic effect).
+            _dragTrackBrush ??= new SolidColorBrush();
+            _dragTrackBrush.Color = currentColor;
+            _track.Background = _dragTrackBrush;
 
             // Interpolate label foreground color (BaseContent -> VariantContent)
             var originalLabelColor = _originalLabelBrush?.Color ?? Color.FromArgb(255, 0, 0, 0);
@@ -847,52 +832,38 @@ namespace Flowery.Controls
 
         #endregion
 
-        #region Neumorphism Upgrade
+        #region Neumorphism
 
-        protected override bool IsNeumorphicEffectivelyEnabled() => base.IsNeumorphicEffectivelyEnabled();
-
-        public new void RefreshNeumorphicEffect() => RefreshNeumorphicEffect(null);
-
-        private void RefreshNeumorphicEffect(Color? trackColorOverride)
+        /// <summary>
+        /// The track is always inset and the handle always raised, whatever the effective mode.
+        /// </summary>
+        /// <summary>
+        /// In neumorphic mode the handle gets an opaque Base100 face for its raised effect.
+        /// </summary>
+        protected override void OnNeumorphicRefreshed(bool isEnabled)
         {
-            if (_track == null || _handle == null) return;
-
-            bool isEnabled = IsNeumorphicEffectivelyEnabled();
-            var intensity = GetEffectiveNeumorphicIntensity();
-
-            if (!isEnabled)
-            {
-                _neumorphicHelper?.Dispose();
-                _neumorphicHelper = null;
-                _handleNeumorphicHelper?.Dispose();
-                _handleNeumorphicHelper = null;
+            if (_drawsNeumorphicEffect == isEnabled)
                 return;
-            }
-            
-            // 1. Update Track (Inset)
-            _neumorphicHelper ??= new DaisyNeumorphicHelper(_track);
-            
-            Color? trackColor = trackColorOverride;
-            if (trackColor == null && DaisyResourceLookup.GetBrush("DaisyBase300Brush") is SolidColorBrush scb) trackColor = scb.Color;
-            
-            _neumorphicHelper.Update(
-                isEnabled,
-                DaisyNeumorphicMode.Inset,
-                intensity,
-                DaisyResourceLookup.GetDefaultElevation(Size)
-            );
 
-            // 2. Update Handle (Raised)
-            _handleNeumorphicHelper ??= new DaisyNeumorphicHelper(_handle);
-            if (_handleNeumorphicHelper != null)
+            _drawsNeumorphicEffect = isEnabled;
+            ApplyVariantColors();
+
+            if (_track?.Background is SolidColorBrush brush)
             {
-                _handleNeumorphicHelper.Update(
-                    isEnabled,
-                    DaisyNeumorphicMode.Raised,
-                    intensity,
-                    DaisyResourceLookup.GetDefaultElevation(Size)
-                );
+                _originalTrackBrush = brush;
             }
+        }
+
+        protected override IReadOnlyList<DaisyNeumorphicSurface> GetNeumorphicSurfaces()
+        {
+            if (_track == null || _handle == null)
+                return [];
+
+            return
+            [
+                new DaisyNeumorphicSurface(_track, DaisyNeumorphicMode.Inset),
+                new DaisyNeumorphicSurface(_handle, DaisyNeumorphicMode.Raised)
+            ];
         }
 
         #endregion

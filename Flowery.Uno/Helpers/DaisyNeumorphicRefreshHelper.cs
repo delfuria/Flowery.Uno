@@ -34,37 +34,15 @@ namespace Flowery.Helpers
             while (queue.Count > 0)
             {
                 var current = queue.Dequeue();
-                if (current is DaisyBaseContentControl baseControl)
+                if (current is IDaisyNeumorphicTarget and FrameworkElement element)
                 {
-                    if (!baseControl.IsLoaded)
+                    if (!element.IsLoaded)
                     {
-                        EnsureRefreshOnLoaded(baseControl);
+                        EnsureRefreshOnLoaded(element);
                     }
                     else
                     {
-                        QueueRefresh(baseControl);
-                    }
-                }
-                else if (current is DaisyButton button)
-                {
-                    if (!button.IsLoaded)
-                    {
-                        EnsureRefreshOnLoaded(button);
-                    }
-                    else
-                    {
-                        QueueRefresh(button);
-                    }
-                }
-                else if (current is DaisyComboBoxBase comboBox)
-                {
-                    if (!comboBox.IsLoaded)
-                    {
-                        EnsureRefreshOnLoaded(comboBox);
-                    }
-                    else
-                    {
-                        QueueRefresh(comboBox);
+                        QueueRefresh(element);
                     }
                 }
 
@@ -154,17 +132,9 @@ namespace Flowery.Helpers
                 if (!element.IsLoaded)
                     continue;
 
-                if (element is DaisyBaseContentControl baseControl)
+                if (element is IDaisyNeumorphicTarget target)
                 {
-                    baseControl.RefreshNeumorphicEffect();
-                }
-                else if (element is DaisyButton button)
-                {
-                    button.RefreshNeumorphicEffect();
-                }
-                else if (element is DaisyComboBoxBase comboBox)
-                {
-                    comboBox.RefreshNeumorphicEffect();
+                    target.RefreshNeumorphicEffect();
                 }
             }
 

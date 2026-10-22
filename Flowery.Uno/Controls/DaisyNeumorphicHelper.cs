@@ -64,6 +64,10 @@ namespace Flowery.Controls
         // Container grid that holds the inset overlay layers (only used for Inset mode)
         private Grid? _containerGrid;
 
+        // The panel the container was inserted into. WinUI reports neither a logical nor a visual parent
+        // for the container once a templated owner is unloaded, so removal needs this reference.
+        private Panel? _containerParent;
+
         // Inner shadow overlays - for Inset mode (gradient Background on borders)
         private Border? _insetTopLeftOverlay;
         private Border? _insetBottomRightOverlay;
@@ -94,6 +98,8 @@ namespace Flowery.Controls
         private double _lastAppliedElevation;
         private double _lastAppliedWidth;
         private double _lastAppliedHeight;
+        private readonly DependencyProperty? _backgroundProperty;
+        private long _backgroundCallbackToken = -1;
 
         public DaisyNeumorphicHelper(FrameworkElement owner)
         {
@@ -102,7 +108,26 @@ namespace Flowery.Controls
             _owner.Loaded += OnOwnerLoaded;
             _owner.Unloaded += OnOwnerUnloaded;
             _visibilityCallbackToken = _owner.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, OnOwnerVisibilityChanged);
+
+            _backgroundProperty = GetBackgroundProperty(_owner);
+            if (_backgroundProperty != null)
+            {
+                _backgroundCallbackToken = _owner.RegisterPropertyChangedCallback(_backgroundProperty, OnOwnerBackgroundChanged);
+            }
         }
+
+        /// <summary>
+        /// The owner's own background while the owner temporarily paints a transparent one
+        /// (the Windows transparency protocol in <see cref="DaisyBaseContentControl"/>).
+        /// </summary>
+        internal Brush? SurfaceBrushOverride { get; set; }
+
+        /// <summary>
+        /// When true, the owner draws nothing while it has no visible background: a control that is its own
+        /// surface but paints none has no surface (spinners, text, layout containers). When false, the owner is
+        /// a surface the control declared, and Raised and Flat fall back to a Base200 surface.
+        /// </summary>
+        internal bool RequiresBackground { get; set; } = true;
 
         public void Update(
             bool enabled,
@@ -125,6 +150,15 @@ namespace Flowery.Controls
             _currentMode = mode;
             _lastIntensity = intensity;
             _lastElevation = elevation;
+
+            // Hidden hosts and hosts without a visible surface draw nothing. The callbacks on
+            // Visibility and Background re-apply the effect once that changes.
+            if (_owner.Visibility != Visibility.Visible || !HasDrawableSurface())
+            {
+                DisposeLayers(resetState: false);
+                ResetAppliedState();
+                return;
+            }
 
             EnsureContainerGrid();
             if (_overlayInjectionFailed)
@@ -199,13 +233,11 @@ namespace Flowery.Controls
                 return;
             }
 
-            var surfaceBrush = GetSurfaceBrush() ?? DaisyResourceLookup.GetBrush("DaisyBase200Brush");
+            var surfaceBrush = GetSurfaceBrush()
+                ?? (RequiresBackground ? null : DaisyResourceLookup.GetBrush("DaisyBase200Brush"));
             if (surfaceBrush == null)
             {
                 SetRaisedVisibility(false);
-                UpdateAppearanceDirectElevation(mode, intensity, elevation);
-                // var dialog = new Windows.UI.Popups.MessageDialog("Fallback");
-                // _ = dialog.ShowAsync();
                 return;
             }
 
@@ -216,10 +248,8 @@ namespace Flowery.Controls
 
             var (offset, blur) = GetShadowMetrics(_owner, elevation, mode);
 
-            var darkShadowColor = DaisyNeumorphic.GetDarkShadowColor(_owner)
-                ?? DaisyBaseContentControl.GlobalNeumorphicDarkShadowColor;
-            var lightShadowColor = DaisyNeumorphic.GetLightShadowColor(_owner)
-                ?? DaisyBaseContentControl.GlobalNeumorphicLightShadowColor;
+            var darkShadowColor = DaisyNeumorphic.GetEffectiveDarkShadowColor(_owner);
+            var lightShadowColor = DaisyNeumorphic.GetEffectiveLightShadowColor(_owner);
 
             _raisedDarkShadow.Color = ApplyIntensity(darkShadowColor, intensity);
             _raisedDarkShadow.OffsetX = offset;
@@ -460,14 +490,10 @@ namespace Flowery.Controls
             {
                 if (!IsContainerAttachedToOwner())
                 {
-                    if (_containerGrid.Parent is Panel parentPanel)
-                    {
-                        parentPanel.Children.Remove(_containerGrid);
-                    }
-
+                    DetachContainer();
                     _containerGrid = null;
                 }
-                else if (_containerGrid.Parent == null)
+                else if (_containerParent == null)
                 {
                     var injectResult = TryInjectIntoVisualTree();
                     if (injectResult == InjectionResult.Unsupported)
@@ -513,12 +539,11 @@ namespace Flowery.Controls
             if (panel == null)
                 return false;
 
-            foreach (var child in panel.Children)
+            // Only this helper's own container counts; several surfaces can share one panel.
+            _containerParent = panel;
+            if (panel.Children.Contains(_containerGrid!))
             {
-                if (child is Grid g && g.Tag?.ToString() == "DaisyNeumorphicContainer")
-                {
-                    return true;
-                }
+                return true;
             }
 
             panel.Children.Insert(0, _containerGrid!);
@@ -546,12 +571,12 @@ namespace Flowery.Controls
                 return false;
             }
 
-            foreach (var child in grid.Children)
+            // Only this helper's own container counts; sibling surfaces (e.g. the start and end
+            // boxes of a timeline item) each inject their own container into the same Grid.
+            _containerParent = grid;
+            if (grid.Children.Contains(_containerGrid!))
             {
-                if (child is Grid g && g.Tag?.ToString() == "DaisyNeumorphicContainer")
-                {
-                    return true;
-                }
+                return true;
             }
 
             var insertIndex = grid.Children.IndexOf(ownerElement);
@@ -595,7 +620,7 @@ namespace Flowery.Controls
                 return true;
             }
 
-            if (ownerParent != null && ReferenceEquals(_containerGrid.Parent, ownerParent))
+            if (ownerParent != null && ReferenceEquals(_containerParent, ownerParent))
             {
                 return true;
             }
@@ -692,6 +717,16 @@ namespace Flowery.Controls
             target.MaxHeight = source.MaxHeight;
         }
 
+        private void DetachContainer()
+        {
+            if (_containerGrid != null)
+            {
+                (_containerParent ?? _containerGrid.Parent as Panel)?.Children.Remove(_containerGrid);
+            }
+
+            _containerParent = null;
+        }
+
         private static CornerRadius GetCornerRadius(FrameworkElement element)
         {
             if (element is Control control) return control.CornerRadius;
@@ -740,6 +775,22 @@ namespace Flowery.Controls
             {
                 QueueLayoutReapply();
             }
+            else
+            {
+                // Layers injected next to the owner (into its parent Grid) do not collapse with it.
+                DisposeLayers(resetState: false);
+                ResetAppliedState();
+            }
+        }
+
+        private void OnOwnerBackgroundChanged(DependencyObject sender, DependencyProperty dp)
+        {
+            if (_isDisposed || !_lastEnabled || _currentMode == DaisyNeumorphicMode.None)
+                return;
+
+            // The surface brush is not part of the applied state; force the next pass to re-apply it.
+            ResetAppliedState();
+            QueueLayoutReapply();
         }
 
         private void QueueLayoutReapply()
@@ -911,7 +962,7 @@ namespace Flowery.Controls
 
         private Brush? GetSurfaceBrush()
         {
-            Brush? brush = _owner switch
+            var brush = SurfaceBrushOverride ?? _owner switch
             {
                 Control control => control.Background,
                 Panel panel => panel.Background,
@@ -919,12 +970,23 @@ namespace Flowery.Controls
                 _ => null
             };
 
-            if (brush is SolidColorBrush scb && scb.Color.A == 0)
-            {
-                return null;
-            }
+            return brush is null or SolidColorBrush { Color.A: 0 } ? null : brush;
+        }
 
-            return brush;
+        private bool HasDrawableSurface()
+        {
+            return !RequiresBackground || GetSurfaceBrush() != null;
+        }
+
+        private static DependencyProperty? GetBackgroundProperty(FrameworkElement element)
+        {
+            return element switch
+            {
+                Control => Control.BackgroundProperty,
+                Panel => Panel.BackgroundProperty,
+                Border => Border.BackgroundProperty,
+                _ => null
+            };
         }
 
         internal static (double Offset, double Blur) GetShadowMetrics(FrameworkElement owner, double elevation, DaisyNeumorphicMode mode)
@@ -1007,10 +1069,7 @@ namespace Flowery.Controls
                 if (_containerGrid == null) return;
 
                 // Remove from parent
-                if (_containerGrid.Parent is Panel parentPanel)
-                {
-                    parentPanel.Children.Remove(_containerGrid);
-                }
+                DetachContainer();
 
                 _containerGrid.Children.Clear();
                 _containerGrid = null;
@@ -1043,6 +1102,11 @@ namespace Flowery.Controls
             {
                 _owner.UnregisterPropertyChangedCallback(UIElement.VisibilityProperty, _visibilityCallbackToken);
                 _visibilityCallbackToken = -1;
+            }
+            if (_backgroundProperty != null && _backgroundCallbackToken >= 0)
+            {
+                _owner.UnregisterPropertyChangedCallback(_backgroundProperty, _backgroundCallbackToken);
+                _backgroundCallbackToken = -1;
             }
             StopLayoutMonitoring();
             DisposeLayers(resetState: true);

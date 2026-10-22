@@ -44,7 +44,7 @@ namespace Flowery.Controls
     /// <summary>
     /// A Button control styled after DaisyUI's Button component (Uno/WinUI).
     /// </summary>
-    public partial class DaisyButton : Button
+    public partial class DaisyButton : Button, IDaisyNeumorphicTarget
     {
         public static readonly DependencyProperty VariantProperty =
             DependencyProperty.Register(
@@ -188,6 +188,53 @@ namespace Flowery.Controls
         /// </summary>
         public bool IsExternallyControlled { get; set; }
 
+        private Brush? _segmentBorderBrush;
+
+        /// <summary>
+        /// The divider border a segment container (<see cref="DaisyJoin"/>) draws around this button.
+        /// It replaces the style's border in every state, at least 1 px wide, so it survives the button
+        /// re-applying its own visuals on load, theme change and hover. <c>null</c> uses the style's border.
+        /// </summary>
+        internal Brush? SegmentBorderBrush
+        {
+            get => _segmentBorderBrush;
+            set
+            {
+                if (ReferenceEquals(_segmentBorderBrush, value))
+                    return;
+
+                _segmentBorderBrush = value;
+                ApplyCurrentPointerState();
+            }
+        }
+
+        private CornerRadius? _segmentCornerRadius;
+
+        /// <summary>
+        /// The corner radius a segment container (<see cref="DaisyJoin"/>) gives this button: rounded on the
+        /// container's outer ends, square inside. It replaces the size token's radius whenever the button re-applies
+        /// its sizing. <c>null</c> uses the token radius or a radius set by the app.
+        /// </summary>
+        internal CornerRadius? SegmentCornerRadius
+        {
+            get => _segmentCornerRadius;
+            set
+            {
+                if (_segmentCornerRadius == value)
+                    return;
+
+                _segmentCornerRadius = value;
+                if (value is { } radius)
+                {
+                    SetCornerRadius(radius);
+                }
+                else
+                {
+                    ApplyAll();
+                }
+            }
+        }
+
         private Brush? _normalBackground;
         private Brush? _disabledBackground;
         private Brush? _pointerOverBackground;
@@ -228,6 +275,7 @@ namespace Flowery.Controls
 
             Loaded += OnLoaded;
             Unloaded += OnUnloaded;
+            DaisyNeumorphicLifecycle.Attach(this, refreshOnThemeChange: false);
             IsEnabledChanged += (_, _) => ApplyCurrentPointerState();
 
             // Watch for Height changes to keep Width in sync for Circle/Square shapes
@@ -336,18 +384,6 @@ namespace Flowery.Controls
             set => DaisyNeumorphic.SetLightShadowColor(this, value);
         }
 
-        public bool? NeumorphicRimLightEnabled
-        {
-            get => DaisyNeumorphic.GetRimLightEnabled(this);
-            set => DaisyNeumorphic.SetRimLightEnabled(this, value);
-        }
-
-        public bool? NeumorphicSurfaceGradientEnabled
-        {
-            get => DaisyNeumorphic.GetSurfaceGradientEnabled(this);
-            set => DaisyNeumorphic.SetSurfaceGradientEnabled(this, value);
-        }
-
         internal void InvokeApplyCurrentPointerState()
         {
             ApplyCurrentPointerState();
@@ -360,9 +396,10 @@ namespace Flowery.Controls
             // Retry getting template parts if they're still null (timing issue)
             EnsureTemplateParts();
 
-            var isEnabled = IsNeumorphicEffectivelyEnabled();
-            var mode = GetEffectiveNeumorphicMode();
-            var intensity = GetEffectiveNeumorphicIntensity();
+            var resolution = DaisyNeumorphic.Resolve(this);
+            var isEnabled = IsNeumorphicEffectivelyEnabled(resolution);
+            var mode = resolution.Mode;
+            var intensity = resolution.Intensity;
             var elevation = DaisyResourceLookup.GetDefaultElevation(Size);
 
             if (!isEnabled)
@@ -408,10 +445,8 @@ namespace Flowery.Controls
                 return;
             }
 
-            var darkShadowColor = DaisyNeumorphic.GetDarkShadowColor(this)
-                ?? DaisyBaseContentControl.GlobalNeumorphicDarkShadowColor;
-            var lightShadowColor = DaisyNeumorphic.GetLightShadowColor(this)
-                ?? DaisyBaseContentControl.GlobalNeumorphicLightShadowColor;
+            var darkShadowColor = DaisyNeumorphic.GetEffectiveDarkShadowColor(this);
+            var lightShadowColor = DaisyNeumorphic.GetEffectiveLightShadowColor(this);
 
             if (_shadowContainer == null || _shadowCollection == null || _darkShadow == null || _lightShadow == null)
             {
@@ -462,6 +497,8 @@ namespace Flowery.Controls
                 return;
             Flowery.Helpers.DaisyNeumorphicRefreshHelper.QueueRefresh(this);
         }
+
+        void IDaisyNeumorphicTarget.RequestNeumorphicRefresh() => RequestNeumorphicRefresh();
 
         protected bool TryEnsureShadowContainer()
         {
@@ -562,32 +599,25 @@ namespace Flowery.Controls
             _buttonBorder.Translation = new Vector3(_buttonBorder.Translation.X, _buttonBorder.Translation.Y, 0f);
         }
 
-        protected internal bool IsNeumorphicEffectivelyEnabled()
-        {
-            var scope = DaisyNeumorphic.GetScopeEnabled(this);
-            bool isActuallyEnabled = scope ?? NeumorphicEnabled ?? DaisyBaseContentControl.GlobalNeumorphicEnabled;
+        /// <summary>
+        /// Gets whether the button draws the effect. Buttons without an opaque face (Ghost, Link, Outline, Dash,
+        /// Soft) never draw it; a <see cref="Variant"/> or <see cref="ButtonStyle"/> change re-evaluates this.
+        /// </summary>
+        protected internal bool IsNeumorphicEffectivelyEnabled() => IsNeumorphicEffectivelyEnabled(DaisyNeumorphic.Resolve(this));
 
-            return isActuallyEnabled && GetEffectiveNeumorphicMode() != DaisyNeumorphicMode.None;
-        }
+        protected internal DaisyNeumorphicMode GetEffectiveNeumorphicMode() => DaisyNeumorphic.Resolve(this).Mode;
 
-        protected internal DaisyNeumorphicMode GetEffectiveNeumorphicMode()
-        {
-            return NeumorphicMode ?? DaisyBaseContentControl.GlobalNeumorphicMode;
-        }
+        protected internal double GetEffectiveNeumorphicIntensity() => DaisyNeumorphic.Resolve(this).Intensity;
 
-        protected internal double GetEffectiveNeumorphicIntensity()
+        /// <summary>
+        /// Only an opaque face can be raised. Ghost, Link, Outline, Dash and Soft buttons would show the shadows
+        /// through their face, and a table cell clips that halo to a box.
+        /// </summary>
+        private bool IsNeumorphicEffectivelyEnabled(DaisyNeumorphicResolution resolution)
         {
-            return Math.Clamp(NeumorphicIntensity ?? DaisyBaseContentControl.GlobalNeumorphicIntensity, 0.0, 1.0);
-        }
-
-        protected internal bool IsNeumorphicRimLightEffectivelyEnabled()
-        {
-            return NeumorphicRimLightEnabled == true && DaisyBaseContentControl.GlobalNeumorphicRimLightEnabled;
-        }
-
-        protected internal bool IsNeumorphicSurfaceGradientEffectivelyEnabled()
-        {
-            return NeumorphicSurfaceGradientEnabled == true && DaisyBaseContentControl.GlobalNeumorphicSurfaceGradientEnabled;
+            return resolution.IsEnabled
+                && Variant is not (DaisyButtonVariant.Ghost or DaisyButtonVariant.Link)
+                && _normalBackground is not SolidColorBrush { Color.A: < 255 };
         }
 
         #endregion
@@ -622,24 +652,6 @@ namespace Flowery.Controls
             _lifecycle.HandleLoaded();
             BuildIconLayoutIfNeeded();
             BuildDashedBorderIfNeeded();
-
-            DaisyBaseContentControl.GlobalNeumorphicChanged += OnGlobalNeumorphicChanged;
-
-            // Defer neumorphic update until the template is laid out.
-            // The template isn't immediately available after Loaded; wait for first
-            // layout so PART_ShadowContainer is ready.
-            LayoutUpdated += OnFirstLayoutForNeumorphic;
-        }
-
-        private void OnFirstLayoutForNeumorphic(object? sender, object e)
-        {
-            LayoutUpdated -= OnFirstLayoutForNeumorphic;
-            RequestNeumorphicRefresh();
-        }
-
-        private void OnGlobalNeumorphicChanged(object? sender, EventArgs e)
-        {
-            RequestNeumorphicRefresh();
         }
 
         private void BuildDashedBorderIfNeeded()
@@ -963,8 +975,6 @@ namespace Flowery.Controls
         private void OnUnloaded(object sender, RoutedEventArgs e)
         {
             _lifecycle.HandleUnloaded();
-            DaisyBaseContentControl.GlobalNeumorphicChanged -= OnGlobalNeumorphicChanged;
-            LayoutUpdated -= OnFirstLayoutForNeumorphic;
             SizeChanged -= OnDashSizeChanged;
             ClearNeumorphicShadows();
             _shadowContainer = null;
@@ -1036,7 +1046,11 @@ namespace Flowery.Controls
             }
 
             // Respect CornerRadius overrides (e.g. DaisyButtonGroup joined corners).
-            if (!_hasCornerRadiusOverride)
+            if (_segmentCornerRadius is { } segmentRadius)
+            {
+                SetCornerRadius(segmentRadius);
+            }
+            else if (!_hasCornerRadiusOverride)
             {
                 SetCornerRadius(DaisyResourceLookup.GetSizeCornerRadius(resources, "DaisySize", size, "CornerRadius",
                     DaisyResourceLookup.GetDefaultCornerRadius(size)));
@@ -1544,6 +1558,18 @@ namespace Flowery.Controls
                 Foreground = _normalForeground;
                 BorderBrush = _normalBorderBrush;
                 BorderThickness = _normalBorderThickness;
+            }
+
+            // 2. A segment container's divider border wins over the style's border.
+            if (_segmentBorderBrush != null)
+            {
+                BorderBrush = IsEnabled
+                    ? _segmentBorderBrush
+                    : DaisyResourceLookup.WithOpacity(_segmentBorderBrush, 0.5) ?? _segmentBorderBrush;
+                if (BorderThickness == default)
+                {
+                    BorderThickness = new Thickness(1);
+                }
             }
 
             // Note: Previously we set Background to Transparent when neumorphism was enabled,

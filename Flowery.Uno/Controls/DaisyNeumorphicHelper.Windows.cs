@@ -70,8 +70,7 @@ namespace Flowery.Controls
             float offset = (float)(finalElevation * 0.6);
 
             // Get shadow color from design tokens (per-element global fallback)
-            var darkBaseColor = DaisyNeumorphic.GetDarkShadowColor(_owner)
-                ?? DaisyBaseContentControl.GlobalNeumorphicDarkShadowColor;
+            var darkBaseColor = DaisyNeumorphic.GetEffectiveDarkShadowColor(_owner);
 
             // Apply intensity to alpha channel (boosted for visibility on Windows)
             byte darkAlpha = (byte)Math.Clamp(160 * intensity, 60, 220);

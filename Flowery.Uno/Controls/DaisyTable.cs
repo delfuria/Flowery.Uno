@@ -175,7 +175,9 @@ namespace Flowery.Controls
             }
 
             _rootBorder.Child = _rowsPanel;
-            Content = _rootBorder;
+            // The neumorphic helper puts the table's surface next to its host inside a parent Grid.
+            // Inside the row panel the surface would get no height.
+            Content = new Grid { Children = { _rootBorder } };
         }
 
         #endregion
@@ -342,10 +344,10 @@ namespace Flowery.Controls
             Size = size;
         }
 
-        protected override FrameworkElement? GetNeumorphicHostElement()
-        {
-            return _rootBorder ?? base.GetNeumorphicHostElement();
-        }
+        /// <summary>
+        /// Rows are flat parts of the table surface; only the table draws the neumorphic effect.
+        /// </summary>
+        protected override bool IsNeumorphicEffectivelyEnabled() => false;
 
         private void OnPointerEntered(object sender, PointerRoutedEventArgs e)
         {
@@ -522,6 +524,11 @@ namespace Flowery.Controls
             VerticalAlignment = VerticalAlignment.Center;
             IsTabStop = false;
         }
+
+        /// <summary>
+        /// Cells are flat parts of the table surface; only the table draws the neumorphic effect.
+        /// </summary>
+        protected override bool IsNeumorphicEffectivelyEnabled() => false;
 
         #region Dependency Properties
 

@@ -6,6 +6,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- **Breaking:** Neumorphic: removed the rim light and surface gradient API (`NeumorphicRimLightEnabled`, `NeumorphicSurfaceGradientEnabled`, `GlobalNeumorphicRimLightEnabled`, `GlobalNeumorphicSurfaceGradientEnabled`, the matching `DaisyNeumorphic` attached properties and the `IsNeumorphic*EffectivelyEnabled()` helpers). No rendering code ever read them (#94).
+- **Breaking:** Neumorphic: `GlobalNeumorphicDarkShadowColor` and `GlobalNeumorphicLightShadowColor` are now `Color?`. `null` (the default) follows the theme; a color set by the app survives theme changes. The navy fallback before the first theme is gone (#94).
+- **Breaking:** Neumorphic: the protected `_neumorphicHelper` field of `DaisyBaseContentControl` is replaced by `GetNeumorphicSurfaces()`, which describes one or more surfaces with an optional fixed mode. `OnNeumorphicRefreshed(bool)` tells derived controls whether the effect is drawn (#94).
+- **Breaking:** Templates: the `DaisyToggle` part `Knob` is now a `Border` (was an `Ellipse`), inside the new `PART_TrackSurface` grid; `KnobTransform` sits on a wrapper `Grid` around it. `PART_HandleTransform` of `DaisySlideToConfirm` moved to a wrapper `Grid` around `PART_Handle`, and `PART_InnerDot` of `DaisyRadio` sits in a `Grid`. Custom templates for these controls need the same structure (#94).
+- Neumorphic: table rows and cells, and list rows and columns, no longer draw their own surface; the table or list is the one surface (#67). The table's root border now sits in a `Grid`, so the surface is drawn next to it; before, it went into the row panel, where it had no height.
+- Gallery: the Table example is 670 px wide instead of 620, so the `Message` button in its last column is no longer clipped.
+- Badge: the label is no longer cut off at the bottom. The default style fixed the height to the Medium token and drew a second border, so a badge in another size tier was squeezed; `DaisyBadge` now owns its border, padding and size, as in Flowery.WinUI.
+- Join: Default and Soft buttons keep the join's divider border, so a join shows its shared borders and rounded ends again. The buttons re-applied their own transparent border on load, theme change and hover.
+- Join and ButtonGroup: buttons keep their segment corners (square inside, rounded at the ends) after a size change. They could return to the size token's radius when the container set a radius equal to the button's current one.
+- Neumorphic: children of `DaisyJoin` and `DaisyButtonGroup` stay flat even when an ancestor sets `NeumorphicScopeEnabled="True"` (#94).
+- Neumorphic: buttons without an opaque face (Ghost, Link, Outline, Dash, Soft) draw no effect; their shadows showed through the face as a grey shimmer, most visibly in table cells, which clipped the halo to a box. Changing `Variant` or `ButtonStyle` re-evaluates this (#94).
+- Neumorphic: controls without a surface of their own (e.g. `DaisyLoading`, `DaisyIndicator`, `DaisyStack`: their own host, with no visible background) no longer get a raised Base200 box in global mode. Surfaces a control declares keep the Base200 fallback (#94).
+- Neumorphic (Windows): shadow layers of surfaces inside a control template are removed again when the control unloads. WinUI reports no parent for them after unload, so they stayed in the tree and were added a second time on the next load (#94).
+- Neumorphic: new `NeumorphicScopeMode` and `NeumorphicScopeIntensity` attached properties set mode and intensity for a subtree; a control's own values still win (#94).
+- Neumorphic: `DaisyToggle` (inset track, raised knob), `DaisyCheckBox` and `DaisyRadio` (inset wells) and boxed `DaisyTimelineItem`s draw the effect. `DaisySlideToConfirm` keeps its inset track and raised handle on global changes, the handle shadow now moves with the handle, and it keeps its normal track in neumorphic mode; the handle gets an opaque Base100 face for its raised effect. Before, a local `NeumorphicEnabled="True"` made the track transparent (#94).
+
 ## [1.4.1] - 2026-10-20
 
 - Dependencies: updated SkiaSharp and its native assets to 4.153.1, with matching Views packages for Browser and Desktop.

@@ -450,7 +450,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
             Assert.IsFalse(toggle.IsOn);
             Assert.AreEqual(DaisyToggleVariant.Default, toggle.Variant);
             Assert.AreEqual(DaisySize.Medium, toggle.Size);
-            Assert.AreEqual(1.0, toggle.TogglePadding);
+            Assert.IsTrue(double.IsNaN(toggle.TogglePadding), "TogglePadding defaults to automatic (NaN)");
         }
 
         [TestMethod]
@@ -481,6 +481,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
             Assert.AreEqual(new Thickness(3), outerBorder.BorderThickness);
             Assert.AreNotSame(userBorderBrush, switchArea.BorderBrush);
             Assert.AreEqual(new Thickness(1), switchArea.BorderThickness);
+            Assert.AreEqual(0.5, switchArea.BorderBrush.Opacity, "Track border uses half of the base content color (DaisyUI)");
             Assert.AreEqual(23, presenter.FontSize);
             Assert.AreEqual(FontWeights.Bold.Weight, presenter.FontWeight.Weight);
         }
@@ -1208,9 +1209,9 @@ namespace Flowery.Uno.RuntimeTests.Controls
             Assert.AreEqual(DateTime.Today.AddMonths(-1), timeline.FirstDate);
             Assert.AreEqual(DateTime.Today.AddMonths(3), timeline.LastDate);
             Assert.AreEqual(DateTime.Today, timeline.SelectedDate);
-            // ItemWidth is resolved from the DaisyDateTimelineMediumItemWidth token (52)
+            // ItemWidth is resolved from the DaisyDateTimelineMediumItemWidth token (64)
             // during ApplySizing unless explicitly set.
-            Assert.AreEqual(52.0, timeline.ItemWidth);
+            Assert.AreEqual(64.0, timeline.ItemWidth);
             // ItemSpacing is resolved from the DaisyDateTimelineItemSpacing token (6)
             // during ApplySizing unless explicitly set.
             Assert.AreEqual(6.0, timeline.ItemSpacing);

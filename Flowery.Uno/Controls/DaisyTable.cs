@@ -164,6 +164,7 @@ namespace Flowery.Controls
 
                     if (child is DaisyTableRow row)
                     {
+                        row.OwnerTable = this;
                         _rows.Add(row);
                         _rowsPanel.Children.Add(row);
                     }
@@ -175,7 +176,9 @@ namespace Flowery.Controls
             }
 
             _rootBorder.Child = _rowsPanel;
-            Content = _rootBorder;
+            // The neumorphic helper puts the table's surface next to its host inside a parent Grid.
+            // Inside the row panel the surface would get no height.
+            Content = new Grid { Children = { _rootBorder } };
         }
 
         #endregion
@@ -224,6 +227,11 @@ namespace Flowery.Controls
         private Grid? _cellsGrid;
         private readonly List<UIElement> _cells = [];
         private bool _isHovering;
+
+        /// <summary>
+        /// The table that collected this row; set by <see cref="DaisyTable"/> when it builds its rows.
+        /// </summary>
+        internal DaisyTable? OwnerTable { get; set; }
 
         public DaisyTableRow()
         {
@@ -342,10 +350,10 @@ namespace Flowery.Controls
             Size = size;
         }
 
-        protected override FrameworkElement? GetNeumorphicHostElement()
-        {
-            return _rootBorder ?? base.GetNeumorphicHostElement();
-        }
+        /// <summary>
+        /// Rows are flat parts of the table surface; only the table draws the neumorphic effect.
+        /// </summary>
+        protected override bool IsNeumorphicEffectivelyEnabled() => false;
 
         private void OnPointerEntered(object sender, PointerRoutedEventArgs e)
         {
@@ -470,11 +478,11 @@ namespace Flowery.Controls
                 return;
 
             // Check for lightweight styling overrides
-            var borderOverride = DaisyResourceLookup.TryGetControlBrush(this, "DaisyTableRow", "BorderBrush");
-            var activeBgOverride = DaisyResourceLookup.TryGetControlBrush(this, "DaisyTableRow", "ActiveBackground");
-            var activeFgOverride = DaisyResourceLookup.TryGetControlBrush(this, "DaisyTableRow", "ActiveForeground");
-            var headerBgOverride = DaisyResourceLookup.TryGetControlBrush(this, "DaisyTableRow", "HeaderBackground");
-            var fgOverride = DaisyResourceLookup.TryGetControlBrush(this, "DaisyTableRow", "Foreground");
+            var borderOverride = TryGetRowBrush("BorderBrush");
+            var activeBgOverride = TryGetRowBrush("ActiveBackground");
+            var activeFgOverride = TryGetRowBrush("ActiveForeground");
+            var headerBgOverride = TryGetRowBrush("HeaderBackground");
+            var fgOverride = TryGetRowBrush("Foreground");
 
             _rootBorder.BorderBrush = borderOverride ?? DaisyResourceLookup.GetBrush("DaisyBase200Brush");
 
@@ -501,11 +509,27 @@ namespace Flowery.Controls
                 return;
 
             // Check for lightweight styling overrides
-            var hoverBgOverride = DaisyResourceLookup.TryGetControlBrush(this, "DaisyTableRow", "HoverBackground");
+            var hoverBgOverride = TryGetRowBrush("HoverBackground");
 
             Background = _isHovering
                 ? hoverBgOverride ?? DaisyResourceLookup.GetBrush("DaisyBase200Brush")
                 : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        }
+
+        /// <summary>
+        /// Looks up a row lightweight-styling brush: row resources win over the owning table's
+        /// resources, which win over application resources. Table resources style all rows at once.
+        /// </summary>
+        private Brush? TryGetRowBrush(string suffix)
+        {
+            var key = "DaisyTableRow" + suffix;
+            foreach (var resources in new[] { Resources, OwnerTable?.Resources, Application.Current?.Resources })
+            {
+                if (DaisyResourceLookup.TryGetResource(resources, key, out var value) && value is Brush brush)
+                    return brush;
+            }
+
+            return null;
         }
 
         #endregion
@@ -522,6 +546,11 @@ namespace Flowery.Controls
             VerticalAlignment = VerticalAlignment.Center;
             IsTabStop = false;
         }
+
+        /// <summary>
+        /// Cells are flat parts of the table surface; only the table draws the neumorphic effect.
+        /// </summary>
+        protected override bool IsNeumorphicEffectivelyEnabled() => false;
 
         #region Dependency Properties
 

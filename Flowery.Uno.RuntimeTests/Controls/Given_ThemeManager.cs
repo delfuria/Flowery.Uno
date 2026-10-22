@@ -15,6 +15,28 @@ namespace Flowery.Uno.RuntimeTests.Controls
     public class Given_ThemeManager
     {
         [TestMethod]
+        public void When_AThemeChangedHandlerThrows_LaterHandlersStillHearTheChange()
+        {
+            var original = DaisyThemeManager.CurrentThemeName ?? DaisyThemeManager.BaseThemeName;
+            string? reached = null;
+            EventHandler<string> throwing = (_, _) => throw new InvalidOperationException("Simulated failing subscriber");
+            EventHandler<string> later = (_, name) => reached = name;
+            DaisyThemeManager.ThemeChanged += throwing;
+            DaisyThemeManager.ThemeChanged += later;
+            try
+            {
+                DaisyThemeManager.SetCurrentTheme(original + "-test");
+                Assert.AreEqual(original + "-test", reached, "A handler subscribed after a failing one still hears the theme change.");
+            }
+            finally
+            {
+                DaisyThemeManager.ThemeChanged -= throwing;
+                DaisyThemeManager.ThemeChanged -= later;
+                DaisyThemeManager.SetCurrentTheme(original);
+            }
+        }
+
+        [TestMethod]
         public void When_TryCreatePalette_UsesRegisteredFactory()
         {
             var expected = new ResourceDictionary();

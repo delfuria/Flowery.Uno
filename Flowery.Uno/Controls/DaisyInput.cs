@@ -35,6 +35,7 @@ namespace Flowery.Controls
         private Storyboard? _floatingLabelStoryboard;
         private long _paddingChangedToken;
         private long _verticalContentAlignmentChangedToken;
+        private long _minHeightChangedToken;
         private CancellationTokenSource? _floatingPlaceholderCts;
         private Brush? _baseInputBackground;
         private Brush? _baseInputBorderBrush;
@@ -58,14 +59,14 @@ namespace Flowery.Controls
             {
                 _isLoaded = true;
                 ApplyAll();
+                RegisterLayoutCallbacks();
                 return;
             }
 
             _isLoaded = true;
             BuildVisualTree();
             ApplyAll();
-            _paddingChangedToken = RegisterPropertyChangedCallback(Control.PaddingProperty, OnPaddingChanged);
-            _verticalContentAlignmentChangedToken = RegisterPropertyChangedCallback(Control.VerticalContentAlignmentProperty, OnVerticalContentAlignmentChanged);
+            RegisterLayoutCallbacks();
             if (_pendingFocusRequest)
             {
                 AttachPendingFocusHandler();
@@ -90,6 +91,12 @@ namespace Flowery.Controls
             {
                 UnregisterPropertyChangedCallback(Control.VerticalContentAlignmentProperty, _verticalContentAlignmentChangedToken);
                 _verticalContentAlignmentChangedToken = 0;
+            }
+
+            if (_minHeightChangedToken != 0)
+            {
+                UnregisterPropertyChangedCallback(FrameworkElement.MinHeightProperty, _minHeightChangedToken);
+                _minHeightChangedToken = 0;
             }
 
             _pendingFocusRequest = false;
@@ -195,13 +202,27 @@ namespace Flowery.Controls
             return _inputBorder ?? base.GetNeumorphicHostElement();
         }
 
-        private void OnPaddingChanged(DependencyObject sender, DependencyProperty dp)
+        private void RegisterLayoutCallbacks()
         {
-            if (_textBox == null)
+            // OnUnloaded removes these callbacks, so every load registers them again.
+            if (_paddingChangedToken != 0)
                 return;
 
-            _textBox.Padding = Padding;
-            UpdateFloatingLabelMargin();
+            _paddingChangedToken = RegisterPropertyChangedCallback(Control.PaddingProperty, OnPaddingChanged);
+            _verticalContentAlignmentChangedToken = RegisterPropertyChangedCallback(Control.VerticalContentAlignmentProperty, OnVerticalContentAlignmentChanged);
+            _minHeightChangedToken = RegisterPropertyChangedCallback(FrameworkElement.MinHeightProperty, OnMinHeightChanged);
+        }
+
+        private void OnPaddingChanged(DependencyObject sender, DependencyProperty dp)
+        {
+            // ApplySizing caps the vertical padding to what the text box height leaves for one line.
+            ApplySizing(Application.Current?.Resources);
+        }
+
+        private void OnMinHeightChanged(DependencyObject sender, DependencyProperty dp)
+        {
+            // The input border and the text box take their heights from MinHeight (DaisyTextArea derives it from its rows).
+            ApplySizing(Application.Current?.Resources);
         }
 
         private void OnVerticalContentAlignmentChanged(DependencyObject sender, DependencyProperty dp)
@@ -1369,7 +1390,15 @@ namespace Flowery.Controls
 
                 if (hasLocalPadding)
                 {
-                    _textBox.Padding = Padding;
+                    // The text box has a fixed height on Skia and WASM: vertical padding that leaves less than one text
+                    // line would clip the text, so it is capped at what centers one line.
+                    var maxVerticalPadding = Math.Max(0, (availableHeight - fontLineHeight) / 2);
+                    var padding = Padding;
+                    _textBox.Padding = new Thickness(
+                        padding.Left,
+                        Math.Min(padding.Top, maxVerticalPadding),
+                        padding.Right,
+                        Math.Min(padding.Bottom, maxVerticalPadding));
                 }
                 else
                 {

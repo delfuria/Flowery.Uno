@@ -732,8 +732,24 @@ namespace Flowery.Controls
 
             ApplyContentForeground(StartContent, labelBrush);
             ApplyContentForeground(EndContent ?? base.Content, labelBrush);
+
+            // The boxes are rebuilt with the layout.
+            RequestNeumorphicRefresh();
         }
 
+        /// <summary>
+        /// Only the boxes draw the neumorphic effect. They show only for <see cref="IsBoxed"/>;
+        /// hidden boxes draw nothing.
+        /// </summary>
+        protected override IReadOnlyList<DaisyNeumorphicSurface> GetNeumorphicSurfaces()
+        {
+            var surfaces = new List<DaisyNeumorphicSurface>(2);
+            if (_startBox != null)
+                surfaces.Add(new DaisyNeumorphicSurface(_startBox));
+            if (_endBox != null)
+                surfaces.Add(new DaisyNeumorphicSurface(_endBox));
+            return surfaces;
+        }
 
         private void OnForegroundChanged(DependencyObject sender, DependencyProperty dp)
         {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using Flowery.Helpers;
@@ -29,16 +30,14 @@ namespace Flowery.Controls
     /// <para><b>Migration:</b> Change <c>: ContentControl</c> to <c>: DaisyBaseContentControl</c>
     /// and remove manual Loaded/Unloaded event wiring for theme/size changes.</para>
     /// </remarks>
-    public abstract partial class DaisyBaseContentControl : ContentControl
+    public abstract partial class DaisyBaseContentControl : ContentControl, IDaisyNeumorphicTarget
     {
         private const string LogCategory = "Controls";
         private static bool _globalNeumorphicEnabled;
         private static DaisyNeumorphicMode _globalNeumorphicMode = DaisyNeumorphicMode.None;
         private static double _globalNeumorphicIntensity = 0.45;
-        private static bool _globalNeumorphicRimLightEnabled = false;
-        private static bool _globalNeumorphicSurfaceGradientEnabled = false;
-        private static Color _globalNeumorphicDarkShadowColor = Color.FromArgb(255, 13, 39, 80); // #0D2750-ish
-        private static Color _globalNeumorphicLightShadowColor = Color.FromArgb(255, 255, 255, 255); // #FFFFFF
+        private static Color? _globalNeumorphicDarkShadowColor;
+        private static Color? _globalNeumorphicLightShadowColor;
         private static DaisyNeumorphicMode _lastNonNoneMode = DaisyNeumorphicMode.Raised; // Remember last mode for toggle
 
         #region Static Configuration
@@ -116,9 +115,11 @@ namespace Flowery.Controls
         }
 
         /// <summary>
-        /// Default dark shadow color for neumorphic effects.
+        /// Default dark shadow color for neumorphic effects. <c>null</c> (the default) derives it from the
+        /// current theme: its Base300 color, darkened by 50% for light themes and 70% for dark themes.
+        /// A value set here survives theme changes.
         /// </summary>
-        public static Color GlobalNeumorphicDarkShadowColor
+        public static Color? GlobalNeumorphicDarkShadowColor
         {
             get => _globalNeumorphicDarkShadowColor;
             set
@@ -132,9 +133,10 @@ namespace Flowery.Controls
         }
 
         /// <summary>
-        /// Default light shadow color for neumorphic effects.
+        /// Default light shadow color for neumorphic effects. <c>null</c> (the default) uses white.
+        /// A value set here survives theme changes.
         /// </summary>
-        public static Color GlobalNeumorphicLightShadowColor
+        public static Color? GlobalNeumorphicLightShadowColor
         {
             get => _globalNeumorphicLightShadowColor;
             set
@@ -143,38 +145,6 @@ namespace Flowery.Controls
                     return;
 
                 _globalNeumorphicLightShadowColor = value;
-                GlobalNeumorphicChanged?.Invoke(null, EventArgs.Empty);
-            }
-        }
-
-        /// <summary>
-        /// When true, a subtle rim light (inner highlight) is added to neumorphic effects.
-        /// </summary>
-        public static bool GlobalNeumorphicRimLightEnabled
-        {
-            get => _globalNeumorphicRimLightEnabled;
-            set
-            {
-                if (_globalNeumorphicRimLightEnabled == value)
-                    return;
-
-                _globalNeumorphicRimLightEnabled = value;
-                GlobalNeumorphicChanged?.Invoke(null, EventArgs.Empty);
-            }
-        }
-
-        /// <summary>
-        /// When true, a subtle gradient is applied to the surface of neumorphic elements to enhance the 3D look.
-        /// </summary>
-        public static bool GlobalNeumorphicSurfaceGradientEnabled
-        {
-            get => _globalNeumorphicSurfaceGradientEnabled;
-            set
-            {
-                if (_globalNeumorphicSurfaceGradientEnabled == value)
-                    return;
-
-                _globalNeumorphicSurfaceGradientEnabled = value;
                 GlobalNeumorphicChanged?.Invoke(null, EventArgs.Empty);
             }
         }
@@ -190,6 +160,8 @@ namespace Flowery.Controls
         /// <summary>
         /// Identifies the NeumorphicScopeEnabled attached property.
         /// When set on a parent element, it enables or disables neumorphic effects for the subtree.
+        /// The nearest value wins over a control's own <see cref="NeumorphicEnabled"/>, but never enables
+        /// rows, cells or segments that their container keeps flat.
         /// </summary>
         public static readonly DependencyProperty NeumorphicScopeEnabledProperty =
             DependencyProperty.RegisterAttached(
@@ -206,6 +178,50 @@ namespace Flowery.Controls
         public static bool? GetNeumorphicScopeEnabled(DependencyObject element)
         {
             return (bool?)element.GetValue(NeumorphicScopeEnabledProperty);
+        }
+
+        /// <summary>
+        /// Identifies the NeumorphicScopeMode attached property.
+        /// When set on a parent element, it sets the neumorphic mode for the subtree.
+        /// The nearest value wins; a control's own <see cref="NeumorphicMode"/> still takes precedence.
+        /// </summary>
+        public static readonly DependencyProperty NeumorphicScopeModeProperty =
+            DependencyProperty.RegisterAttached(
+                "NeumorphicScopeMode",
+                typeof(DaisyNeumorphicMode?),
+                typeof(DaisyBaseContentControl),
+                new PropertyMetadata(null, OnNeumorphicScopeChanged));
+
+        public static void SetNeumorphicScopeMode(DependencyObject element, DaisyNeumorphicMode? value)
+        {
+            element.SetValue(NeumorphicScopeModeProperty, value);
+        }
+
+        public static DaisyNeumorphicMode? GetNeumorphicScopeMode(DependencyObject element)
+        {
+            return (DaisyNeumorphicMode?)element.GetValue(NeumorphicScopeModeProperty);
+        }
+
+        /// <summary>
+        /// Identifies the NeumorphicScopeIntensity attached property.
+        /// When set on a parent element, it sets the neumorphic intensity (0.0 to 1.0) for the subtree.
+        /// The nearest value wins; a control's own <see cref="NeumorphicIntensity"/> still takes precedence.
+        /// </summary>
+        public static readonly DependencyProperty NeumorphicScopeIntensityProperty =
+            DependencyProperty.RegisterAttached(
+                "NeumorphicScopeIntensity",
+                typeof(double?),
+                typeof(DaisyBaseContentControl),
+                new PropertyMetadata(null, OnNeumorphicScopeChanged));
+
+        public static void SetNeumorphicScopeIntensity(DependencyObject element, double? value)
+        {
+            element.SetValue(NeumorphicScopeIntensityProperty, value);
+        }
+
+        public static double? GetNeumorphicScopeIntensity(DependencyObject element)
+        {
+            return (double?)element.GetValue(NeumorphicScopeIntensityProperty);
         }
 
         private static void OnNeumorphicScopeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -332,28 +348,6 @@ namespace Flowery.Controls
             set => DaisyNeumorphic.SetLightShadowColor(this, value);
         }
 
-        /// <summary>
-        /// Gets or sets whether rim lighting is enabled for this control's neumorphic effect.
-        /// </summary>
-        public bool? NeumorphicRimLightEnabled
-        {
-            get => DaisyNeumorphic.GetRimLightEnabled(this);
-            set => DaisyNeumorphic.SetRimLightEnabled(this, value);
-        }
-
-        /// <summary>
-        /// Gets or sets whether a surface gradient is enabled for this control's neumorphic effect.
-        /// </summary>
-        public bool? NeumorphicSurfaceGradientEnabled
-        {
-            get => DaisyNeumorphic.GetSurfaceGradientEnabled(this);
-            set => DaisyNeumorphic.SetSurfaceGradientEnabled(this, value);
-        }
-
-        #endregion
-
-        #region Composition API Fields
-        protected DaisyNeumorphicHelper? _neumorphicHelper;
         #endregion
 
         #region State
@@ -361,10 +355,12 @@ namespace Flowery.Controls
         private bool _isLoaded;
         private bool _themeSubscribed;
         private bool _sizeSubscribed;
-        private bool _neumorphicSubscribed;
+        private readonly DaisyNeumorphicSurfaceSet _neumorphicSurfaces;
+        private DaisyNeumorphicResolution? _neumorphicResolution;
         private bool _neumorphicTransparencyApplied;
         private object? _neumorphicOriginalBackgroundValue;
-        private FrameworkElement? _neumorphicHostElement;
+        private Brush? _neumorphicSurfaceBrush;
+        private SolidColorBrush? _neumorphicTransparentBrush;
 
         #endregion
 
@@ -375,6 +371,13 @@ namespace Flowery.Controls
         /// </summary>
         protected DaisyBaseContentControl()
         {
+            _neumorphicSurfaces = new DaisyNeumorphicSurfaceSet(this);
+            DaisyNeumorphicLifecycle.Attach(this, refreshOnThemeChange: true);
+            if (UsesNeumorphicTransparencyProtocol)
+            {
+                RegisterPropertyChangedCallback(BackgroundProperty, OnBackgroundChangedForNeumorphic);
+            }
+
             Loaded += OnBaseLoaded;
             Unloaded += OnBaseUnloaded;
             SizeChanged += OnBaseSizeChanged;
@@ -421,36 +424,14 @@ namespace Flowery.Controls
                 }
             }
 
-            if (!_neumorphicSubscribed)
-            {
-                GlobalNeumorphicChanged += OnBaseNeumorphicChanged;
-                _neumorphicSubscribed = true;
-            }
-
             OnLoaded();
 
-            // Defer neumorphic attachment until the visual tree is fully laid out.
-            // When Content is set in OnLoaded(), the ContentPresenter doesn't process
-            // it immediately - it happens on the next layout pass. If we call
-            // RefreshNeumorphicEffect() immediately, the helper will find an empty
-            // visual tree and fall back to attaching to the ContentPresenter itself,
-            // causing the composition surface to render ON TOP of the content.
-            LayoutUpdated += OnFirstLayoutForNeumorphic;
-        }
-
-        private void OnFirstLayoutForNeumorphic(object? sender, object e)
-        {
-            LayoutUpdated -= OnFirstLayoutForNeumorphic;
-            if (_isLoaded)
-            {
-                RequestNeumorphicRefresh();
-            }
+            // The neumorphic effect is applied after the first layout pass by DaisyNeumorphicLifecycle.
         }
 
         private void OnBaseUnloaded(object sender, RoutedEventArgs e)
         {
             _isLoaded = false;
-            LayoutUpdated -= OnFirstLayoutForNeumorphic;
 
             if (_themeSubscribed)
             {
@@ -464,15 +445,9 @@ namespace Flowery.Controls
                 _sizeSubscribed = false;
             }
 
-            if (_neumorphicSubscribed)
-            {
-                GlobalNeumorphicChanged -= OnBaseNeumorphicChanged;
-                _neumorphicSubscribed = false;
-            }
-
             RestoreNeumorphicHostBackground();
 
-            _neumorphicHelper?.Suspend();
+            _neumorphicSurfaces.Suspend();
 
             OnUnloaded();
         }
@@ -484,13 +459,7 @@ namespace Flowery.Controls
 
         private void OnBaseThemeChanged(object? sender, string themeName)
         {
-            RequestNeumorphicRefresh();
             OnThemeChanged(themeName);
-        }
-
-        private void OnBaseNeumorphicChanged(object? sender, EventArgs e)
-        {
-            RequestNeumorphicRefresh();
         }
 
         private void OnBaseGlobalSizeChanged(object? sender, DaisySize size)
@@ -580,9 +549,32 @@ namespace Flowery.Controls
 
         #region Neumorphic Effect Implementation
 
+        /// <summary>
+        /// Gets the element that draws the neumorphic effect for the default surface.
+        /// Override to return the element that renders the control's visible surface.
+        /// </summary>
         protected virtual FrameworkElement? GetNeumorphicHostElement()
         {
             return this;
+        }
+
+        /// <summary>
+        /// Gets the surfaces that draw the neumorphic effect. The default is one surface on
+        /// <see cref="GetNeumorphicHostElement"/>, which draws nothing without a visible background.
+        /// Override for controls with several surfaces or surfaces with a fixed mode
+        /// (e.g. an inset track with a raised handle).
+        /// </summary>
+        protected virtual IReadOnlyList<DaisyNeumorphicSurface> GetNeumorphicSurfaces()
+        {
+            return [new DaisyNeumorphicSurface(GetNeumorphicHostElement() ?? this)];
+        }
+
+        /// <summary>
+        /// Called after every neumorphic refresh with whether the control draws the effect.
+        /// Override to switch appearance details that depend on it (e.g. a transparent track in neumorphic mode).
+        /// </summary>
+        protected virtual void OnNeumorphicRefreshed(bool isEnabled)
+        {
         }
 
         public void RefreshNeumorphicEffect()
@@ -594,49 +586,50 @@ namespace Flowery.Controls
 
             if (!_isLoaded) return;
 
-            var hostElement = GetNeumorphicHostElement() ?? this;
-            if (!ReferenceEquals(hostElement, _neumorphicHostElement))
+            var surfaces = GetNeumorphicSurfaces();
+
+            // One walk up the tree serves all three hooks; overrides still take part.
+            bool isEnabled;
+            DaisyNeumorphicMode mode;
+            double intensity;
+            _neumorphicResolution = DaisyNeumorphic.Resolve(this);
+            try
+            {
+                isEnabled = IsNeumorphicEffectivelyEnabled();
+                mode = GetEffectiveNeumorphicMode();
+                intensity = GetEffectiveNeumorphicIntensity();
+            }
+            finally
+            {
+                _neumorphicResolution = null;
+            }
+
+            var elevation = DaisyResourceLookup.GetDefaultElevation(GetResolvedSize());
+
+            // Apply transparency protocol only on Windows (Composition shadows need it),
+            // and only when the control is its own surface and paints one.
+            var useTransparentBackground = isEnabled
+                && UsesNeumorphicTransparencyProtocol
+                && surfaces.Any(surface => ReferenceEquals(surface.Host, this))
+                && (_neumorphicTransparencyApplied || Background is not (null or SolidColorBrush { Color.A: 0 }));
+            if (useTransparentBackground)
+            {
+                ApplyTransparentBackground();
+            }
+            else
             {
                 RestoreNeumorphicHostBackground();
-                _neumorphicHelper?.Dispose();
-                _neumorphicHelper = null;
-                _neumorphicHostElement = hostElement;
             }
 
-            bool isEnabled = IsNeumorphicEffectivelyEnabled();
-            var mode = GetEffectiveNeumorphicMode();
-
-            // Apply transparency protocol only on Windows (Composition shadows need it)
-            var useTransparentBackground = PlatformCompatibility.IsWindows
-                && !PlatformCompatibility.IsSkiaBackend
-                && ReferenceEquals(hostElement, this);
-            if (isEnabled && useTransparentBackground)
-            {
-                ApplyTransparentBackground(hostElement);
-            }
-            else if (_neumorphicTransparencyApplied)
-            {
-                RestoreNeumorphicHostBackground();
-            }
-
-            if (!isEnabled && _neumorphicHelper == null)
-            {
-                return;
-            }
-
-            _neumorphicHelper ??= new DaisyNeumorphicHelper(hostElement);
-
-            if (!ReferenceEquals(hostElement, this))
-            {
-                SyncNeumorphicOverrides(hostElement);
-            }
-
-            _neumorphicHelper.Update(
+            _neumorphicSurfaces.Update(
+                surfaces,
                 isEnabled,
                 mode,
-                GetEffectiveNeumorphicIntensity(),
-                DaisyResourceLookup.GetDefaultElevation(GetResolvedSize())
-            );
+                intensity,
+                elevation,
+                _neumorphicTransparencyApplied ? _neumorphicSurfaceBrush : null);
+
+            OnNeumorphicRefreshed(isEnabled);
         }
 
         internal void RequestNeumorphicRefresh()
@@ -646,35 +639,21 @@ namespace Flowery.Controls
             DaisyNeumorphicRefreshHelper.QueueRefresh(this);
         }
 
+        void IDaisyNeumorphicTarget.RequestNeumorphicRefresh() => RequestNeumorphicRefresh();
+
+        private DaisyNeumorphicResolution ResolveNeumorphic() => _neumorphicResolution ?? DaisyNeumorphic.Resolve(this);
+
         public void RebuildNeumorphicEffect()
         {
             if (!_isLoaded) return;
 
-            _neumorphicHelper?.Dispose();
-            _neumorphicHelper = null;
+            _neumorphicSurfaces.Clear();
             RefreshNeumorphicEffect();
         }
 
-
         protected virtual bool IsNeumorphicEffectivelyEnabled()
         {
-            var scope = DaisyNeumorphic.GetScopeEnabled(this);
-            bool isActuallyEnabled = (scope ?? NeumorphicEnabled ?? _globalNeumorphicEnabled);
-
-            return isActuallyEnabled && GetEffectiveNeumorphicMode() != DaisyNeumorphicMode.None;
-        }
-
-        protected virtual bool IsNeumorphicRimLightEffectivelyEnabled()
-        {
-            return NeumorphicRimLightEnabled == true && GlobalNeumorphicRimLightEnabled;
-        }
-
-        /// <summary>
-        /// Gets whether surface gradient is effectively enabled for this control.
-        /// </summary>
-        protected virtual bool IsNeumorphicSurfaceGradientEffectivelyEnabled()
-        {
-            return NeumorphicSurfaceGradientEnabled == true && GlobalNeumorphicSurfaceGradientEnabled;
+            return ResolveNeumorphic().IsEnabled;
         }
 
         /// <summary>
@@ -682,7 +661,7 @@ namespace Flowery.Controls
         /// </summary>
         protected virtual DaisyNeumorphicMode GetEffectiveNeumorphicMode()
         {
-            return NeumorphicMode ?? GlobalNeumorphicMode;
+            return ResolveNeumorphic().Mode;
         }
 
         /// <summary>
@@ -690,101 +669,64 @@ namespace Flowery.Controls
         /// </summary>
         protected virtual double GetEffectiveNeumorphicIntensity()
         {
-            return Math.Clamp(NeumorphicIntensity ?? GlobalNeumorphicIntensity, 0.0, 1.0);
+            return ResolveNeumorphic().Intensity;
         }
 
-        private void SyncNeumorphicOverrides(FrameworkElement hostElement)
-        {
-            SyncNeumorphicOverride(hostElement, DaisyNeumorphic.OffsetProperty, DaisyNeumorphic.GetOffset(this));
-            SyncNeumorphicOverride(hostElement, DaisyNeumorphic.BlurRadiusProperty, DaisyNeumorphic.GetBlurRadius(this));
-            SyncNeumorphicOverride(hostElement, DaisyNeumorphic.DarkShadowColorProperty, DaisyNeumorphic.GetDarkShadowColor(this));
-            SyncNeumorphicOverride(hostElement, DaisyNeumorphic.LightShadowColorProperty, DaisyNeumorphic.GetLightShadowColor(this));
-        }
+        /// <summary>
+        /// Windows (non-Skia) Composition shadows need the control that is its own surface to paint a transparent
+        /// background; the surface brush is drawn behind it instead.
+        /// </summary>
+        private static bool UsesNeumorphicTransparencyProtocol =>
+            PlatformCompatibility.IsWindows && !PlatformCompatibility.IsSkiaBackend;
 
-        private void SyncNeumorphicOverride(FrameworkElement hostElement, DependencyProperty property, object? value)
+        private void OnBackgroundChangedForNeumorphic(DependencyObject sender, DependencyProperty dp)
         {
-            if (ShouldApplyNeumorphicOverride(property, value))
+            // A new background from the control or the app replaces the remembered surface brush.
+            if (!ReferenceEquals(Background, _neumorphicTransparentBrush))
             {
-                hostElement.SetValue(property, value);
-            }
-            else
-            {
-                hostElement.ClearValue(property);
+                RequestNeumorphicRefresh();
             }
         }
 
-        private bool ShouldApplyNeumorphicOverride(DependencyProperty property, object? value)
+        private void ApplyTransparentBackground()
         {
-            if (ReadLocalValue(property) != DependencyProperty.UnsetValue)
-            {
-                return true;
-            }
-
-            var metadata = property.GetMetadata(GetType());
-            var defaultValue = metadata?.DefaultValue;
-            if (defaultValue == null)
-            {
-                return value != null;
-            }
-
-            return !Equals(value, defaultValue);
-        }
-
-        private void ApplyTransparentBackground(FrameworkElement hostElement)
-        {
-            if (_neumorphicTransparencyApplied)
+            if (_neumorphicTransparencyApplied && ReferenceEquals(Background, _neumorphicTransparentBrush))
             {
                 return;
             }
 
-            var backgroundProperty = GetBackgroundProperty(hostElement);
-            if (backgroundProperty == null)
-            {
-                return;
-            }
-
-            _neumorphicOriginalBackgroundValue = hostElement.ReadLocalValue(backgroundProperty);
-            hostElement.SetValue(backgroundProperty, new SolidColorBrush(Microsoft.UI.Colors.Transparent));
+            // First application, or the control replaced the transparent brush (e.g. on a theme change):
+            // remember the background it paints now as the neumorphic surface.
+            _neumorphicSurfaceBrush = Background;
+            _neumorphicOriginalBackgroundValue = ReadLocalValue(BackgroundProperty);
+            _neumorphicTransparentBrush ??= new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+            SetValue(BackgroundProperty, _neumorphicTransparentBrush);
             _neumorphicTransparencyApplied = true;
         }
 
         private void RestoreNeumorphicHostBackground()
         {
-            if (!_neumorphicTransparencyApplied || _neumorphicHostElement == null)
+            if (!_neumorphicTransparencyApplied)
             {
                 return;
             }
 
-            var backgroundProperty = GetBackgroundProperty(_neumorphicHostElement);
-            if (backgroundProperty == null)
+            // A background the control set after the transparent one stays in place.
+            if (ReferenceEquals(Background, _neumorphicTransparentBrush))
             {
-                _neumorphicOriginalBackgroundValue = null;
-                _neumorphicTransparencyApplied = false;
-                return;
-            }
-
-            if (_neumorphicOriginalBackgroundValue == DependencyProperty.UnsetValue)
-            {
-                _neumorphicHostElement.ClearValue(backgroundProperty);
-            }
-            else
-            {
-                _neumorphicHostElement.SetValue(backgroundProperty, _neumorphicOriginalBackgroundValue);
+                if (_neumorphicOriginalBackgroundValue == DependencyProperty.UnsetValue)
+                {
+                    ClearValue(BackgroundProperty);
+                }
+                else
+                {
+                    SetValue(BackgroundProperty, _neumorphicOriginalBackgroundValue);
+                }
             }
 
             _neumorphicOriginalBackgroundValue = null;
+            _neumorphicSurfaceBrush = null;
             _neumorphicTransparencyApplied = false;
-        }
-
-        private static DependencyProperty? GetBackgroundProperty(FrameworkElement element)
-        {
-            return element switch
-            {
-                Control => Control.BackgroundProperty,
-                Panel => Panel.BackgroundProperty,
-                Border => Border.BackgroundProperty,
-                _ => null
-            };
         }
 
         #endregion

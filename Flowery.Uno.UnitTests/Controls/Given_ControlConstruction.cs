@@ -14,8 +14,6 @@ namespace Flowery.Uno.UnitTests.Controls
             _ = DaisyBaseContentControl.GlobalNeumorphicIntensity;
             _ = DaisyBaseContentControl.GlobalNeumorphicDarkShadowColor;
             _ = DaisyBaseContentControl.GlobalNeumorphicLightShadowColor;
-            _ = DaisyBaseContentControl.GlobalNeumorphicRimLightEnabled;
-            _ = DaisyBaseContentControl.GlobalNeumorphicSurfaceGradientEnabled;
         }
     }
 }

@@ -11,15 +11,14 @@
         Values mirror DaisyTokenDefaults.
     -->
     <Thickness x:Key="DaisyBadgeMediumPadding">8,0,8,0</Thickness>
-    <x:Double x:Key="DaisyBadgeMediumHeight">20</x:Double>
-    <x:Double x:Key="DaisyBadgeMediumFontSize">10</x:Double>
+    <x:Double x:Key="DaisyBadgeMediumHeight">24</x:Double>
+    <x:Double x:Key="DaisyBadgeMediumFontSize">14</x:Double>
 
     <Style TargetType="controls:DaisyBadge">
         <Setter Property="Background" Value="{ThemeResource DaisyBase200Brush}" />
         <Setter Property="Foreground" Value="{ThemeResource DaisyBaseContentBrush}" />
         <Setter Property="Padding" Value="{ThemeResource DaisyBadgeMediumPadding}" />
         <Setter Property="CornerRadius" Value="10" />
-        <Setter Property="Height" Value="{ThemeResource DaisyBadgeMediumHeight}" />
         <Setter Property="FontSize" Value="{ThemeResource DaisyBadgeMediumFontSize}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -29,20 +28,12 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="controls:DaisyBadge">
-                    <Border
-                        Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}"
-                        Padding="{TemplateBinding Padding}"
-                        Height="{TemplateBinding Height}">
-                        <ContentPresenter
-                            Content="{TemplateBinding Content}"
-                            ContentTemplate="{TemplateBinding ContentTemplate}"
-                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                            Margin="0,-2,0,0" />
-                    </Border>
+                    <!-- DaisyBadge owns its border, padding, and size in its content. -->
+                    <ContentPresenter
+                        Content="{TemplateBinding Content}"
+                        ContentTemplate="{TemplateBinding ContentTemplate}"
+                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

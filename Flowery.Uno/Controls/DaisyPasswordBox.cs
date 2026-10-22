@@ -123,9 +123,12 @@ namespace Flowery.Controls
             Size = size;
         }
 
+        /// <summary>
+        /// The input border paints the visible surface; the shadow layers go next to it into the input host Grid.
+        /// </summary>
         protected override FrameworkElement? GetNeumorphicHostElement()
         {
-            return _inputHost ?? base.GetNeumorphicHostElement();
+            return _inputBorder ?? base.GetNeumorphicHostElement();
         }
 
         public void FocusInput(bool selectAll = false)

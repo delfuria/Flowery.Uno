@@ -28,7 +28,7 @@ namespace Flowery.Controls
     /// to avoid platform-specific bugs and limitations of the native ComboBox.
     /// </summary>
     [ContentProperty(Name = nameof(Items))]
-    public abstract partial class DaisyComboBoxBase : ContentControl
+    public abstract partial class DaisyComboBoxBase : ContentControl, IDaisyNeumorphicTarget
     {
         protected readonly DaisyControlLifecycle _lifecycle;
         private Grid? _rootGrid;
@@ -57,7 +57,6 @@ namespace Flowery.Controls
         private static ResourceDictionary? s_daisyControlsResources;
         private static bool s_daisyControlsLoaded;
         private ObservableCollection<object>? _items;
-        private bool _neumorphicSubscribed;
 
         protected DaisyComboBoxBase() : this(true)
         {
@@ -424,11 +423,6 @@ namespace Flowery.Controls
             OnBeforeLoaded();
             BuildVisualTree();
             EnsureItemsControlSubscriptions();
-            if (!_neumorphicSubscribed)
-            {
-                DaisyBaseContentControl.GlobalNeumorphicChanged += OnGlobalNeumorphicChanged;
-                _neumorphicSubscribed = true;
-            }
             if (!_lifecycleLoaded)
             {
                 _lifecycleLoaded = true;
@@ -452,7 +446,6 @@ namespace Flowery.Controls
             else UpdateTriggerContent();
 
             OnAfterLoaded();
-            RequestNeumorphicRefresh();
         }
 
         private void EnsureItemsControlSubscriptions()
@@ -512,12 +505,6 @@ namespace Flowery.Controls
                 _listBox.PointerCaptureLost -= OnItemsControlPointerCanceled;
             }
             _itemsControlEventsAttached = false;
-
-            if (_neumorphicSubscribed)
-            {
-                DaisyBaseContentControl.GlobalNeumorphicChanged -= OnGlobalNeumorphicChanged;
-                _neumorphicSubscribed = false;
-            }
 
             OnBeforeUnloaded();
             if (_lifecycleLoaded)
@@ -1543,11 +1530,6 @@ namespace Flowery.Controls
             RequestApplyAll();
         }
 
-        private void OnGlobalNeumorphicChanged(object? sender, EventArgs e)
-        {
-            RequestNeumorphicRefresh();
-        }
-
         protected void RequestApplyAll()
         {
             if (_isUnloading)
@@ -1738,7 +1720,8 @@ namespace Flowery.Controls
                 return;
             }
 
-            if (!IsNeumorphicEffectivelyEnabled())
+            var resolution = DaisyNeumorphic.Resolve(this);
+            if (!resolution.IsEnabled)
             {
                 ClearNeumorphicShadows();
                 return;
@@ -1756,15 +1739,13 @@ namespace Flowery.Controls
 
             EnsureShadowResources();
 
-            var mode = GetEffectiveNeumorphicMode();
-            var intensity = GetEffectiveNeumorphicIntensity();
+            var mode = resolution.Mode;
+            var intensity = resolution.Intensity;
             var elevation = DaisyResourceLookup.GetDefaultElevation(Size);
             var (offset, blur) = DaisyNeumorphicHelper.GetShadowMetrics(this, elevation, mode);
 
-            var darkShadowColor = DaisyNeumorphic.GetDarkShadowColor(this)
-                ?? DaisyBaseContentControl.GlobalNeumorphicDarkShadowColor;
-            var lightShadowColor = DaisyNeumorphic.GetLightShadowColor(this)
-                ?? DaisyBaseContentControl.GlobalNeumorphicLightShadowColor;
+            var darkShadowColor = DaisyNeumorphic.GetEffectiveDarkShadowColor(this);
+            var lightShadowColor = DaisyNeumorphic.GetEffectiveLightShadowColor(this);
 
             if (_shadowCollection == null || _darkShadow == null || _lightShadow == null)
             {
@@ -1821,6 +1802,8 @@ namespace Flowery.Controls
             DaisyNeumorphicRefreshHelper.QueueRefresh(this);
         }
 
+        void IDaisyNeumorphicTarget.RequestNeumorphicRefresh() => RequestNeumorphicRefresh();
+
         private void EnsureShadowResources()
         {
             _shadowCollection ??= new ToolkitShadowCollection();
@@ -1838,23 +1821,6 @@ namespace Flowery.Controls
             _shadowContainer.Shadows = new ToolkitShadowCollection();
         }
 
-        private bool IsNeumorphicEffectivelyEnabled()
-        {
-            var scope = DaisyNeumorphic.GetScopeEnabled(this);
-            bool isActuallyEnabled = scope ?? NeumorphicEnabled ?? DaisyBaseContentControl.GlobalNeumorphicEnabled;
-
-            return isActuallyEnabled && GetEffectiveNeumorphicMode() != DaisyNeumorphicMode.None;
-        }
-
-        private DaisyNeumorphicMode GetEffectiveNeumorphicMode()
-        {
-            return NeumorphicMode ?? DaisyBaseContentControl.GlobalNeumorphicMode;
-        }
-
-        private double GetEffectiveNeumorphicIntensity()
-        {
-            return Math.Clamp(NeumorphicIntensity ?? DaisyBaseContentControl.GlobalNeumorphicIntensity, 0.0, 1.0);
-        }
 
         #endregion
 

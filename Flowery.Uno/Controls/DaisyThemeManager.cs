@@ -7,6 +7,7 @@ using System.Linq;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using Flowery.Helpers;
+using Flowery.Services;
 using Flowery.Theming;
 
 namespace Flowery.Controls
@@ -485,11 +486,12 @@ namespace Flowery.Controls
 
                 TrySetRequestedTheme(app, def.Info.IsDark ? ApplicationTheme.Dark : ApplicationTheme.Light);
 
-                ThemeChanged?.Invoke(null, def.Info.Name);
+                FloweryEventRaiser.Raise(ThemeChanged, null, def.Info.Name, nameof(ThemeChanged));
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                FloweryLogging.Log(FloweryLogLevel.Error, "Theming", $"[DaisyThemeManager] Applying '{themeName}' failed: {ex.Message}", ex);
                 return false;
             }
         }
@@ -692,7 +694,7 @@ namespace Flowery.Controls
 
             _currentThemeName = themeName;
             DaisyNeumorphic.InvalidateThemeShadowColors();
-            ThemeChanged?.Invoke(null, themeName);
+            FloweryEventRaiser.Raise(ThemeChanged, null, themeName, nameof(ThemeChanged));
         }
 
         /// <summary>

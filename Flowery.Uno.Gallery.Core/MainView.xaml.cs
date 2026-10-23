@@ -25,7 +25,6 @@ namespace Flowery.Uno.Gallery
     public sealed partial class MainView : UserControl
     {
         private const string HomeTabHeader = "Sidebar_Home";
-        private const double SidebarWidth = 250;
         private const double MinContentWidth = 400;
         private const double MaxSidebarWidthPercent = 0.35;
         private const double HeaderCollapseScrollThreshold = 20;
@@ -195,8 +194,6 @@ namespace Flowery.Uno.Gallery
                 SplitView.DisplayModeProperty, OnPaneStateChanged);
             UpdateCarouselOverlaySuspension();
 #endif
-            UpdateResponsiveLayout(ActualWidth);
-
             if (_isMobilePlatform)
             {
                 _isLandscape = ActualWidth > ActualHeight;
@@ -376,14 +373,16 @@ namespace Flowery.Uno.Gallery
         }
 
         // GallerySafeAreaPadding pads the pane on mobile (e.g. the camera cutout on the left in landscape). Widen the pane by that
-        // padding so the fixed-width sidebar is not clipped on the right.
-        private void OnSidebarPanePaddingChanged(DependencyObject sender, DependencyProperty dp)
+        // padding so the size-dependent sidebar is not clipped on the right.
+        private void OnSidebarPanePaddingChanged(DependencyObject sender, DependencyProperty dp) => UpdateSidebarPaneWidth();
+
+        private void UpdateSidebarPaneWidth()
         {
             if (MainSplitView == null || SidebarPaneBorder == null)
                 return;
 
             var padding = SidebarPaneBorder.Padding;
-            MainSplitView.OpenPaneLength = SidebarWidth + padding.Left + padding.Right;
+            MainSplitView.OpenPaneLength = ComponentSidebar.SidebarWidth + padding.Left + padding.Right;
 
             if (ActualWidth > 0)
                 UpdateResponsiveLayout(ActualWidth);
@@ -906,6 +905,9 @@ namespace Flowery.Uno.Gallery
 
         private void ApplySizeToGalleryElements(DaisySize size)
         {
+            ComponentSidebar.SidebarWidth = FlowerySizeManager.GetSidebarWidth(size);
+            UpdateSidebarPaneWidth();
+
             if (CategoryTitle != null)
             {
                 CategoryTitle.FontSize = size switch

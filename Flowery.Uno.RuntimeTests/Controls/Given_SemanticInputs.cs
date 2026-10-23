@@ -60,13 +60,15 @@ namespace Flowery.Uno.RuntimeTests.Controls
                 for (var index = 0; index < controls.Length; index++)
                     AssertRoles(controls[index], nativeInputs[index], editing, selection, transparent);
 
+                var unloaded = controls.Select(WaitForUnloadedAsync).ToArray();
                 host.Children.Remove(panel);
+                await Task.WhenAll(unloaded);
                 await CompleteLayoutAsync(host);
                 foreach (var control in controls)
                     control.Resources.Remove("DaisyInputPlaceholderForeground");
                 Assert.IsTrue(DaisyThemeManager.ApplyTheme("Light"));
                 host.Children.Add(panel);
-                await CompleteLayoutAsync(panel, nativeInputs);
+                await CompleteLayoutAsync(panel, controls.Concat(nativeInputs).ToArray());
                 for (var index = 0; index < controls.Length; index++)
                 {
                     Assert.AreSame(nativeInputs[index], FindNativeInput(controls[index]));
@@ -121,6 +123,21 @@ namespace Flowery.Uno.RuntimeTests.Controls
             Assert.IsInstanceOfType<SolidColorBrush>(actual);
             Assert.AreEqual(((SolidColorBrush)expected).Color, ((SolidColorBrush)actual).Color);
             Assert.AreEqual(expected.Opacity, ((Brush)actual).Opacity);
+        }
+
+        private static async Task WaitForUnloadedAsync(FrameworkElement element)
+        {
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            RoutedEventHandler handler = (_, _) => completion.TrySetResult();
+            element.Unloaded += handler;
+            try
+            {
+                await completion.Task.WaitAsync(System.TimeSpan.FromSeconds(5));
+            }
+            finally
+            {
+                element.Unloaded -= handler;
+            }
         }
 
         private static Control FindNativeInput(DependencyObject owner) =>

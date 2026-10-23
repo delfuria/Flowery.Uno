@@ -149,7 +149,7 @@ namespace Flowery.Controls
                 Variant = DaisyButtonVariant.Ghost,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                Padding = new Thickness(0),
+                ContentPadding = new Thickness(0),
                 IsTabStop = false,
                 Size = ResolvedSize // Sync with our rendered size
             };

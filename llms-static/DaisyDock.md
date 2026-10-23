@@ -14,6 +14,12 @@ DaisyDock arranges items in a pill-shaped bar, similar to a macOS dock. It suppo
 | `SelectedIndex` (int, default `-1`) | Gets or sets the index of the currently selected item. |
 | `ItemSelected` event | Raised with `DockItemSelectedEventArgs` containing the clicked `UIElement` and its index. |
 
+## Icon and Item Sizing
+
+For `DaisyIconText` children, an unset or `NaN` `IconSize` uses the resolved tier's `DaisyDock{Size}ItemSize` token multiplied by `DaisyDockIconSizeRatio`. Explicit `IconSize` values from local properties, styles, and bindings remain unchanged. Clearing an override or returning it to `NaN` resumes automatic icon sizing.
+
+A child's explicit `Size` takes precedence over the dock tier. Changes to a child `Size` binding update that item's footprint immediately, even when the dock and global sizes do not change. When an icon moves outside the dock, it returns to the standard `DaisyIconText` automatic icon size. Reloading the dock restores its defaults and child-size tracking.
+
 ## Quick Examples
 
 ```xml

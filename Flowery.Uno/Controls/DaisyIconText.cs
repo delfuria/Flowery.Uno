@@ -34,6 +34,19 @@ namespace Flowery.Controls
         protected StackPanel? _rootPanel;
         protected Viewbox? _iconViewbox;
         protected TextBlock? _textBlock;
+        private double _containerIconSize = double.NaN;
+
+        internal double ContainerIconSize
+        {
+            get => _containerIconSize;
+            set
+            {
+                if (_containerIconSize.Equals(value))
+                    return;
+                _containerIconSize = value;
+                ApplySizing();
+            }
+        }
 
         #region Dependency Properties
 
@@ -212,7 +225,9 @@ namespace Flowery.Controls
         /// Gets the effective icon size, computing from Size if not explicitly set.
         /// </summary>
         public double EffectiveIconSize =>
-            !double.IsNaN(IconSize) ? IconSize : DaisyResourceLookup.GetDefaultIconSize(ResolvedSize);
+            !double.IsNaN(IconSize) ? IconSize
+                : !double.IsNaN(ContainerIconSize) ? ContainerIconSize
+                : DaisyResourceLookup.GetDefaultIconSize(ResolvedSize);
 
         /// <summary>
         /// Gets the effective font size, computing from Size if not explicitly set.
@@ -271,6 +286,7 @@ namespace Flowery.Controls
         protected override void OnUnloaded()
         {
             base.OnUnloaded();
+            ContainerIconSize = double.NaN;
 
             if (_foregroundCallbackToken != 0)
             {

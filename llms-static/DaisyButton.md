@@ -52,6 +52,26 @@ DaisyButton delivers DaisyUI-styled actions with **11 color variants**, **4 visu
 > [!NOTE]
 > DaisyButton uses **fixed heights** (not MinHeight) for each size to match DaisyUI's design. Buttons will not grow vertically to accommodate multi-line content. If you need a flexible-height button, override `Height="NaN"` on the individual button.
 
+## Content Padding
+
+| Property | Default | Description |
+| --- | --- | --- |
+| `ContentPadding` (`Thickness?`) | `null` | Inner content spacing. Automatic padding follows `ResolvedSize`; Link, Square and Circle use zero. An explicit value, including zero, takes precedence. |
+| `ResolvedContentPadding` (`Thickness`) | Computed | The concrete inner padding used by the control template. |
+| Inherited `Padding` (`Thickness`) | Native default | Separate outer spacing inside the button border, added around the inner content spacing. The control does not write this property. |
+
+Use `ContentPadding` for a complete inner-padding override. Its local values, style setters and bindings remain authored values when size, shape or variant changes. Set it to `null` to request automatic padding. `ClearValue(DaisyButton.ContentPaddingProperty)` restores the applicable style value, or automatic padding if the style supplies no value.
+
+```xml
+<!-- No inner spacing, including after size changes -->
+<controls:DaisyButton Content="Edge-to-edge" ContentPadding="0" />
+
+<!-- Authored outer spacing plus automatic inner spacing -->
+<controls:DaisyButton Content="Additional spacing" Padding="2" />
+```
+
+Migration: code or XAML that previously used `Padding` to replace the size-based inner padding should use `ContentPadding`. Inherited `Padding` now retains its authored value and contributes separate outer spacing. Custom templates should bind inner spacing to `ResolvedContentPadding` and outer spacing to `Padding`.
+
 ## Shadows & States
 
 | Property | Description |

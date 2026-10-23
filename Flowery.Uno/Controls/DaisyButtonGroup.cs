@@ -649,7 +649,6 @@ namespace Flowery.Controls
                         var segmentSize = daisyButton.ResolvedSize;
                         var segmentKey = DaisyResourceLookup.GetSizeKeyFull(segmentSize);
                         button.Height = DaisyResourceLookup.GetDouble(resources, $"DaisySize{segmentKey}Height", DaisyResourceLookup.GetDefaultHeight(segmentSize));
-                        button.Padding = DaisyResourceLookup.GetThickness(resources, $"DaisyButton{segmentKey}Padding", DaisyResourceLookup.GetDefaultPadding(segmentSize));
                         button.FontSize = DaisyResourceLookup.GetDouble(resources, $"DaisySize{segmentKey}FontSize", DaisyResourceLookup.GetDefaultFontSize(segmentSize));
                     }
                     else

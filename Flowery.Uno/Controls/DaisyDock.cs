@@ -46,6 +46,7 @@ namespace Flowery.Controls
         private Grid? _itemsHost;
         private StackPanel? _itemsPanel;
         private readonly List<UIElement> _dockItems = [];
+        private readonly Dictionary<DaisyIconText, long> _itemSizeCallbacks = [];
         private int _selectedIndex = -1;
         private Border? _selectionIndicator;
         private CompositeTransform? _selectionTransform;
@@ -187,14 +188,47 @@ namespace Flowery.Controls
         {
             base.OnLoaded();
 
-            if (_rootGrid != null)
-            {
-                ApplyAll();
-                return;
-            }
-
-            BuildVisualTree();
+            if (_rootGrid == null)
+                BuildVisualTree();
+            RegisterItemSizeCallbacks();
             ApplyAll();
+        }
+
+        protected override void OnUnloaded()
+        {
+            base.OnUnloaded();
+            foreach (var (item, token) in _itemSizeCallbacks)
+            {
+                item.UnregisterPropertyChangedCallback(DaisyIconText.SizeProperty, token);
+                item.Loaded -= OnItemLoaded;
+            }
+            _itemSizeCallbacks.Clear();
+        }
+
+        private void RegisterItemSizeCallbacks()
+        {
+            foreach (var item in _dockItems)
+            {
+                if (item is DaisyIconText iconText && !_itemSizeCallbacks.ContainsKey(iconText))
+                {
+                    var token = iconText.RegisterPropertyChangedCallback(DaisyIconText.SizeProperty, OnItemSizeChanged);
+                    _itemSizeCallbacks.Add(iconText, token);
+                    iconText.Loaded += OnItemLoaded;
+                }
+            }
+        }
+
+        private void OnItemLoaded(object sender, RoutedEventArgs e)
+        {
+            // Moving user content into the dock can load it after the dock's own sizing pass.
+            ApplySizing();
+        }
+
+        private void OnItemSizeChanged(DependencyObject sender, DependencyProperty property)
+        {
+            ApplySizing();
+            if (IsSelectionAnimationEnabled)
+                QueueSelectionIndicatorUpdate(animate: false);
         }
 
         protected override void OnThemeChanged(string themeName)
@@ -473,10 +507,10 @@ namespace Flowery.Controls
                         fe.Height = itemSize;
                     }
 
-                    // If the child is DaisyIconText, set its IconSize to scale properly
+                    // Supply the dock default without replacing an authored value, style or binding.
                     if (container.Child is DaisyIconText iconText)
                     {
-                        iconText.IconSize = itemSize * iconSizeRatio;
+                        iconText.ContainerIconSize = itemSize * iconSizeRatio;
                     }
                 }
             }

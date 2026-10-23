@@ -26,7 +26,7 @@ Use it directly in any UI, or as the `Content` of buttons, menu items, tabs, lis
 | `Size` | `DaisySize` | `Auto` | Controls icon dimensions and font size. `ResolvedSize` exposes the concrete tier from [global sizing](FlowerySizeManager.md); explicit tiers remain unchanged. |
 | `IconPlacement` | `IconPlacement` | `Left` | Position of the icon relative to text: `Left`, `Right`, `Top`, or `Bottom`. |
 | `Spacing` | `double` | `NaN` (auto) | Gap between icon and text. If `NaN`, auto-computed based on `Size`. |
-| `IconSize` | `double` | `NaN` (auto) | Explicit icon size override. If `NaN`, auto-computed based on `Size`. |
+| `IconSize` | `double` | `NaN` (auto) | Explicit icon size override. If `NaN`, computed from `ResolvedSize` or the containing dock's icon default. Local values, styles, and bindings retain precedence. |
 | `FontSizeOverride` | `double` | `NaN` (auto) | Explicit font size override. If `NaN`, auto-computed based on `Size`. |
 | `FontWeight` | `FontWeight` | `Normal` | Font weight for the text (e.g., `Normal`, `SemiBold`, `Bold`). |
 

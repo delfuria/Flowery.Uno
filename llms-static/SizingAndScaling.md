@@ -38,6 +38,7 @@ Apply a global size to controls using Auto:
 
 ```csharp
 using Flowery.Controls;
+using Flowery.Enums;
 
 // Apply a size by enum
 FlowerySizeManager.ApplySize(DaisySize.Small);
@@ -113,9 +114,9 @@ A ComboBox-style dropdown that shows all available sizes with localized names:
 
 The dropdown:
 
-- Shows the current size with an abbreviation (XS, S, M, L, XL)
-- Displays localized size names (e.g., "Klein" in German, "小" in Japanese)
-- Automatically updates all controls when selection changes
+- Displays localized size names by default (for example, "Klein" in German)
+- Shows abbreviations (XS, S, M, L, XL) when `ShowAbbreviations="True"`
+- Refreshes Auto controls when selection changes and global refresh is enabled
 
 **Advanced customization**: You can control which sizes appear and customize their display names. See [DaisySizeDropdown](DaisySizeDropdown.md) for details on the `SizeOptions` property.
 
@@ -156,7 +157,8 @@ For regular `TextBlock` elements that should scale with the global size, use the
 | `Primary` | Body text, descriptions | 10/12/14/18/20 |
 | `Secondary` | Hints, captions, labels | 9/10/12/14/16 |
 | `Tertiary` | Very small text, counters | 8/9/11/12/14 |
-| `Header` | Section titles, headings | 14/16/20/24/28 |
+| `SectionHeader` | Section titles, control groups | 12/14/16/20/22 |
+| `Header` | Page titles, headings | 14/16/20/24/28 |
 
 ### Examples
 
@@ -171,7 +173,7 @@ For regular `TextBlock` elements that should scale with the global size, use the
 
 <!-- Section header -->
 <TextBlock Text="Settings" FontWeight="Bold"
-           controls:FlowerySizeManager.ResponsiveFont="Header" />
+           controls:FlowerySizeManager.ResponsiveFont="SectionHeader" />
 ```
 
 ### How It Works
@@ -262,17 +264,20 @@ Supported languages: English, German, French, Spanish, Italian, Japanese, Korean
 
 ## Design Tokens Integration
 
-The sizing system works with [Design Tokens](DesignTokens.md). Each size tier maps to specific tokens:
+The sizing system works with [Design Tokens](DesignTokens.md). These are the desktop defaults:
 
 | Size | Height Token | Font Size Token |
 | --- | --- | --- |
-| ExtraSmall | `DaisySizeExtraSmallHeight` (20) | `DaisySizeExtraSmallFontSize` (9) |
-| Small | `DaisySizeSmallHeight` (24) | `DaisySizeSmallFontSize` (10) |
-| Medium | `DaisySizeMediumHeight` (28) | `DaisySizeMediumFontSize` (12) |
-| Large | `DaisySizeLargeHeight` (32) | `DaisySizeLargeFontSize` (14) |
-| ExtraLarge | `DaisySizeExtraLargeHeight` (36) | `DaisySizeExtraLargeFontSize` (16) |
+| ExtraSmall | `DaisySizeExtraSmallHeight` (24) | `DaisySizeExtraSmallFontSize` (10) |
+| Small | `DaisySizeSmallHeight` (28) | `DaisySizeSmallFontSize` (12) |
+| Medium | `DaisySizeMediumHeight` (32) | `DaisySizeMediumFontSize` (14) |
+| Large | `DaisySizeLargeHeight` (36) | `DaisySizeLargeFontSize` (18) |
+| ExtraLarge | `DaisySizeExtraLargeHeight` (40) | `DaisySizeExtraLargeFontSize` (20) |
 
-> **Note:** Token values can be accessed programmatically via `DaisyResourceLookup.GetDefaultHeight(size)` and `DaisyResourceLookup.GetDefaultFontSize(size)`. See [Design Tokens](DesignTokens.md) for full reference.
+Android and iOS use height defaults of 36/40/44/48/56 for XS/S/M/L/XL. The font ladder stays the same.
+
+`DaisyResourceLookup.GetDefaultHeight(size)` and `GetDefaultFontSize(size)` return code defaults, without resource overrides.
+See [Design Tokens](DesignTokens.md) for token lookup and customization.
 
 ## Best Practices
 
@@ -300,7 +305,7 @@ A complete example of a settings panel with size selection:
                controls:FlowerySizeManager.ResponsiveFont="Primary" />
     
     <controls:DaisyButton Content="Sample Button" />
-    <controls:DaisyInput Watermark="Sample Input" />
+    <controls:DaisyInput PlaceholderText="Sample Input" />
 </StackPanel>
 ```
 

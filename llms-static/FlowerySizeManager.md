@@ -7,6 +7,7 @@ It refreshes loaded controls without assigning their Size dependency property.
 
 ```csharp
 using Flowery.Controls;
+using Flowery.Enums;
 FlowerySizeManager.ApplySize(DaisySize.Large);
 ```
 
@@ -107,8 +108,12 @@ Setting ResponsiveFont explicitly applies its current tier immediately.
 
 ## Heights and Tokens
 
+The primary font defaults are 10/12/14/18/20 for ExtraSmall through ExtraLarge.
+The [Badge defaults](DaisyBadge.md) are 16/20/24/28/32 in height and use the same primary font ladder, including XL.
+
 GetControlHeight returns fixed heights of 24, 28, 32, 34 and 36 for ExtraSmall through ExtraLarge.
 Unknown values return 32. This helper does not read token overrides or mobile-specific heights.
+It differs from `DaisyResourceLookup.GetDefaultHeight`: desktop 24/28/32/36/40, mobile 36/40/44/48/56.
 
 For control rendering, pass ResolvedSize to DaisyResourceLookup:
 
@@ -119,6 +124,9 @@ var fontSize = DaisyResourceLookup.GetDefaultFontSize(button.ResolvedSize);
 
 See [Design Tokens](DesignTokens.md) and [DaisyResourceLookup](DaisyResourceLookup.md)
 for token overrides and platform-specific dimensions.
+
+`GetSidebarWidth` returns 190/205/220/235/250 DIP for the five concrete tiers; other values return 220.
+This helper does not include DPI calculations or safe-area Insets. A host can own its sidebar width and add its own horizontal Insets.
 
 ## Custom Controls
 

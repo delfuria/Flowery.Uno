@@ -30,6 +30,16 @@ Use it directly in any UI, or as the `Content` of buttons, menu items, tabs, lis
 | `FontSizeOverride` | `double` | `NaN` (auto) | Explicit font size override. If `NaN`, auto-computed based on `Size`. |
 | `FontWeight` | `FontWeight` | `Normal` | Font weight for the text (e.g., `Normal`, `SemiBold`, `Bold`). |
 
+## Dynamic Content
+
+Bind `Text`, `IconData`, `IconGeometry` or `IconSymbol` to update the display. `Content` hosts the
+generated layout; it is not an alternative label property. Bindings remain active through visual
+updates and reload. Properties changed while unloaded are applied when the control loads again.
+
+The existing layout handles all four icon placements and removes the gap when either part is absent.
+Changing an explicit `Size` refreshes automatic spacing as well as icon and font dimensions.
+An explicit `Spacing` remains authoritative. These lifecycle rules also apply to `DaisyKbd`.
+
 ## Size Presets
 
 | Size | Icon Size | Font Size | Spacing |

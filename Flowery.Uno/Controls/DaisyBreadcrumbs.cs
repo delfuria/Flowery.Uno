@@ -63,6 +63,25 @@ namespace Flowery.Controls
         }
         #endregion
 
+        #region SeparatorBrush
+        public static readonly DependencyProperty SeparatorBrushProperty =
+            DependencyProperty.Register(
+                nameof(SeparatorBrush),
+                typeof(Brush),
+                typeof(DaisyBreadcrumbs),
+                new PropertyMetadata(null, OnAppearanceChanged));
+
+        /// <summary>
+        /// Gets or sets the default separator brush for items without their own brush.
+        /// Null uses each item's separator resource or theme foreground.
+        /// </summary>
+        public Brush? SeparatorBrush
+        {
+            get => (Brush?)GetValue(SeparatorBrushProperty);
+            set => SetValue(SeparatorBrushProperty, value);
+        }
+        #endregion
+
         #region SeparatorOpacity
         public static readonly DependencyProperty SeparatorOpacityProperty =
             DependencyProperty.Register(
@@ -247,6 +266,25 @@ namespace Flowery.Controls
         }
         #endregion
 
+        #region SeparatorBrush
+        public static readonly DependencyProperty SeparatorBrushProperty =
+            DependencyProperty.Register(
+                nameof(SeparatorBrush),
+                typeof(Brush),
+                typeof(DaisyBreadcrumbItem),
+                new PropertyMetadata(null, OnAppearanceChanged));
+
+        /// <summary>
+        /// Gets or sets this item's separator brush. Null uses the containing breadcrumbs' brush,
+        /// then the separator resource or theme foreground.
+        /// </summary>
+        public Brush? SeparatorBrush
+        {
+            get => (Brush?)GetValue(SeparatorBrushProperty);
+            set => SetValue(SeparatorBrushProperty, value);
+        }
+        #endregion
+
         #region Icon
         public static readonly DependencyProperty IconProperty =
             DependencyProperty.Register(
@@ -363,6 +401,18 @@ namespace Flowery.Controls
             DaisyAccessibility.TryHandleEnterOrSpace(e, OnBaseClick);
         }
 
+        private Brush? GetParentSeparatorBrush()
+        {
+            var parent = VisualTreeHelper.GetParent(this) ?? Parent;
+            while (parent != null)
+            {
+                if (parent is DaisyBreadcrumbs breadcrumbs)
+                    return breadcrumbs.SeparatorBrush;
+                parent = VisualTreeHelper.GetParent(parent) ?? (parent as FrameworkElement)?.Parent;
+            }
+            return null;
+        }
+
         internal void RebuildVisual()
         {
             if (_rootGrid == null)
@@ -389,7 +439,7 @@ namespace Flowery.Controls
             if (_separatorText != null)
             {
                 _separatorText.Text = Separator;
-                _separatorText.Foreground = separatorFgOverride ?? baseContentBrush;
+                _separatorText.Foreground = SeparatorBrush ?? GetParentSeparatorBrush() ?? separatorFgOverride ?? baseContentBrush;
                 _separatorText.Opacity = SeparatorOpacity;
                 _separatorText.FontSize = fontSize;
                 _separatorText.Visibility = IsFirst ? Visibility.Collapsed : Visibility.Visible;

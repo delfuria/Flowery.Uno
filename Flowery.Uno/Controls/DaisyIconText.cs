@@ -272,13 +272,7 @@ namespace Flowery.Controls
                 _foregroundCallbackToken = RegisterPropertyChangedCallback(ForegroundProperty, OnForegroundChanged);
             }
 
-            if (_rootPanel != null)
-            {
-                ApplyTheme();
-                return;
-            }
-
-            // Watch for Foreground changes to sync internal elements
+            // Rebuild from current properties, including changes made while unloaded.
             BuildVisualTree();
             ApplyTheme();
         }
@@ -343,6 +337,8 @@ namespace Flowery.Controls
             if (d is DaisyIconText iconText && iconText.IsLoaded)
             {
                 iconText.ApplySizing();
+                if (e.Property == SizeProperty)
+                    iconText.ApplyLayout();
             }
         }
 
@@ -368,6 +364,9 @@ namespace Flowery.Controls
 
         protected virtual void BuildVisualTree()
         {
+            _iconViewbox = null;
+            _textBlock = null;
+
             // Create root panel
             _rootPanel = new StackPanel
             {

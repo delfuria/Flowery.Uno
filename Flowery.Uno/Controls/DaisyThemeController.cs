@@ -103,10 +103,7 @@ namespace Flowery.Controls
             _lifecycle = new DaisyControlLifecycle(
                 this,
                 OnThemeUpdated,
-                () => DaisySize.Medium,
-                _ => { },
-                handleLifecycleEvents: false,
-                subscribeSizeChanges: false);
+                handleLifecycleEvents: false);
 
             Checked += OnCheckedChanged;
             Unchecked += OnCheckedChanged;

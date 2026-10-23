@@ -87,7 +87,7 @@ namespace Flowery.Controls
                 nameof(Size),
                 typeof(DaisySize),
                 typeof(DaisyBreadcrumbs),
-                new PropertyMetadata(DaisySize.Medium, OnAppearanceChanged));
+                new PropertyMetadata(DaisySize.Auto, OnAppearanceChanged));
 
         /// <summary>
         /// Gets or sets the size of the breadcrumbs.
@@ -105,18 +105,13 @@ namespace Flowery.Controls
                 breadcrumbs.SyncItemProperties();
         }
 
-        protected override void OnGlobalSizeChanged(DaisySize size)
+        protected override void OnResolvedSizeChanged()
         {
-            base.OnGlobalSizeChanged(size);
-            SetControlSize(size);
+            base.OnResolvedSizeChanged();
+            SyncItemProperties();
         }
 
         protected override DaisySize? GetControlSize() => Size;
-
-        protected override void SetControlSize(DaisySize size)
-        {
-            Size = size;
-        }
 
         private void CollectAndDisplay()
         {
@@ -159,7 +154,7 @@ namespace Flowery.Controls
                         item.IsLast = index == count - 1;
                         item.Separator = Separator;
                         item.SeparatorOpacity = SeparatorOpacity;
-                        item.Size = Size;
+                        item.Size = ResolvedSize;
                         _breadcrumbItems.Add(item);
                         _itemsPanel.Children.Add(item);
                         index++;
@@ -177,7 +172,7 @@ namespace Flowery.Controls
             {
                 item.Separator = Separator;
                 item.SeparatorOpacity = SeparatorOpacity;
-                item.Size = Size;
+                item.Size = ResolvedSize;
                 item.RebuildVisual();
             }
         }

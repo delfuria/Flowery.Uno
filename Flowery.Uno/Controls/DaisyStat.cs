@@ -51,18 +51,13 @@ namespace Flowery.Controls
             ApplyAll();
         }
 
-        protected override void OnGlobalSizeChanged(DaisySize size)
+        protected override void OnResolvedSizeChanged()
         {
-            base.OnGlobalSizeChanged(size);
-            SetControlSize(size);
+            base.OnResolvedSizeChanged();
+            ApplyAll();
         }
 
         protected override DaisySize? GetControlSize() => Size;
-
-        protected override void SetControlSize(DaisySize size)
-        {
-            Size = size;
-        }
 
         #region Title
         public static readonly DependencyProperty TitleProperty =
@@ -194,7 +189,7 @@ namespace Flowery.Controls
                 nameof(Size),
                 typeof(DaisySize),
                 typeof(DaisyStat),
-                new PropertyMetadata(DaisySize.Medium, OnAppearanceChanged));
+                new PropertyMetadata(DaisySize.Auto, OnAppearanceChanged));
 
         /// <summary>
         /// The size of the stat display.

@@ -136,7 +136,7 @@ namespace Flowery.Controls
                 nameof(Size),
                 typeof(DaisySize),
                 typeof(DaisyButtonGroup),
-                new PropertyMetadata(DaisySize.Medium, OnAppearanceChanged));
+                new PropertyMetadata(DaisySize.Auto, OnAppearanceChanged));
 
         /// <summary>
         /// Gets or sets the size applied to all segments.
@@ -306,18 +306,15 @@ namespace Flowery.Controls
                 group.ApplyTheme();
         }
 
-        protected override void OnGlobalSizeChanged(DaisySize size)
+        protected override void OnResolvedSizeChanged()
         {
-            base.OnGlobalSizeChanged(size);
-            SetControlSize(size);
+            base.OnResolvedSizeChanged();
+            ApplyTheme();
         }
 
         protected override DaisySize? GetControlSize() => Size;
 
-        protected override void SetControlSize(DaisySize size)
-        {
-            Size = size;
-        }
+        internal override DaisySize? ChildSizeOverride => Size == DaisySize.Auto ? null : Size;
 
         private void CollectAndDisplay()
         {
@@ -626,9 +623,7 @@ namespace Flowery.Controls
             if (resources != null)
                 DaisyTokenDefaults.EnsureDefaults(resources);
 
-            var effectiveSize = FlowerySizeManager.ShouldIgnoreGlobalSize(this)
-                ? Size
-                : FlowerySizeManager.CurrentSize;
+            var effectiveSize = ResolvedSize;
 
             // ---- Sizing (token-first) ----
             var sizeKey = DaisyResourceLookup.GetSizeKeyFull(effectiveSize);
@@ -644,11 +639,25 @@ namespace Flowery.Controls
 
             foreach (var seg in _segmentItems)
             {
+                if (seg is DaisyBaseContentControl contentControl)
+                    contentControl.RefreshResolvedSize();
                 if (seg is Button button)
                 {
-                    button.Height = height;
-                    button.Padding = padding;
-                    button.FontSize = fontSize;
+                    if (button is DaisyButton daisyButton)
+                    {
+                        daisyButton.RefreshResolvedSize();
+                        var segmentSize = daisyButton.ResolvedSize;
+                        var segmentKey = DaisyResourceLookup.GetSizeKeyFull(segmentSize);
+                        button.Height = DaisyResourceLookup.GetDouble(resources, $"DaisySize{segmentKey}Height", DaisyResourceLookup.GetDefaultHeight(segmentSize));
+                        button.Padding = DaisyResourceLookup.GetThickness(resources, $"DaisyButton{segmentKey}Padding", DaisyResourceLookup.GetDefaultPadding(segmentSize));
+                        button.FontSize = DaisyResourceLookup.GetDouble(resources, $"DaisySize{segmentKey}FontSize", DaisyResourceLookup.GetDefaultFontSize(segmentSize));
+                    }
+                    else
+                    {
+                        button.Height = height;
+                        button.Padding = padding;
+                        button.FontSize = fontSize;
+                    }
                     button.HorizontalContentAlignment = HorizontalAlignment.Center;
                     button.VerticalContentAlignment = VerticalAlignment.Center;
                 }

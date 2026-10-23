@@ -29,18 +29,13 @@ namespace Flowery.Controls.Weather
             ApplyAll();
         }
 
-        protected override void OnGlobalSizeChanged(DaisySize size)
+        protected override void OnResolvedSizeChanged()
         {
-            base.OnGlobalSizeChanged(size);
-            SetControlSize(size);
+            base.OnResolvedSizeChanged();
+            UpdateSizeVisualState();
         }
 
         protected override DaisySize? GetControlSize() => Size;
-
-        protected override void SetControlSize(DaisySize size)
-        {
-            Size = size;
-        }
 
         private void ApplyAll()
         {
@@ -65,7 +60,7 @@ namespace Flowery.Controls.Weather
                 nameof(Size),
                 typeof(DaisySize),
                 typeof(DaisyWeatherMetrics),
-                new PropertyMetadata(DaisySize.Medium, OnSizeChanged));
+                new PropertyMetadata(DaisySize.Auto, OnSizeChanged));
 
         /// <summary>
         /// The size of the metrics display.
@@ -97,7 +92,7 @@ namespace Flowery.Controls.Weather
 
         private void UpdateSizeVisualState()
         {
-            var stateName = Size switch
+            var stateName = ResolvedSize switch
             {
                 DaisySize.ExtraSmall => "ExtraSmall",
                 DaisySize.Small => "Small",

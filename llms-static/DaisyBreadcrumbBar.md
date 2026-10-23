@@ -17,11 +17,13 @@ overflow ellipsis.
 
 ## Size Options
 
+`Size` defaults to `Auto`. `ResolvedSize` exposes the concrete tier selected by [global sizing](FlowerySizeManager.md); an explicit tier remains unchanged.
+
 | Size | Description |
 | --- | --- |
 | ExtraSmall | Compact breadcrumbs for dense layouts |
 | Small | Tight navigation trails |
-| Medium | Default sizing |
+| Medium | General-purpose sizing |
 | Large | More prominent breadcrumb text |
 | ExtraLarge | Large display breadcrumb trails |
 

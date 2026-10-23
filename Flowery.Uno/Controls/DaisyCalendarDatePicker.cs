@@ -34,11 +34,6 @@ namespace Flowery.Controls
             DefaultStyleKey = typeof(DaisyCalendarDatePicker);
             IsTabStop = false;
 
-            // Apply global size early if allowed and not explicitly ignored.
-            if (FlowerySizeManager.UseGlobalSizeByDefault && !FlowerySizeManager.GetIgnoreGlobalSize(this))
-            {
-                Size = FlowerySizeManager.CurrentSize;
-            }
         }
 
         #region Dependency Properties
@@ -108,7 +103,7 @@ namespace Flowery.Controls
                 nameof(Size),
                 typeof(DaisySize),
                 typeof(DaisyCalendarDatePicker),
-                new PropertyMetadata(DaisySize.Medium, OnAppearanceChanged));
+                new PropertyMetadata(DaisySize.Auto, OnAppearanceChanged));
 
         /// <summary>
         /// Gets or sets the size of the date picker.
@@ -214,18 +209,13 @@ namespace Flowery.Controls
             ApplyAll();
         }
 
-        protected override void OnGlobalSizeChanged(DaisySize size)
+        protected override void OnResolvedSizeChanged()
         {
-            base.OnGlobalSizeChanged(size);
-            SetControlSize(size);
+            base.OnResolvedSizeChanged();
+            ApplyAll();
         }
 
         protected override DaisySize? GetControlSize() => Size;
-
-        protected override void SetControlSize(DaisySize size)
-        {
-            Size = size;
-        }
 
         protected override FrameworkElement? GetNeumorphicHostElement()
         {
@@ -351,12 +341,12 @@ namespace Flowery.Controls
             if (_inputBorder == null || _calendarDatePicker == null)
                 return;
 
-            var controlHeight = DaisyResourceLookup.GetSizeDouble(resources, "DaisySize", Size, "Height",
-                DaisyResourceLookup.GetDefaultHeight(Size));
-            var fontSize = DaisyResourceLookup.GetSizeDouble(resources, "DaisySize", Size, "FontSize",
-                DaisyResourceLookup.GetDefaultFontSize(Size));
-            var defaultPadding = DaisyResourceLookup.GetSizeThickness(resources, "DaisyInput", Size, "Padding",
-                DaisyResourceLookup.GetDefaultPadding(Size));
+            var controlHeight = DaisyResourceLookup.GetSizeDouble(resources, "DaisySize", ResolvedSize, "Height",
+                DaisyResourceLookup.GetDefaultHeight(ResolvedSize));
+            var fontSize = DaisyResourceLookup.GetSizeDouble(resources, "DaisySize", ResolvedSize, "FontSize",
+                DaisyResourceLookup.GetDefaultFontSize(ResolvedSize));
+            var defaultPadding = DaisyResourceLookup.GetSizeThickness(resources, "DaisyInput", ResolvedSize, "Padding",
+                DaisyResourceLookup.GetDefaultPadding(ResolvedSize));
 
             Height = controlHeight;
             FontSize = fontSize;

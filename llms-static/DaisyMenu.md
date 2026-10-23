@@ -7,10 +7,12 @@ DaisyMenu is a styled menu control for navigation menus. It supports vertical or
 
 ## Orientation & Sizes
 
+`Size` defaults to `Auto`. Read `ResolvedSize` for the concrete tier used to render the control. Explicit sizes and bindings are preserved; see [size precedence](FlowerySizeManager.md#size-ownership-and-precedence).
+
 | Option | Description |
 | --- | --- |
 | `Orientation` | `Vertical` (default) or `Horizontal`. Horizontal enables horizontal scrolling if needed. |
-| `Size` | ExtraSmall, Small, Medium (default), Large, ExtraLarge adjust padding/font on items. |
+| `Size` | Auto (default), or ExtraSmall, Small, Medium, Large, ExtraLarge to set padding/font on items. |
 
 ## Active Styling
 

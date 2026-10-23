@@ -109,7 +109,7 @@ namespace Flowery.Controls
                 nameof(Size),
                 typeof(DaisySize),
                 typeof(DaisyIconText),
-                new PropertyMetadata(DaisySize.Medium, OnSizeChanged));
+                new PropertyMetadata(DaisySize.Auto, OnSizeChanged));
 
         /// <summary>
         /// Gets or sets the size preset. Controls both icon dimensions and font size.
@@ -212,19 +212,19 @@ namespace Flowery.Controls
         /// Gets the effective icon size, computing from Size if not explicitly set.
         /// </summary>
         public double EffectiveIconSize =>
-            !double.IsNaN(IconSize) ? IconSize : DaisyResourceLookup.GetDefaultIconSize(Size);
+            !double.IsNaN(IconSize) ? IconSize : DaisyResourceLookup.GetDefaultIconSize(ResolvedSize);
 
         /// <summary>
         /// Gets the effective font size, computing from Size if not explicitly set.
         /// </summary>
         public double EffectiveFontSize =>
-            !double.IsNaN(FontSizeOverride) ? FontSizeOverride : DaisyResourceLookup.GetDefaultFontSize(Size);
+            !double.IsNaN(FontSizeOverride) ? FontSizeOverride : DaisyResourceLookup.GetDefaultFontSize(ResolvedSize);
 
         /// <summary>
         /// Gets the effective spacing, computing from Size if not explicitly set.
         /// </summary>
         public double EffectiveSpacing =>
-            !double.IsNaN(Spacing) ? Spacing : DaisyResourceLookup.GetDefaultIconSpacing(Size);
+            !double.IsNaN(Spacing) ? Spacing : DaisyResourceLookup.GetDefaultIconSpacing(ResolvedSize);
 
         /// <summary>
         /// Returns true if an icon should be displayed.
@@ -295,18 +295,14 @@ namespace Flowery.Controls
                 icon.Foreground = Foreground;
         }
 
-        protected override void OnGlobalSizeChanged(DaisySize size)
+        protected override void OnResolvedSizeChanged()
         {
-            base.OnGlobalSizeChanged(size);
-            SetControlSize(size);
+            base.OnResolvedSizeChanged();
+            ApplySizing();
+            ApplyLayout();
         }
 
         protected override DaisySize? GetControlSize() => Size;
-
-        protected override void SetControlSize(DaisySize size)
-        {
-            Size = size;
-        }
 
         protected override void OnThemeChanged(string themeName)
         {

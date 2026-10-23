@@ -14,13 +14,15 @@ It also supports non-clickable segments (for counters/labels) by using a `Border
 | Member | Description |
 | --- | --- |
 | `Variant` (`DaisyButtonVariant`) | Applies a unified color variant to all segments (Default, Primary, Secondary, Accent, etc.). |
-| `Size` (`DaisySize`) | Applies size tokens to all segments (height, padding, font size). |
+| `Size` (`DaisySize`, default `Auto`) | Supplies the tier for automatic DaisyButton children and native segments. Explicit DaisyButton tiers, including styles and bindings, remain unchanged. |
 | `ButtonStyle` (`DaisyButtonStyle`) | Segment style: `Default`, `Outline`, `Soft`, `Dash` (outer dashed border). |
 | `Shape` (`DaisyButtonGroupShape`) | Corner rounding: `Default`, `Square`, `Rounded`, `Pill`. |
 | `Orientation` (`Orientation`) | Layout direction (`Horizontal` or `Vertical`). |
 | `AutoSelect` (`bool`) | When `True`, clicking a button segment applies the `button-group-active` class to it and removes it from sibling buttons. |
 | `ShowShadow` (`bool`) | When `True`, renders a subtle shadow around the group. |
 | `ItemSelected` event | Raised when a button segment is clicked; provides the clicked `Control`. |
+
+`ResolvedSize` exposes the group's concrete tier. Clear the group `Size` or set it to `Auto` to resume [global sizing](FlowerySizeManager.md).
 
 ## Quick Examples
 

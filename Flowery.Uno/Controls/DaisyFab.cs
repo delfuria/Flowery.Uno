@@ -176,7 +176,7 @@ namespace Flowery.Controls
                 nameof(Size),
                 typeof(DaisySize),
                 typeof(DaisyFab),
-                new PropertyMetadata(DaisySize.Large, OnAppearanceChanged));
+                new PropertyMetadata(DaisySize.Auto, OnAppearanceChanged));
 
         public DaisySize Size
         {
@@ -248,18 +248,17 @@ namespace Flowery.Controls
             UpdateTriggerButton();
         }
 
-        protected override void OnGlobalSizeChanged(DaisySize size)
+        protected override void OnResolvedSizeChanged()
         {
-            base.OnGlobalSizeChanged(size);
-            SetControlSize(size);
+            base.OnResolvedSizeChanged();
+            UpdateTriggerButton();
         }
 
         protected override DaisySize? GetControlSize() => Size;
 
-        protected override void SetControlSize(DaisySize size)
-        {
-            Size = size;
-        }
+        protected override DaisySize DefaultSize => DaisySize.Large;
+
+        internal override DaisySize? ChildSizeOverride => Size == DaisySize.Auto ? null : Size;
 
         #endregion
 
@@ -316,7 +315,6 @@ namespace Flowery.Controls
                         _actionButtons.Add(btn);
                         btn.Click += OnActionButtonClick;
                         btn.Shape = DaisyButtonShape.Circle;
-                        btn.Size = Size;
                         if (!DaisyNeumorphic.GetIsEnabled(btn).HasValue)
                         {
                             DaisyNeumorphic.SetIsEnabled(btn, true);
@@ -330,7 +328,6 @@ namespace Flowery.Controls
                 _actionButtons.Add(singleBtn);
                 singleBtn.Click += OnActionButtonClick;
                 singleBtn.Shape = DaisyButtonShape.Circle;
-                singleBtn.Size = Size;
                 if (!DaisyNeumorphic.GetIsEnabled(singleBtn).HasValue)
                 {
                     DaisyNeumorphic.SetIsEnabled(singleBtn, true);
@@ -352,7 +349,7 @@ namespace Flowery.Controls
             _triggerButton = new DaisyButton
             {
                 Shape = DaisyButtonShape.Circle,
-                Size = Size,
+                Size = ResolvedSize,
                 Variant = TriggerVariant,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
@@ -370,7 +367,7 @@ namespace Flowery.Controls
                 _triggerIconText = new DaisyIconText
                 {
                     IconData = iconData,
-                    Size = Size,
+                    Size = ResolvedSize,
                     IconSize = double.IsNaN(TriggerIconSize) ? double.NaN : TriggerIconSize,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center
@@ -394,7 +391,7 @@ namespace Flowery.Controls
                 _triggerIconText = new DaisyIconText
                 {
                     IconData = "M12 5v14M5 12h14", // Plus icon path
-                    Size = Size,
+                    Size = ResolvedSize,
                     IconSize = double.IsNaN(TriggerIconSize) ? double.NaN : TriggerIconSize,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center
@@ -466,13 +463,13 @@ namespace Flowery.Controls
             if (_triggerButton == null)
                 return;
 
-            _triggerButton.Size = Size;
+            _triggerButton.Size = ResolvedSize;
             _triggerButton.Variant = TriggerVariant;
 
             // Propagate size to all action buttons
             foreach (var btn in _actionButtons)
             {
-                btn.Size = Size;
+                btn.RefreshResolvedSize();
             }
 
             // Update trigger icon size
@@ -498,7 +495,7 @@ namespace Flowery.Controls
                 return;
 
             // DaisyIconText handles all sizing internally
-            _triggerIconText.Size = Size;
+            _triggerIconText.Size = ResolvedSize;
             _triggerIconText.IconSize = double.IsNaN(TriggerIconSize) ? double.NaN : TriggerIconSize;
         }
 
@@ -555,7 +552,7 @@ namespace Flowery.Controls
 
         private double GetActionsPanelOffset()
         {
-            return Size switch
+            return ResolvedSize switch
             {
                 DaisySize.ExtraSmall => 8,
                 DaisySize.Small => 10,

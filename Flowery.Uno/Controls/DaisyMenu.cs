@@ -54,18 +54,13 @@ namespace Flowery.Controls
             ApplyTheme();
         }
 
-        protected override void OnGlobalSizeChanged(DaisySize size)
+        protected override void OnResolvedSizeChanged()
         {
-            base.OnGlobalSizeChanged(size);
-            SetControlSize(size);
+            base.OnResolvedSizeChanged();
+            ApplyTheme();
         }
 
         protected override DaisySize? GetControlSize() => Size;
-
-        protected override void SetControlSize(DaisySize size)
-        {
-            Size = size;
-        }
 
         protected override FrameworkElement? GetNeumorphicHostElement()
         {
@@ -93,7 +88,7 @@ namespace Flowery.Controls
                 nameof(Size),
                 typeof(DaisySize),
                 typeof(DaisyMenu),
-                new PropertyMetadata(DaisySize.Medium, OnAppearanceChanged));
+                new PropertyMetadata(DaisySize.Auto, OnAppearanceChanged));
 
         public DaisySize Size
         {
@@ -234,7 +229,7 @@ namespace Flowery.Controls
                     if (child is DaisyMenuItem item)
                     {
                         item.ParentMenu = this;
-                        item.Size = Size;
+                        item.Size = ResolvedSize;
                         item.HorizontalAlignment = Orientation == Orientation.Vertical
                             ? HorizontalAlignment.Stretch
                             : HorizontalAlignment.Left;
@@ -281,7 +276,7 @@ namespace Flowery.Controls
 
             foreach (var item in _menuItems)
             {
-                item.Size = Size;
+                item.Size = ResolvedSize;
                 item.ActiveBackground = ActiveBackground;
                 item.ActiveForeground = ActiveForeground;
                 item.RebuildVisual();

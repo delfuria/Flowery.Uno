@@ -64,13 +64,15 @@ namespace Flowery.Controls
                 nameof(Size),
                 typeof(DaisySize),
                 typeof(DaisyButton),
-                new PropertyMetadata(DaisySize.Medium, OnStylePropertyChanged));
+                new PropertyMetadata(DaisySize.Auto, OnStylePropertyChanged));
 
         public DaisySize Size
         {
             get => (DaisySize)GetValue(SizeProperty);
             set => SetValue(SizeProperty, value);
         }
+
+        public DaisySize ResolvedSize => FlowerySizeManager.ResolveSize(this, Size);
 
         public static readonly DependencyProperty ButtonStyleProperty =
             DependencyProperty.Register(
@@ -269,9 +271,8 @@ namespace Flowery.Controls
             _lifecycle = new DaisyControlLifecycle(
                 this,
                 ApplyAll,
-                () => Size,
-                s => Size = s,
                 handleLifecycleEvents: false);
+            FlowerySizeManager.Register(this, RefreshResolvedSize, () => ResolvedSize);
 
             Loaded += OnLoaded;
             Unloaded += OnUnloaded;
@@ -400,7 +401,7 @@ namespace Flowery.Controls
             var isEnabled = IsNeumorphicEffectivelyEnabled(resolution);
             var mode = resolution.Mode;
             var intensity = resolution.Intensity;
-            var elevation = DaisyResourceLookup.GetDefaultElevation(Size);
+            var elevation = DaisyResourceLookup.GetDefaultElevation(ResolvedSize);
 
             if (!isEnabled)
             {
@@ -965,12 +966,12 @@ namespace Flowery.Controls
         /// <summary>
         /// Gets the appropriate icon size based on button Size.
         /// </summary>
-        private double GetIconSizeForButtonSize() => DaisyResourceLookup.GetDefaultIconSize(Size);
+        private double GetIconSizeForButtonSize() => DaisyResourceLookup.GetDefaultIconSize(ResolvedSize);
 
         /// <summary>
         /// Gets the appropriate icon-to-text spacing based on button Size.
         /// </summary>
-        private double GetIconSpacingForSize() => DaisyResourceLookup.GetDefaultIconSpacing(Size);
+        private double GetIconSpacingForSize() => DaisyResourceLookup.GetDefaultIconSpacing(ResolvedSize);
 
         private void OnUnloaded(object sender, RoutedEventArgs e)
         {
@@ -1013,6 +1014,8 @@ namespace Flowery.Controls
             ApplyCurrentPointerState();
         }
 
+        internal virtual void RefreshResolvedSize() => ApplyAll();
+
         private void ApplyAll()
         {
             var resources = Application.Current?.Resources;
@@ -1029,7 +1032,7 @@ namespace Flowery.Controls
 
         private void ApplySizing(ResourceDictionary? resources)
         {
-            var size = Size;
+            var size = ResolvedSize;
 
             // Tokens are guaranteed by EnsureDefaults(); fallbacks only for null resources edge case
             Height = DaisyResourceLookup.GetSizeDouble(resources, "DaisySize", size, "Height",
@@ -1090,8 +1093,8 @@ namespace Flowery.Controls
             if (label.ReadLocalValue(TextBlock.LineHeightProperty) != DependencyProperty.UnsetValue)
                 return;
 
-            var lineHeight = DaisyResourceLookup.GetSizeDouble(resources, "DaisySize", Size, "LineHeight",
-                DaisyResourceLookup.GetDefaultLineHeight(Size));
+            var lineHeight = DaisyResourceLookup.GetSizeDouble(resources, "DaisySize", ResolvedSize, "LineHeight",
+                DaisyResourceLookup.GetDefaultLineHeight(ResolvedSize));
             label.LineHeight = lineHeight;
         }
 

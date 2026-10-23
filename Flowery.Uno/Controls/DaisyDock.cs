@@ -67,7 +67,7 @@ namespace Flowery.Controls
                 nameof(Size),
                 typeof(DaisySize),
                 typeof(DaisyDock),
-                new PropertyMetadata(DaisySize.Medium, OnAppearanceChanged));
+                new PropertyMetadata(DaisySize.Auto, OnAppearanceChanged));
 
         public DaisySize Size
         {
@@ -239,18 +239,15 @@ namespace Flowery.Controls
             e.Handled = handled;
         }
 
-        protected override void OnGlobalSizeChanged(DaisySize size)
+        protected override void OnResolvedSizeChanged()
         {
-            base.OnGlobalSizeChanged(size);
-            SetControlSize(size);
+            base.OnResolvedSizeChanged();
+            ApplyAll();
         }
 
         protected override DaisySize? GetControlSize() => Size;
 
-        protected override void SetControlSize(DaisySize size)
-        {
-            Size = size;
-        }
+        internal override DaisySize? ChildSizeOverride => Size == DaisySize.Auto ? null : Size;
 
         #endregion
 
@@ -447,10 +444,7 @@ namespace Flowery.Controls
                 DaisyTokenDefaults.EnsureDefaults(resources);
 
             // Get size key for token lookup
-            var sizeKey = DaisyResourceLookup.GetSizeKeyFull(Size);
-
-            // Look up item size from design tokens
-            double itemSize = DaisyResourceLookup.GetDouble($"DaisyDock{sizeKey}ItemSize", 32);
+            var sizeKey = DaisyResourceLookup.GetSizeKeyFull(ResolvedSize);
 
             // Look up spacing from design tokens
             double spacing = DaisyResourceLookup.GetDouble($"DaisyDock{sizeKey}Spacing", 4);
@@ -459,13 +453,20 @@ namespace Flowery.Controls
 
             // Icon size ratio from design tokens
             double iconSizeRatio = DaisyResourceLookup.GetDouble("DaisyDockIconSizeRatio", 0.6);
-            double iconSize = itemSize * iconSizeRatio;
 
             // Apply size to all dock items
             for (int i = 0; i < _itemsPanel.Children.Count; i++)
             {
                 if (_itemsPanel.Children[i] is Border container && container.Child != null)
                 {
+                    var itemSizeTier = ResolvedSize;
+                    if (container.Child is DaisyBaseContentControl childControl)
+                    {
+                        childControl.RefreshResolvedSize();
+                        itemSizeTier = childControl.ResolvedSize;
+                    }
+                    var itemSizeKey = DaisyResourceLookup.GetSizeKeyFull(itemSizeTier);
+                    double itemSize = DaisyResourceLookup.GetDouble($"DaisyDock{itemSizeKey}ItemSize", 32);
                     if (container.Child is FrameworkElement fe)
                     {
                         fe.Width = itemSize;
@@ -475,9 +476,7 @@ namespace Flowery.Controls
                     // If the child is DaisyIconText, set its IconSize to scale properly
                     if (container.Child is DaisyIconText iconText)
                     {
-                        iconText.IconSize = iconSize;
-                        // Prevent global size from overriding our explicit sizing
-                        FlowerySizeManager.SetIgnoreGlobalSize(iconText, true);
+                        iconText.IconSize = itemSize * iconSizeRatio;
                     }
                 }
             }

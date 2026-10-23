@@ -11,7 +11,7 @@ namespace Flowery.Controls.Weather
     /// Displays a horizontal strip of daily weather forecasts.
     /// Uses DaisyWeatherForecastItem as item containers to support size-responsive styling.
     /// </summary>
-    public partial class DaisyWeatherForecast : ItemsControl
+    public partial class DaisyWeatherForecast : ItemsControl, IDaisySizeScope
     {
         private const double MinItemSpacing = 2;
         private readonly DaisyControlLifecycle _lifecycle;
@@ -30,9 +30,8 @@ namespace Flowery.Controls.Weather
 
             _lifecycle = new DaisyControlLifecycle(
                 this,
-                applyAll: ApplyAll,
-                getSize: () => Size,
-                setSize: s => Size = s);
+                applyAll: ApplyAll);
+            FlowerySizeManager.Register(this, ApplySizing, () => ResolvedSize);
         }
 
         private void ApplyAll()
@@ -56,7 +55,7 @@ namespace Flowery.Controls.Weather
                 nameof(Size),
                 typeof(DaisySize),
                 typeof(DaisyWeatherForecast),
-                new PropertyMetadata(DaisySize.Medium, OnSizePropertyChanged));
+                new PropertyMetadata(DaisySize.Auto, OnSizePropertyChanged));
 
         /// <summary>
         /// The size of the forecast display.
@@ -67,6 +66,19 @@ namespace Flowery.Controls.Weather
         {
             get => (DaisySize)GetValue(SizeProperty);
             set => SetValue(SizeProperty, value);
+        }
+
+        public DaisySize ResolvedSize => FlowerySizeManager.ResolveSize(this, Size);
+
+        DaisySize? IDaisySizeScope.ChildSizeOverride
+        {
+            get
+            {
+                var availableWidth = GetAvailableWidth();
+                return AutoFitItems && availableWidth > 0 && Items.Count > 0
+                    ? CalculateItemSizing(availableWidth).EffectiveSize
+                    : ResolvedSize;
+            }
         }
 
         private static void OnSizePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -206,7 +218,7 @@ namespace Flowery.Controls.Weather
             else
             {
                 // Use visual state-based sizing
-                PropagrateSizeToItems(null, Size);
+                PropagrateSizeToItems(null, ResolvedSize);
             }
             UpdateScrollIndicators();
         }
@@ -251,7 +263,7 @@ namespace Flowery.Controls.Weather
         {
             int itemCount = Items.Count;
             if (itemCount <= 0 || availableWidth <= 0)
-                return (double.NaN, MinItemSpacing, Size);
+                return (double.NaN, MinItemSpacing, ResolvedSize);
 
             // Favor internal width (padding) over large gaps. 
             // Keep spacing fixed at minimum unless manually overridden.
@@ -263,7 +275,7 @@ namespace Flowery.Controls.Weather
             // Distribute all remaining space to the items to create a solid dashboard look
             double finalItemWidth = (availableWidth - totalSpacing) / itemCount;
             
-            DaisySize effectiveSize = Size;
+            DaisySize effectiveSize = ResolvedSize;
 
             // If items would be too small, hit the floor and enable scrolling
             if (finalItemWidth < AbsoluteMinItemWidth)
@@ -273,9 +285,9 @@ namespace Flowery.Controls.Weather
 
             // Cap the effective size at the requested Size.
             // Items can scale DOWN to fit width, but should not scale UP beyond requested global size.
-            if ((int)effectiveSize > (int)Size)
+            if ((int)effectiveSize > (int)ResolvedSize)
             {
-                effectiveSize = Size;
+                effectiveSize = ResolvedSize;
             }
 
             // Update effective size based on resulting width for styling (downscaling only)
@@ -288,7 +300,7 @@ namespace Flowery.Controls.Weather
 
         private void UpdateSizeVisualState()
         {
-            var stateName = Size switch
+            var stateName = ResolvedSize switch
             {
                 DaisySize.ExtraSmall => "ExtraSmall",
                 DaisySize.Small => "Small",
@@ -309,7 +321,10 @@ namespace Flowery.Controls.Weather
                 if (ContainerFromIndex(i) is DaisyWeatherForecastItem container)
                 {
                     // Use effective size (may be scaled down by AutoFitItems)
-                    container.Size = effectiveSize;
+                    if (Items[i] is not DaisyWeatherForecastItem)
+                        container.Size = effectiveSize;
+                    else
+                        container.RefreshResolvedSize();
                     container.TemperatureUnit = TemperatureUnit;
                     container.ShowPrecipitation = ShowPrecipitation;
 
@@ -404,7 +419,7 @@ namespace Flowery.Controls.Weather
                 container.HighTemperature = forecast.HighTemperature;
                 container.LowTemperature = forecast.LowTemperature;
                 container.PrecipitationChance = forecast.ChanceOfPrecipitation;
-                container.Size = Size;
+                container.Size = ResolvedSize;
                 container.TemperatureUnit = TemperatureUnit;
                 container.ShowPrecipitation = ShowPrecipitation;
 

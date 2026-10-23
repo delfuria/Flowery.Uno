@@ -66,18 +66,15 @@ namespace Flowery.Controls
             ApplyTheme();
         }
 
-        protected override void OnGlobalSizeChanged(DaisySize size)
+        protected override void OnResolvedSizeChanged()
         {
-            base.OnGlobalSizeChanged(size);
-            SetControlSize(size);
+            base.OnResolvedSizeChanged();
+            ApplyLayoutChanges();
         }
 
         protected override DaisySize? GetControlSize() => Size;
 
-        protected override void SetControlSize(DaisySize size)
-        {
-            Size = size;
-        }
+        internal override DaisySize? ChildSizeOverride => Size == DaisySize.Auto ? null : Size;
 
         #region Orientation
         public static readonly DependencyProperty OrientationProperty =
@@ -100,7 +97,7 @@ namespace Flowery.Controls
                 nameof(Size),
                 typeof(DaisySize),
                 typeof(DaisySteps),
-                new PropertyMetadata(DaisySize.Medium, OnLayoutChanged));
+                new PropertyMetadata(DaisySize.Auto, OnLayoutChanged));
 
         public DaisySize Size
         {
@@ -239,7 +236,6 @@ namespace Flowery.Controls
                     {
                         stepItem.Index = index;
                         stepItem.Orientation = Orientation;
-                        stepItem.Size = Size;
                         _stepItems.Add(stepItem);
                         _itemsPanel.Children.Add(stepItem);
                         index++;
@@ -270,7 +266,6 @@ namespace Flowery.Controls
             foreach (var step in _stepItems)
             {
                 step.Orientation = Orientation;
-                step.Size = Size;
                 step.RebuildVisual();
             }
 
@@ -342,18 +337,13 @@ namespace Flowery.Controls
             RebuildVisual();
         }
 
-        protected override void OnGlobalSizeChanged(DaisySize size)
+        protected override void OnResolvedSizeChanged()
         {
-            base.OnGlobalSizeChanged(size);
-            SetControlSize(size);
+            base.OnResolvedSizeChanged();
+            RebuildVisual();
         }
 
         protected override DaisySize? GetControlSize() => Size;
-
-        protected override void SetControlSize(DaisySize size)
-        {
-            Size = size;
-        }
 
         #region Color
         public static readonly DependencyProperty ColorProperty =
@@ -376,7 +366,7 @@ namespace Flowery.Controls
                 nameof(Size),
                 typeof(DaisySize),
                 typeof(DaisyStepItem),
-                new PropertyMetadata(DaisySize.Medium, OnAppearanceChanged));
+                new PropertyMetadata(DaisySize.Auto, OnAppearanceChanged));
 
         public DaisySize Size
         {
@@ -488,8 +478,8 @@ namespace Flowery.Controls
 
                 // Indicator container
                 var indicatorContainer = new Grid();
-                var indSize = GetIndicatorSize(Size);
-                var fontSize = GetFontSize(Size);
+                var indSize = GetIndicatorSize(ResolvedSize);
+                var fontSize = GetFontSize(ResolvedSize);
 
                 _indicator = new Ellipse 
                 { 
@@ -527,8 +517,8 @@ namespace Flowery.Controls
                 {
                     HorizontalAlignment = HorizontalAlignment.Center,
                     TextAlignment = Microsoft.UI.Xaml.TextAlignment.Center,
-                    Margin = new Thickness(DaisyResourceLookup.GetSpacing(Size) / 2, DaisyResourceLookup.GetSpacing(Size) * 0.6, DaisyResourceLookup.GetSpacing(Size) / 2, 0),
-                    FontSize = GetFontSize(Size),
+                    Margin = new Thickness(DaisyResourceLookup.GetSpacing(ResolvedSize) / 2, DaisyResourceLookup.GetSpacing(ResolvedSize) * 0.6, DaisyResourceLookup.GetSpacing(ResolvedSize) / 2, 0),
+                    FontSize = GetFontSize(ResolvedSize),
                     TextWrapping = TextWrapping.Wrap
                 };
                 Grid.SetRow(_labelBlock, 1);
@@ -536,7 +526,7 @@ namespace Flowery.Controls
                 Grid.SetColumnSpan(_labelBlock, 3);
                 _rootGrid.Children.Add(_labelBlock);
 
-                _rootGrid.MinWidth = GetMinStepSize(Size);
+                _rootGrid.MinWidth = GetMinStepSize(ResolvedSize);
             }
             else
             {
@@ -555,8 +545,8 @@ namespace Flowery.Controls
 
                 // Indicator container
                 var indicatorContainer = new Grid();
-                var indSize = GetIndicatorSize(Size);
-                var fontSize = GetFontSize(Size);
+                var indSize = GetIndicatorSize(ResolvedSize);
+                var fontSize = GetFontSize(ResolvedSize);
 
                 _indicator = new Ellipse 
                 { 
@@ -587,8 +577,8 @@ namespace Flowery.Controls
                 _labelBlock = new TextBlock
                 {
                     VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(DaisyResourceLookup.GetSpacing(Size), 0, 0, 0),
-                    FontSize = GetFontSize(Size)
+                    Margin = new Thickness(DaisyResourceLookup.GetSpacing(ResolvedSize), 0, 0, 0),
+                    FontSize = GetFontSize(ResolvedSize)
                 };
                 Grid.SetRow(_labelBlock, 1);
                 Grid.SetColumn(_labelBlock, 1);
@@ -600,7 +590,7 @@ namespace Flowery.Controls
                 Grid.SetColumn(_connectorAfter, 0);
                 _rootGrid.Children.Add(_connectorAfter);
 
-                _rootGrid.MinHeight = GetMinStepSize(Size);
+                _rootGrid.MinHeight = GetMinStepSize(ResolvedSize);
             }
         }
 

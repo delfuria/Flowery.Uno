@@ -390,7 +390,7 @@ namespace Flowery.Uno.Gallery
             base.ApplySizeToControls();
 
             var metrics = GetSidebarMetrics();
-            var selectorSize = GetSelectorSize(Size);
+            var selectorSize = GetSelectorSize(ResolvedSize);
 
             if (_languageSelector != null)
             {
@@ -430,7 +430,7 @@ namespace Flowery.Uno.Gallery
             base.ApplyControlFontSizes();
 
             var resources = Application.Current?.Resources;
-            var selectorSize = GetSelectorSize(Size);
+            var selectorSize = GetSelectorSize(ResolvedSize);
             var fontSize = GetFontSizeForSize(selectorSize, resources);
 
             if (_languageSelector != null)
@@ -517,7 +517,7 @@ namespace Flowery.Uno.Gallery
         private StackPanel BuildThemeSelector(SidebarItem item, Panel parentPanel)
         {
             var metrics = GetSidebarMetrics();
-            var selectorSize = GetSelectorSize(Size);
+            var selectorSize = GetSelectorSize(ResolvedSize);
             var selectorHeight = DaisyResourceLookup.GetDefaultHeight(selectorSize);
 
             var selector = new DaisyThemeDropdown
@@ -546,7 +546,7 @@ namespace Flowery.Uno.Gallery
         private StackPanel BuildLanguageSelector(SidebarItem item, Panel parentPanel)
         {
             var metrics = GetSidebarMetrics();
-            var selectorSize = GetSelectorSize(Size);
+            var selectorSize = GetSelectorSize(ResolvedSize);
             var selectorHeight = DaisyResourceLookup.GetDefaultHeight(selectorSize);
 
             var selector = new DaisySelect
@@ -579,7 +579,7 @@ namespace Flowery.Uno.Gallery
         private StackPanel BuildSizeSelector(SidebarItem item, Panel parentPanel)
         {
             var metrics = GetSidebarMetrics();
-            var selectorSize = GetSelectorSize(Size);
+            var selectorSize = GetSelectorSize(ResolvedSize);
             var selectorHeight = DaisyResourceLookup.GetDefaultHeight(selectorSize);
 
             var panel = new StackPanel

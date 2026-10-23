@@ -22,11 +22,13 @@ DaisyCalendarDatePicker provides a themed CalendarDatePicker that matches Daisy 
 
 ## Size Options
 
+`Size` defaults to `Auto`. `ResolvedSize` exposes the concrete tier selected by [global sizing](FlowerySizeManager.md); an explicit tier remains unchanged.
+
 | Size | Use Case |
 | --- | --- |
 | ExtraSmall | Compact toolbars or dense forms. |
 | Small | Tight layouts. |
-| Medium | Default sizing. |
+| Medium | General-purpose sizing. |
 | Large | Touch-friendly inputs. |
 | ExtraLarge | Prominent date entry surfaces. |
 

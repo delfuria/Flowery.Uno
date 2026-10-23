@@ -39,11 +39,13 @@ DaisyButton delivers DaisyUI-styled actions with **11 color variants**, **4 visu
 
 ## Size Options
 
+`Size` defaults to `Auto`. Read `ResolvedSize` for the concrete tier used to render the control. Explicit sizes and bindings are preserved; see [size precedence](FlowerySizeManager.md#size-ownership-and-precedence).
+
 | Size | Height | Padding | Typical Use |
 | --- | --- | --- | --- |
 | ExtraSmall | 24px | 8px horizontal | Dense toolbars, icon circles. |
 | Small | 32px | 12px horizontal | Compact forms, secondary actions. |
-| Medium (default) | 48px | 16px horizontal | General purpose. |
+| Medium | 48px | 16px horizontal | General purpose. |
 | Large | 64px | 24px horizontal | Hero sections, primary CTAs. |
 | ExtraLarge | 80px | 32px horizontal | Splash/marketing layouts. |
 

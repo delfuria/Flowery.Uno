@@ -20,7 +20,8 @@ namespace Flowery.Uno.RuntimeTests.Controls
             await RuntimeTestHelpers.EnsureLoadedAsync(loading);
 
             Assert.AreEqual(DaisyLoadingVariant.Spinner, loading.Variant);
-            Assert.AreEqual(DaisySize.Small, loading.Size);
+            Assert.AreEqual(DaisySize.Auto, loading.Size);
+            Assert.AreEqual(FlowerySizeManager.CurrentSize, loading.ResolvedSize);
             Assert.AreEqual(DaisyColor.Default, loading.Color);
             Assert.IsTrue(double.IsNaN(loading.PixelSize));
 
@@ -58,7 +59,8 @@ namespace Flowery.Uno.RuntimeTests.Controls
             Assert.AreEqual(0, animated.MinDigits);
             Assert.AreEqual(TimeSpan.FromMilliseconds(250), animated.Duration);
             Assert.AreEqual(18.0, animated.SlideDistance);
-            Assert.AreEqual(DaisySize.Small, animated.Size);
+            Assert.AreEqual(DaisySize.Auto, animated.Size);
+            Assert.AreEqual(FlowerySizeManager.CurrentSize, animated.ResolvedSize);
 
             animated.MinDigits = 3;
             animated.Value = 7;

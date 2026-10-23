@@ -80,7 +80,7 @@ namespace Flowery.Controls
                 nameof(Size),
                 typeof(DaisySize),
                 typeof(DaisyCard),
-                new PropertyMetadata(DaisySize.Medium, OnAppearanceChanged));
+                new PropertyMetadata(DaisySize.Auto, OnAppearanceChanged));
 
         /// <summary>
         /// The size/scale of the card.
@@ -408,18 +408,13 @@ namespace Flowery.Controls
             ScheduleBackdropCapture();
         }
 
-        protected override void OnGlobalSizeChanged(DaisySize size)
+        protected override void OnResolvedSizeChanged()
         {
-            base.OnGlobalSizeChanged(size);
-            SetControlSize(size);
+            base.OnResolvedSizeChanged();
+            ApplyAll();
         }
 
         protected override DaisySize? GetControlSize() => Size;
-
-        protected override void SetControlSize(DaisySize size)
-        {
-            Size = size;
-        }
 
         protected override FrameworkElement? GetNeumorphicHostElement()
         {
@@ -612,9 +607,9 @@ namespace Flowery.Controls
 
             // WinUI/Uno doesn't support TextElement.FontSize attached properties.
             // If Size is set, we prefer its scaled font size over BodyFontSize.
-            if (ReadLocalValue(SizeProperty) != DependencyProperty.UnsetValue || FlowerySizeManager.UseGlobalSizeByDefault)
+            if (Size != DaisySize.Auto || (FlowerySizeManager.UseGlobalSizeByDefault && !FlowerySizeManager.ShouldIgnoreGlobalSize(this)))
             {
-                FontSize = FlowerySizeManager.GetFontSizeForTier(ResponsiveFontTier.Primary, Size);
+                FontSize = FlowerySizeManager.GetFontSizeForTier(ResponsiveFontTier.Primary, ResolvedSize);
             }
             else
             {
@@ -831,7 +826,7 @@ namespace Flowery.Controls
             {
                 if (ReadLocalValue(BodyPaddingProperty) == DependencyProperty.UnsetValue)
                 {
-                    double p = Size switch
+                    double p = ResolvedSize switch
                     {
                         DaisySize.ExtraSmall => 8,
                         DaisySize.Small => 12,
@@ -846,7 +841,7 @@ namespace Flowery.Controls
             {
                 if (ReadLocalValue(BodyPaddingProperty) == DependencyProperty.UnsetValue)
                 {
-                    double p = Size switch
+                    double p = ResolvedSize switch
                     {
                         DaisySize.ExtraSmall => 16,
                         DaisySize.Small => 24,

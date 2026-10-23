@@ -22,11 +22,13 @@ DaisyBadge is a compact label for counts, statuses, or tags. It supports **10 co
 
 ## Size Options
 
+`Size` defaults to `Auto`. `ResolvedSize` exposes the concrete tier selected by [global sizing](FlowerySizeManager.md); an explicit tier remains unchanged.
+
 | Size | Approx. Dimensions | Use Case |
 | --- | --- | --- |
 | ExtraSmall | 12px height, 4px horizontal padding, 8px text | Tiny dots/counts inline with text |
 | Small | 16px height, 6px padding, 10px text | Compact chips for dense lists |
-| Medium (default) | 20px height, 8px padding, 12px text | General-purpose badges |
+| Medium | 20px height, 8px padding, 12px text | General-purpose badges |
 | Large | 24px height, 12px padding, 14px text | Emphasized tags or hero labels |
 | ExtraLarge | Falls back to medium metrics | No additional styling in theme |
 

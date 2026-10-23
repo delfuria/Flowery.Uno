@@ -225,6 +225,8 @@ namespace Flowery.Controls
             if (d is DaisyFab fab)
             {
                 fab.UpdateTriggerButton();
+                if (e.Property == SizeProperty)
+                    FlowerySizeManager.RefreshSizeScope(fab);
             }
         }
 
@@ -259,6 +261,8 @@ namespace Flowery.Controls
         protected override DaisySize DefaultSize => DaisySize.Large;
 
         internal override DaisySize? ChildSizeOverride => Size == DaisySize.Auto ? null : Size;
+
+        internal override DaisySize? ChildSizeFallback => DaisySize.Large;
 
         #endregion
 

@@ -41,7 +41,9 @@ namespace Flowery.Controls
 
         private static void OnSizeChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
         {
-            ((DaisyAccordion)sender).RefreshResolvedSize();
+            var accordion = (DaisyAccordion)sender;
+            accordion.RefreshResolvedSize();
+            FlowerySizeManager.RefreshSizeScope(accordion);
         }
 
         protected override DaisySize? GetControlSize() => Size;

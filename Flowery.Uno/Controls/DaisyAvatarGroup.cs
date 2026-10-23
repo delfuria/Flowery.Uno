@@ -144,7 +144,12 @@ namespace Flowery.Controls
 
         private static void OnAppearanceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            if (d is DaisyAvatarGroup g) g.RebuildAvatars();
+            if (d is DaisyAvatarGroup g)
+            {
+                g.RebuildAvatars();
+                if (e.Property == SizeProperty)
+                    FlowerySizeManager.RefreshSizeScope(g);
+            }
         }
 
         private static void OnInitialsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)

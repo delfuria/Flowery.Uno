@@ -58,9 +58,9 @@ namespace Flowery.Controls.Weather
                 new PropertyMetadata(DaisySize.Auto, OnSizePropertyChanged));
 
         /// <summary>
-        /// The size of the forecast display.
-        /// When <see cref="FlowerySizeManager.UseGlobalSizeByDefault"/> is enabled,
-        /// this will follow <see cref="FlowerySizeManager.CurrentSize"/> unless IgnoreGlobalSize is set.
+        /// Gets or sets the authored size of the forecast display. The default is <see cref="DaisySize.Auto"/>.
+        /// Concrete values, including styles and bindings, take precedence over inherited and global sizing.
+        /// <see cref="ResolvedSize"/> reports the effective size without changing this property.
         /// </summary>
         public DaisySize Size
         {
@@ -69,6 +69,8 @@ namespace Flowery.Controls.Weather
         }
 
         public DaisySize ResolvedSize => FlowerySizeManager.ResolveSize(this, Size);
+
+        DaisySize? IDaisySizeScope.ChildSizeFallback => null;
 
         DaisySize? IDaisySizeScope.ChildSizeOverride
         {
@@ -339,6 +341,7 @@ namespace Flowery.Controls.Weather
                     }
                 }
             }
+            FlowerySizeManager.RefreshSizeScope(this);
         }
 
         protected override void OnApplyTemplate()

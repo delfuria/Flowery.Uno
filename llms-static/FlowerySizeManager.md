@@ -27,12 +27,14 @@ Read `ResolvedSize` to obtain the effective tier:
 1. A concrete Size wins, whether supplied by XAML, code, a style or a binding.
 2. An Auto child in a sizing composite uses the composite's explicit size or calculated child size.
 3. Otherwise, Auto uses CurrentSize when global defaults are enabled and the control does not opt out.
-4. An opted-out control uses its fallback: normally Medium; Small for Divider, ModifierKeys,
+4. Without global defaults, Auto uses the nearest composite fallback, if provided. An automatic Fab
+   supplies Large to its automatic descendants. Otherwise, the control uses its fallback: normally Medium; Small for Divider, ModifierKeys,
    TabsHeaderButtons and TagPicker; Large for Fab.
 
 Composite defaults apply to groups that size their children, such as ButtonGroup, AvatarGroup,
 List, Table, Steps, Dock and Fab. WeatherForecast supplies its calculated size after auto-fit.
-Explicit child sizes remain authoritative.
+Explicit child sizes remain authoritative. Changing a composite's Size refreshes loaded automatic
+descendants through intermediate layout containers without assigning their Size properties.
 
 Normal dependency-property precedence applies. A local `Size="Auto"` overrides a style's concrete
 size and requests automatic resolution. `ClearValue(SizeProperty)` restores the style or metadata
@@ -85,6 +87,10 @@ A local false lets a child opt back in. Changing the property refreshes loaded c
 
 Concrete Size values do not require IgnoreGlobalSize. This property controls global fallback;
 it does not cancel an explicit composite size.
+
+`SetIgnoreGlobalSize(control, false)` also refreshes an already loaded control when the new local
+false overrides an ignored ancestor. If you remove that local false with `ClearValue`, call
+`RefreshAllSizes()` afterward: the native Boolean can remain false while its ownership changes.
 
 ## Responsive Text
 

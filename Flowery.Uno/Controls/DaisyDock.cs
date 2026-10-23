@@ -173,6 +173,8 @@ namespace Flowery.Controls
             if (d is DaisyDock dock)
             {
                 dock.ApplyAll();
+                if (e.Property == SizeProperty)
+                    FlowerySizeManager.RefreshSizeScope(dock);
             }
         }
 

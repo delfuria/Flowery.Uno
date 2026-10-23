@@ -517,6 +517,10 @@ namespace Flowery.Controls
 
         DaisySize? IDaisySizeScope.ChildSizeOverride => ChildSizeOverride;
 
+        internal virtual DaisySize? ChildSizeFallback => null;
+
+        DaisySize? IDaisySizeScope.ChildSizeFallback => ChildSizeFallback;
+
         internal void RefreshResolvedSize() => OnResolvedSizeChanged();
 
         #endregion

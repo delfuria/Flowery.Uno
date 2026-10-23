@@ -303,7 +303,11 @@ namespace Flowery.Controls
         private static void OnAppearanceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is DaisyButtonGroup group)
+            {
                 group.ApplyTheme();
+                if (e.Property == SizeProperty)
+                    FlowerySizeManager.RefreshSizeScope(group);
+            }
         }
 
         protected override void OnResolvedSizeChanged()

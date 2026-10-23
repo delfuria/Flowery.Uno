@@ -33,6 +33,7 @@ namespace Flowery.Controls
     internal interface IDaisySizeScope
     {
         DaisySize? ChildSizeOverride { get; }
+        DaisySize? ChildSizeFallback { get; }
     }
 
     /// <summary>
@@ -56,8 +57,14 @@ namespace Flowery.Controls
         public static bool GetIgnoreGlobalSize(DependencyObject control) =>
             (bool)control.GetValue(IgnoreGlobalSizeProperty);
 
-        public static void SetIgnoreGlobalSize(DependencyObject control, bool value) =>
+        public static void SetIgnoreGlobalSize(DependencyObject control, bool value)
+        {
+            var changesInheritedPolicy = GetIgnoreGlobalSize(control) == value && ShouldIgnoreGlobalSize(control) != value;
             control.SetValue(IgnoreGlobalSizeProperty, value);
+            // A new local false changes inherited policy even when the native effective value stays false.
+            if (changesInheritedPolicy)
+                RefreshAllSizes();
+        }
 
         private static void OnIgnoreGlobalSizeChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
         {
@@ -67,22 +74,47 @@ namespace Flowery.Controls
 
         /// <summary>
         /// Resolves an authored Size without changing its dependency-property value.
-        /// Auto follows the global size unless the control opts out.
+        /// Auto uses a composite override, the enabled global size, or the nearest composite/control fallback.
         /// </summary>
         public static DaisySize ResolveSize(FrameworkElement owner, DaisySize requested, DaisySize fallback = DaisySize.Medium)
         {
             if (requested != DaisySize.Auto)
                 return requested;
 
+            DaisySize? scopeFallback = null;
             var parent = VisualTreeHelper.GetParent(owner) ?? owner.Parent;
             while (parent != null)
             {
-                if (parent is IDaisySizeScope { ChildSizeOverride: { } inheritedSize })
-                    return inheritedSize;
+                if (parent is IDaisySizeScope scope)
+                {
+                    if (scope.ChildSizeOverride is { } inheritedSize)
+                        return inheritedSize;
+                    scopeFallback ??= scope.ChildSizeFallback;
+                }
                 parent = VisualTreeHelper.GetParent(parent) ?? (parent as FrameworkElement)?.Parent;
             }
 
-            return UseGlobalSizeByDefault && !ShouldIgnoreGlobalSize(owner) ? _currentSize : fallback;
+            return UseGlobalSizeByDefault && !ShouldIgnoreGlobalSize(owner) ? _currentSize : scopeFallback ?? fallback;
+        }
+
+        internal static void RefreshSizeScope(FrameworkElement scope)
+        {
+            foreach (var registration in new List<SizeRegistration>(LoadedControls))
+            {
+                if (!LoadedControls.Contains(registration))
+                    continue;
+
+                var parent = VisualTreeHelper.GetParent(registration.Owner) ?? registration.Owner.Parent;
+                while (parent != null)
+                {
+                    if (ReferenceEquals(parent, scope))
+                    {
+                        registration.Refresh();
+                        break;
+                    }
+                    parent = VisualTreeHelper.GetParent(parent) ?? (parent as FrameworkElement)?.Parent;
+                }
+            }
         }
 
         internal static void Register(FrameworkElement owner, Action refresh, Func<DaisySize> getResolvedSize)
@@ -98,6 +130,7 @@ namespace Flowery.Controls
 
             public SizeRegistration(FrameworkElement owner, Action refresh, Func<DaisySize> getResolvedSize)
             {
+                Owner = owner;
                 _refresh = refresh;
                 _getResolvedSize = getResolvedSize;
                 owner.Loaded += OnLoaded;
@@ -111,6 +144,8 @@ namespace Flowery.Controls
             }
 
             private void OnUnloaded(object sender, RoutedEventArgs args) => LoadedControls.Remove(this);
+
+            public FrameworkElement Owner { get; }
 
             public DaisySize ResolvedSize => _getResolvedSize();
 

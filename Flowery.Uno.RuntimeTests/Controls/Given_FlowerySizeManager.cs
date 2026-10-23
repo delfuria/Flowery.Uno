@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Flowery.Controls;
 using Flowery.Enums;
+using Flowery.Theming;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -342,6 +343,183 @@ namespace Flowery.Uno.RuntimeTests.Controls
                     Assert.AreEqual(boundReference.ActualHeight, bound.ActualHeight, 0.1);
                 }
             });
+
+        [TestMethod]
+        public Task When_AccordionScopeChanges_NestedButtonsRefreshWithoutReplacingAuthoredSizes() =>
+            WithSizeScopeAsync(static async host =>
+            {
+                FlowerySizeManager.ApplySize(DaisySize.ExtraLarge);
+                var automatic = new DaisyButton { Content = "Automatic", NeumorphicEnabled = false };
+                var local = new DaisyButton { Content = "Local", Size = DaisySize.Medium, NeumorphicEnabled = false };
+                var bound = new DaisyButton { Content = "Bound", NeumorphicEnabled = false };
+                var source = new ContentControl { Tag = DaisySize.Medium };
+                bound.SetBinding(DaisyButton.SizeProperty, SizeBinding(source));
+                var body = new StackPanel { Children = { automatic, local, bound } };
+                var item = new DaisyAccordionItem { Header = "Nested controls", Content = body, NeumorphicEnabled = false };
+                var accordion = new DaisyAccordion
+                {
+                    Size = DaisySize.Large,
+                    ExpandedIndex = 0,
+                    Content = new StackPanel { Children = { item } },
+                    NeumorphicEnabled = false
+                };
+                host.Children.Add(accordion);
+                await CompleteLayoutAsync(host, accordion, item, automatic, local, bound);
+                Assert.IsTrue(item.IsExpanded);
+
+                foreach (var size in new DaisySize?[] { DaisySize.Large, DaisySize.Small, null })
+                {
+                    if (size is { } explicitSize)
+                        accordion.Size = explicitSize;
+                    else
+                        accordion.ClearValue(DaisyAccordion.SizeProperty);
+                    await CompleteLayoutAsync(host);
+                    AssertButtonTier(automatic, size ?? DaisySize.ExtraLarge);
+                    AssertButtonTier(local, DaisySize.Medium);
+                    AssertButtonTier(bound, DaisySize.Medium);
+                    Assert.AreEqual(DependencyProperty.UnsetValue, automatic.ReadLocalValue(DaisyButton.SizeProperty));
+                    Assert.AreEqual(DaisySize.Medium, local.ReadLocalValue(DaisyButton.SizeProperty));
+                    Assert.AreEqual(DaisySize.Medium, bound.Size);
+                }
+
+                source.Tag = DaisySize.Large;
+                FlowerySizeManager.ApplySize(DaisySize.ExtraSmall);
+                await CompleteLayoutAsync(host);
+                AssertButtonTier(automatic, DaisySize.ExtraSmall);
+                AssertButtonTier(bound, DaisySize.Large);
+                Assert.AreEqual(DaisySize.Large, bound.Size, "The nested Size binding must remain active.");
+            });
+
+        [TestMethod]
+        public Task When_ButtonGroupScopeChanges_ManualNestedIconsRefreshAndKeepAuthoredSizes() =>
+            WithSizeScopeAsync(static async host =>
+            {
+                FlowerySizeManager.ApplySize(DaisySize.ExtraLarge);
+                var automatic = new DaisyIconText { IconData = "M0 0 L24 0 L24 24 Z", Text = "Auto", NeumorphicEnabled = false };
+                var local = new DaisyIconText { IconData = automatic.IconData, Text = "Local", Size = DaisySize.Medium, NeumorphicEnabled = false };
+                var bound = new DaisyIconText { IconData = automatic.IconData, Text = "Bound", NeumorphicEnabled = false };
+                var source = new ContentControl { Tag = DaisySize.Medium };
+                bound.SetBinding(DaisyIconText.SizeProperty, SizeBinding(source));
+                var automaticButton = new DaisyButton { Content = automatic, NeumorphicEnabled = false };
+                var localButton = new DaisyButton { Content = local, NeumorphicEnabled = false };
+                var boundButton = new DaisyButton { Content = bound, NeumorphicEnabled = false };
+                var group = new DaisyButtonGroup
+                {
+                    Size = DaisySize.Large,
+                    Content = new StackPanel { Children = { automaticButton, localButton, boundButton } },
+                    NeumorphicEnabled = false
+                };
+                host.Children.Add(group);
+                await CompleteLayoutAsync(host, group, automaticButton, localButton, boundButton, automatic, local, bound);
+
+                foreach (var size in new DaisySize?[] { DaisySize.Large, DaisySize.Small, null })
+                {
+                    if (size is { } explicitSize)
+                        group.Size = explicitSize;
+                    else
+                        group.ClearValue(DaisyButtonGroup.SizeProperty);
+                    await CompleteLayoutAsync(host);
+                    AssertIconTier(automatic, size ?? DaisySize.ExtraLarge);
+                    AssertButtonTier(automaticButton, size ?? DaisySize.ExtraLarge);
+                    AssertIconTier(local, DaisySize.Medium);
+                    AssertIconTier(bound, DaisySize.Medium);
+                    Assert.AreEqual(DependencyProperty.UnsetValue, automatic.ReadLocalValue(DaisyIconText.SizeProperty));
+                    Assert.AreEqual(DaisySize.Medium, local.ReadLocalValue(DaisyIconText.SizeProperty));
+                    Assert.AreEqual(DaisySize.Medium, bound.Size);
+                }
+
+                source.Tag = DaisySize.Large;
+                FlowerySizeManager.ApplySize(DaisySize.ExtraSmall);
+                await CompleteLayoutAsync(host);
+                AssertIconTier(automatic, DaisySize.ExtraSmall);
+                AssertIconTier(bound, DaisySize.Large);
+                Assert.AreEqual(DaisySize.Large, bound.Size, "The manual icon's Size binding must remain active.");
+            });
+
+        [TestMethod]
+        public Task When_AutomaticFabOptsOut_ActionsShareLargeFallbackAndCanOptBackIn() =>
+            WithSizeScopeAsync(static async host =>
+            {
+                FlowerySizeManager.UseGlobalSizeByDefault = false;
+                var automatic = new DaisyButton { Content = "Automatic", NeumorphicEnabled = false };
+                var local = new DaisyButton { Content = "Local", Size = DaisySize.Medium, NeumorphicEnabled = false };
+                var bound = new DaisyButton { Content = "Bound", NeumorphicEnabled = false };
+                var source = new ContentControl { Tag = DaisySize.Medium };
+                bound.SetBinding(DaisyButton.SizeProperty, SizeBinding(source));
+                var fab = new DaisyFab
+                {
+                    Content = new StackPanel { Children = { automatic, local, bound } },
+                    NeumorphicEnabled = false
+                };
+                var ancestor = new StackPanel { Children = { fab } };
+                host.Children.Add(ancestor);
+                await CompleteLayoutAsync(host, fab);
+                fab.IsOpen = true;
+                var trigger = (DaisyButton)((Grid)fab.Content).Children[1];
+                await CompleteLayoutAsync(host, automatic, local, bound, trigger);
+                Assert.AreEqual(Visibility.Visible, ((StackPanel)((Grid)fab.Content).Children[0]).Visibility);
+
+                foreach (var stage in new[]
+                {
+                    (UseGlobal: false, Ignore: false, Expected: DaisySize.Large),
+                    (UseGlobal: true, Ignore: false, Expected: DaisySize.Small),
+                    (UseGlobal: true, Ignore: true, Expected: DaisySize.Large)
+                })
+                {
+                    FlowerySizeManager.UseGlobalSizeByDefault = stage.UseGlobal;
+                    FlowerySizeManager.SetIgnoreGlobalSize(ancestor, stage.Ignore);
+                    await CompleteLayoutAsync(host);
+                    Assert.AreEqual(stage.Expected, fab.ResolvedSize);
+                    AssertButtonTier(trigger, stage.Expected);
+                    AssertButtonTier(automatic, stage.Expected);
+                    AssertButtonTier(local, DaisySize.Medium);
+                    AssertButtonTier(bound, DaisySize.Medium);
+                    Assert.AreEqual(DependencyProperty.UnsetValue, fab.ReadLocalValue(DaisyFab.SizeProperty));
+                    Assert.AreEqual(DependencyProperty.UnsetValue, automatic.ReadLocalValue(DaisyButton.SizeProperty));
+                    Assert.AreEqual(DaisySize.Medium, local.ReadLocalValue(DaisyButton.SizeProperty));
+                    Assert.AreEqual(DaisySize.Medium, bound.Size);
+                }
+
+                FlowerySizeManager.SetIgnoreGlobalSize(automatic, false);
+                await CompleteLayoutAsync(host);
+                AssertButtonTier(automatic, DaisySize.Small);
+                AssertButtonTier(trigger, DaisySize.Large);
+                source.Tag = DaisySize.Small;
+                FlowerySizeManager.ApplySize(DaisySize.ExtraLarge);
+                await CompleteLayoutAsync(host);
+                AssertButtonTier(automatic, DaisySize.ExtraLarge);
+                AssertButtonTier(trigger, DaisySize.Large);
+                AssertButtonTier(local, DaisySize.Medium);
+                AssertButtonTier(bound, DaisySize.Small);
+                Assert.AreEqual(DaisySize.Small, bound.Size, "The action's Size binding must remain active.");
+                Assert.AreEqual(DependencyProperty.UnsetValue, automatic.ReadLocalValue(DaisyButton.SizeProperty));
+
+                ancestor.ClearValue(FlowerySizeManager.IgnoreGlobalSizeProperty);
+                await CompleteLayoutAsync(host);
+                Assert.AreEqual(DaisySize.ExtraLarge, fab.ResolvedSize);
+                AssertButtonTier(trigger, DaisySize.ExtraLarge);
+                AssertButtonTier(automatic, DaisySize.ExtraLarge);
+            });
+
+        private static void AssertButtonTier(DaisyButton button, DaisySize size)
+        {
+            Assert.IsTrue(button.IsLoaded);
+            Assert.AreEqual(size, button.ResolvedSize);
+            var resources = Application.Current.Resources;
+            Assert.AreEqual(DaisyResourceLookup.GetSizeDouble(resources, "DaisySize", size, "Height", DaisyResourceLookup.GetDefaultHeight(size)), button.Height, 0.001);
+            Assert.AreEqual(DaisyResourceLookup.GetSizeDouble(resources, "DaisySize", size, "FontSize", DaisyResourceLookup.GetDefaultFontSize(size)), button.FontSize, 0.001);
+        }
+
+        private static void AssertIconTier(DaisyIconText icon, DaisySize size)
+        {
+            Assert.IsTrue(icon.IsLoaded);
+            Assert.AreEqual(size, icon.ResolvedSize);
+            var content = (StackPanel)icon.Content;
+            var viewbox = (Viewbox)content.Children[0];
+            Assert.AreEqual(DaisyResourceLookup.GetDefaultIconSize(size), viewbox.Width, 0.001);
+            Assert.AreEqual(DaisyResourceLookup.GetDefaultIconSize(size), viewbox.Height, 0.001);
+            Assert.AreEqual(DaisyResourceLookup.GetDefaultFontSize(size), ((TextBlock)content.Children[1]).FontSize, 0.001);
+        }
 
         private static async Task WithSizeScopeAsync(Func<StackPanel, Task> test)
         {

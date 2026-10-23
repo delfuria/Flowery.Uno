@@ -30,7 +30,7 @@ DaisyFab is a Floating Action Button container with a trigger button and expanda
 
 An explicit FAB tier supplies the size for action buttons whose `Size` is `Auto`. Local values, styles, and bindings on action buttons retain their own tiers.
 
-`ResolvedSize` exposes the concrete tier from [global sizing](FlowerySizeManager.md). With global sizing disabled or ignored, an automatic FAB uses its legacy `Large` fallback. Clear an explicit FAB `Size` or set it to `Auto` to resume the global policy.
+`ResolvedSize` exposes the concrete tier from [global sizing](FlowerySizeManager.md). With global sizing disabled or ignored, an automatic FAB and its automatic action buttons use the legacy `Large` fallback. A child with `IgnoreGlobalSize="False"` can opt back into enabled global defaults. Concrete child sizes still take precedence. Clear an explicit FAB `Size` or set it to `Auto` to resume the global policy.
 
 ## Quick Examples
 

@@ -48,6 +48,8 @@ namespace Flowery.Controls
             if (d is DaisyList list)
             {
                 list.ApplyAll();
+                if (e.Property == SizeProperty)
+                    FlowerySizeManager.RefreshSizeScope(list);
             }
         }
 

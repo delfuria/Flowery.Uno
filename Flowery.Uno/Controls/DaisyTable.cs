@@ -96,6 +96,8 @@ namespace Flowery.Controls
             if (d is DaisyTable table)
             {
                 table.ApplyAll();
+                if (e.Property == SizeProperty)
+                    FlowerySizeManager.RefreshSizeScope(table);
             }
         }
 

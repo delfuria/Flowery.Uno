@@ -204,7 +204,11 @@ namespace Flowery.Controls
         private static void OnLayoutChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is DaisySteps steps)
+            {
                 steps.ApplyLayoutChanges();
+                if (e.Property == SizeProperty)
+                    FlowerySizeManager.RefreshSizeScope(steps);
+            }
         }
 
         private void CollectAndDisplay()

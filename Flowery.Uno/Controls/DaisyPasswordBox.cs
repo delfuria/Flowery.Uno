@@ -239,7 +239,6 @@ namespace Flowery.Controls
             _optionalText = new TextBlock
             {
                 Text = FloweryLocalization.GetStringInternal("Input_Optional", "Optional"),
-                Opacity = 0.7,
                 Visibility = Visibility.Collapsed
             };
             _labelPanel.Children.Add(_optionalText);
@@ -250,7 +249,6 @@ namespace Flowery.Controls
             // Row 1: Hint text
             _hintTextBlock = new TextBlock
             {
-                Opacity = 0.7,
                 Margin = new Thickness(0, 0, 0, 4),
                 Visibility = Visibility.Collapsed
             };
@@ -437,7 +435,6 @@ namespace Flowery.Controls
             // Row 3: Helper text
             _helperTextBlock = new TextBlock
             {
-                Opacity = 0.7,
                 HorizontalAlignment = HorizontalAlignment.Right,
                 Margin = new Thickness(0, 4, 0, 0),
                 Visibility = Visibility.Collapsed
@@ -1280,6 +1277,9 @@ namespace Flowery.Controls
             var base300 = DaisyResourceLookup.GetBrush("DaisyBase300Brush") ?? new SolidColorBrush(Colors.Gray);
             var baseContent = DaisyResourceLookup.GetBrush("DaisyBaseContentBrush") ?? new SolidColorBrush(Colors.Black);
             var error = DaisyResourceLookup.GetBrush("DaisyErrorBrush") ?? new SolidColorBrush(Colors.IndianRed);
+            var muted = DaisyResourceLookup.GetBrush("DaisyBaseContentMutedBrush");
+            var subtle = DaisyResourceLookup.GetBrush("DaisyBaseContentSubtleBrush");
+            var disabled = DaisyResourceLookup.GetBrush("DaisyBaseContentDisabledBrush");
 
             var variantName = Variant switch
             {
@@ -1378,30 +1378,17 @@ namespace Flowery.Controls
                 _passwordBox.Foreground = textForeground;
                 _passwordBox.Resources["TextControlForegroundPointerOver"] = textForeground;
                 _passwordBox.Resources["TextControlForegroundFocused"] = textForeground;
-                _passwordBox.Resources["TextControlForegroundDisabled"] = textForeground;
+                _passwordBox.Resources["TextControlForegroundDisabled"] = disabled;
 
-                Brush? placeholderBrush = null;
-                if (placeholderOverride != null)
-                {
-                    placeholderBrush = placeholderOverride;
-                }
-                else if (textForeground is SolidColorBrush scb)
-                {
-                    var placeholderColor = Color.FromArgb(153, scb.Color.R, scb.Color.G, scb.Color.B);
-                    placeholderBrush = new SolidColorBrush(placeholderColor);
-                }
-
-                if (placeholderBrush != null)
-                {
-                    _passwordBox.Resources["PasswordBoxPlaceholderTextForeground"] = placeholderBrush;
-                    _passwordBox.Resources["PasswordBoxPlaceholderTextForegroundPointerOver"] = placeholderBrush;
-                    _passwordBox.Resources["PasswordBoxPlaceholderTextForegroundFocused"] = placeholderBrush;
-                    _passwordBox.Resources["PasswordBoxPlaceholderTextForegroundDisabled"] = placeholderBrush;
-                    _passwordBox.Resources["TextControlPlaceholderForeground"] = placeholderBrush;
-                    _passwordBox.Resources["TextControlPlaceholderForegroundPointerOver"] = placeholderBrush;
-                    _passwordBox.Resources["TextControlPlaceholderForegroundFocused"] = placeholderBrush;
-                    _passwordBox.Resources["TextControlPlaceholderForegroundDisabled"] = placeholderBrush;
-                }
+                var placeholderBrush = placeholderOverride ?? subtle;
+                _passwordBox.Resources["PasswordBoxPlaceholderTextForeground"] = placeholderBrush;
+                _passwordBox.Resources["PasswordBoxPlaceholderTextForegroundPointerOver"] = placeholderBrush;
+                _passwordBox.Resources["PasswordBoxPlaceholderTextForegroundFocused"] = placeholderBrush;
+                _passwordBox.Resources["PasswordBoxPlaceholderTextForegroundDisabled"] = placeholderBrush;
+                _passwordBox.Resources["TextControlPlaceholderForeground"] = placeholderBrush;
+                _passwordBox.Resources["TextControlPlaceholderForegroundPointerOver"] = placeholderBrush;
+                _passwordBox.Resources["TextControlPlaceholderForegroundFocused"] = placeholderBrush;
+                _passwordBox.Resources["TextControlPlaceholderForegroundDisabled"] = placeholderBrush;
 
                 // Theme the custom reveal icon
                 if (_revealIconPath != null)
@@ -1434,9 +1421,9 @@ namespace Flowery.Controls
 
             if (_labelText != null) _labelText.Foreground = textForeground;
             if (_requiredIndicator != null) _requiredIndicator.Foreground = error;
-            if (_optionalText != null) _optionalText.Foreground = textForeground;
-            if (_hintTextBlock != null) _hintTextBlock.Foreground = textForeground;
-            if (_helperTextBlock != null) _helperTextBlock.Foreground = textForeground;
+            if (_optionalText != null) _optionalText.Foreground = muted;
+            if (_hintTextBlock != null) _hintTextBlock.Foreground = muted;
+            if (_helperTextBlock != null) _helperTextBlock.Foreground = muted;
             if (_floatingLabelBorder != null) _floatingLabelBorder.Background = bgOverride ?? base100;
             if (_floatingLabelText != null) _floatingLabelText.Foreground = textForeground;
         }

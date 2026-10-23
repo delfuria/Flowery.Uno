@@ -467,6 +467,8 @@ namespace Flowery.Controls
             _baseInputBorderBrush = border;
 
             var textForeground = fgOverride ?? baseContent;
+            var placeholderForeground = DaisyResourceLookup.TryGetControlBrush(this, "DaisyCalendarDatePicker", "PlaceholderForeground")
+                ?? fgOverride ?? DaisyResourceLookup.GetBrush(resources, "DaisyBaseContentMutedBrush", baseContent);
             _calendarDatePicker.Foreground = textForeground;
             _calendarDatePicker.Background = background;
 
@@ -479,10 +481,10 @@ namespace Flowery.Controls
 
             _calendarDatePicker.Resources["CalendarDatePickerForeground"] = textForeground;
             _calendarDatePicker.Resources["CalendarDatePickerForegroundDisabled"] = textForeground;
-            _calendarDatePicker.Resources["CalendarDatePickerTextForeground"] = textForeground;
-            _calendarDatePicker.Resources["CalendarDatePickerTextForegroundPointerOver"] = textForeground;
-            _calendarDatePicker.Resources["CalendarDatePickerTextForegroundPressed"] = textForeground;
-            _calendarDatePicker.Resources["CalendarDatePickerTextForegroundDisabled"] = textForeground;
+            _calendarDatePicker.Resources["CalendarDatePickerTextForeground"] = placeholderForeground;
+            _calendarDatePicker.Resources["CalendarDatePickerTextForegroundPointerOver"] = placeholderForeground;
+            _calendarDatePicker.Resources["CalendarDatePickerTextForegroundPressed"] = placeholderForeground;
+            _calendarDatePicker.Resources["CalendarDatePickerTextForegroundDisabled"] = placeholderForeground;
             _calendarDatePicker.Resources["CalendarDatePickerTextForegroundSelected"] = textForeground;
             _calendarDatePicker.Resources["CalendarDatePickerCalendarGlyphForeground"] = textForeground;
             _calendarDatePicker.Resources["CalendarDatePickerCalendarGlyphForegroundPointerOver"] = textForeground;
@@ -497,16 +499,6 @@ namespace Flowery.Controls
             _calendarDatePicker.Resources["CalendarDatePickerBackgroundPressed"] = background;
             _calendarDatePicker.Resources["CalendarDatePickerBackgroundDisabled"] = background;
             _calendarDatePicker.Resources["CalendarDatePickerBackgroundFocused"] = background;
-
-            if (textForeground is SolidColorBrush scb)
-            {
-                var placeholderColor = Color.FromArgb(153, scb.Color.R, scb.Color.G, scb.Color.B);
-                var placeholderBrush = new SolidColorBrush(placeholderColor);
-                _calendarDatePicker.Resources["TextControlPlaceholderForeground"] = placeholderBrush;
-                _calendarDatePicker.Resources["TextControlPlaceholderForegroundPointerOver"] = placeholderBrush;
-                _calendarDatePicker.Resources["TextControlPlaceholderForegroundFocused"] = placeholderBrush;
-                _calendarDatePicker.Resources["TextControlPlaceholderForegroundDisabled"] = placeholderBrush;
-            }
         }
 
         private void ApplyContent()

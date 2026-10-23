@@ -32,11 +32,11 @@ namespace Flowery.Uno.RuntimeTests.Controls
                 var separator = Separator(automatic);
                 Assert.IsNull(breadcrumbs.SeparatorBrush);
                 Assert.AreEqual(DependencyProperty.UnsetValue, breadcrumbs.ReadLocalValue(DaisyBreadcrumbs.SeparatorBrushProperty));
-                AssertSeparator(automatic, DaisyResourceLookup.GetBrush("DaisyBaseContentBrush"));
+                AssertSeparator(automatic, DaisyResourceLookup.GetBrush("DaisyBaseContentSubtleBrush"));
                 AssertSeparator(resourceItem, resourceBrush);
                 Assert.AreEqual(Visibility.Collapsed, Separator(first).Visibility);
                 Assert.AreEqual(Visibility.Visible, separator.Visibility);
-                Assert.AreEqual(0.5, separator.Opacity);
+                Assert.AreEqual(1.0, separator.Opacity);
 
                 var parentBrush = new SolidColorBrush(Microsoft.UI.Colors.Blue);
                 breadcrumbs.SeparatorBrush = parentBrush;
@@ -45,7 +45,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
                 AssertSeparator(resourceItem, parentBrush);
 
                 var resources = Application.Current.Resources;
-                const string baseToken = "DaisyBaseContentBrush";
+                const string baseToken = "DaisyBaseContentSubtleBrush";
                 var hadBaseToken = resources.ContainsKey(baseToken);
                 var originalBaseToken = hadBaseToken ? resources[baseToken] : null;
                 var themeBrush = new SolidColorBrush(Microsoft.UI.Colors.Goldenrod);
@@ -80,7 +80,10 @@ namespace Flowery.Uno.RuntimeTests.Controls
                     Assert.AreSame(body, ((ContentPresenter)((Grid)automatic.Content).Children[3]).Content);
                     Assert.AreEqual("Retained edit", body.Text);
                     Assert.AreEqual(Visibility.Collapsed, Separator(first).Visibility);
-                    Assert.AreEqual(0.5, separator.Opacity);
+                    Assert.AreEqual(1.0, separator.Opacity);
+                    breadcrumbs.SeparatorOpacity = 0.25;
+                    Assert.AreEqual(0.25, separator.Opacity);
+                    AssertSeparator(automatic, parentBrush);
                     Assert.IsNull(automatic.SeparatorBrush);
                     Assert.AreEqual(DependencyProperty.UnsetValue, automatic.ReadLocalValue(DaisyBreadcrumbItem.SeparatorBrushProperty));
                 }
@@ -135,7 +138,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
                 parentSource.Tag = null;
                 await CompleteLayoutAsync(host);
                 Assert.IsNull(breadcrumbs.SeparatorBrush);
-                AssertSeparator(automatic, DaisyResourceLookup.GetBrush("DaisyBaseContentBrush"));
+                AssertSeparator(automatic, DaisyResourceLookup.GetBrush("DaisyBaseContentSubtleBrush"));
                 parentSource.Tag = nextParentBrush;
                 await CompleteLayoutAsync(host);
                 AssertSeparator(automatic, nextParentBrush);
@@ -180,7 +183,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
                 breadcrumbs.ClearValue(FrameworkElement.StyleProperty);
                 await CompleteLayoutAsync(host);
                 Assert.IsNull(breadcrumbs.SeparatorBrush);
-                AssertSeparator(automatic, DaisyResourceLookup.GetBrush("DaisyBaseContentBrush"));
+                AssertSeparator(automatic, DaisyResourceLookup.GetBrush("DaisyBaseContentSubtleBrush"));
 
                 var lateItem = CreateItem("Late");
                 var late = CreateBreadcrumbs(CreateItem("First"), lateItem);

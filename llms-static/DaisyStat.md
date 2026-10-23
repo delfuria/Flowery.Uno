@@ -21,6 +21,12 @@ DaisyStat displays a metric with title, value, optional description, figure (ico
 | `ValueFontSize` (`double`) | Value text size. `NaN` (default) follows the resolved tier. Set a positive number to override it. |
 | `LabelFontSize` (`double`) | Shared title and description text size. `NaN` (default) follows the resolved secondary font tier. |
 
+## Text Brushes
+
+The title and default description use `DaisyBaseContentMutedBrush` at element opacity 1.
+An explicit `DaisyStatTitleForeground` or `DaisyStatDescriptionForeground` resource replaces that brush without additional dimming.
+`DescriptionVariant` selects the corresponding semantic color. The value retains its existing variant color.
+
 ## Typography
 
 Automatic typography uses these defaults:

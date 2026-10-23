@@ -763,6 +763,22 @@ namespace Flowery.Controls
                 hoverBg = base300;
                 fg = baseContent;
                 dividerBorder = base300;
+
+                if (Variant is DaisyButtonVariant.Primary or DaisyButtonVariant.Secondary or DaisyButtonVariant.Accent
+                    or DaisyButtonVariant.Info or DaisyButtonVariant.Success or DaisyButtonVariant.Warning or DaisyButtonVariant.Error)
+                {
+                    var variantName = Variant.ToString();
+                    normalBg = DaisyResourceLookup.GetBrush(resources, $"DaisyButton{variantName}SoftBrush", base200);
+                    hoverBg = DaisyResourceLookup.GetBrush(resources, $"DaisyButton{variantName}SoftHoverBrush", base300);
+                    dividerBorder = DaisyResourceLookup.GetBrush(resources, $"DaisyButton{variantName}SoftBorderBrush", base300);
+                    var foregroundKey = Variant switch
+                    {
+                        DaisyButtonVariant.Primary => "DaisyButtonPrimaryForegroundBrush",
+                        DaisyButtonVariant.Secondary or DaisyButtonVariant.Accent => $"Daisy{variantName}ForegroundBrush",
+                        _ => $"Daisy{variantName}Brush"
+                    };
+                    fg = DaisyResourceLookup.GetBrush(resources, foregroundKey, baseContent);
+                }
             }
 
             // Check for lightweight styling overrides (instance-level takes precedence)

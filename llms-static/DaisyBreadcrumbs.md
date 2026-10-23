@@ -11,7 +11,7 @@ DaisyBreadcrumbs shows a horizontal trail of navigation steps. Provide a `Panel`
 | --- | --- |
 | `Separator` (string, default "/") | Text used between items. Accepts any string (e.g., `›`, `»`, `>`). |
 | `SeparatorBrush` (Brush, default null) | Default separator brush for items without their own brush. Null retains the existing resource/theme fallback. |
-| `SeparatorOpacity` (double, default 0.5) | Controls the visual weight of the separator glyph. |
+| `SeparatorOpacity` (double, default 1) | Additional opacity multiplier for the separator glyph. |
 | `Size` (DaisySize) | Controls text/icon sizing for the breadcrumb items. |
 | `Content` (Panel) | Provide a `Panel` (e.g., `StackPanel` with `Orientation="Horizontal"`) containing `DaisyBreadcrumbItem` children; items are re-parented into the control layout. |
 
@@ -31,13 +31,16 @@ DaisyBreadcrumbs shows a horizontal trail of navigation steps. Provide a `Panel`
 
 Both `DaisyBreadcrumbs.SeparatorBrush` and `DaisyBreadcrumbItem.SeparatorBrush` are nullable dependency properties.
 The separator uses the first available brush: the item's brush, its nearest `DaisyBreadcrumbs` brush,
-the existing `DaisyBreadcrumbItemSeparatorForeground` resource, then the item's existing foreground/theme fallback.
+the `DaisyBreadcrumbItemSeparatorForeground` resource, then `DaisyBaseContentSubtleBrush`.
 A transparent brush is an explicit override; null requests fallback.
 
 Styles and bindings keep normal dependency-property precedence. Parent changes never assign the item's
 `SeparatorBrush`. Set an override to null to resume fallback; `ClearValue(SeparatorBrushProperty)` restores
 the applicable style or null default. Theme, size and reload updates retain authored brushes and bindings.
-Changing the brush does not change separator opacity; its default remains 0.5.
+The separator brush carries its own alpha. `SeparatorOpacity` defaults to 1, so an explicit brush has no additional dimming.
+An explicit multiplier still applies to both the default brush and custom brushes.
+The last item's default text and icon use `DaisyBaseContentMutedBrush`.
+Custom content keeps its own foreground and opacity values.
 
 ## When to Use (vs DaisyBreadcrumbBar)
 

@@ -261,7 +261,6 @@ namespace Flowery.Controls
             _optionalText = new TextBlock
             {
                 Text = FloweryLocalization.GetStringInternal("Input_Optional", "Optional"),
-                Opacity = 0.7,
                 Visibility = Visibility.Collapsed
             };
             _labelPanel.Children.Add(_optionalText);
@@ -272,7 +271,6 @@ namespace Flowery.Controls
             // Row 1: Hint text
             _hintTextBlock = new TextBlock
             {
-                Opacity = 0.7,
                 Margin = new Thickness(0, 0, 0, 4),
                 Visibility = Visibility.Collapsed
             };
@@ -465,7 +463,6 @@ namespace Flowery.Controls
             // Row 3: Helper text
             _helperTextBlock = new TextBlock
             {
-                Opacity = 0.7,
                 HorizontalAlignment = HorizontalAlignment.Right,
                 Margin = new Thickness(0, 4, 0, 0),
                 Visibility = Visibility.Collapsed
@@ -1498,6 +1495,9 @@ namespace Flowery.Controls
             var baseContent = DaisyResourceLookup.GetBrush(resources, "DaisyBaseContentBrush", new SolidColorBrush(Colors.Black));
             var neutral = DaisyResourceLookup.GetBrush(resources, "DaisyNeutralBrush", base300);
             var error = DaisyResourceLookup.GetBrush(resources, "DaisyErrorBrush", new SolidColorBrush(Colors.IndianRed));
+            var muted = DaisyResourceLookup.GetBrush(resources, "DaisyBaseContentMutedBrush", baseContent);
+            var subtle = DaisyResourceLookup.GetBrush(resources, "DaisyBaseContentSubtleBrush", baseContent);
+            var disabled = DaisyResourceLookup.GetBrush(resources, "DaisyBaseContentDisabledBrush", baseContent);
 
             // Get variant name for resource lookup
             var variantName = Variant switch
@@ -1610,18 +1610,10 @@ namespace Flowery.Controls
                 // Override internal TextBox states to prevent them from using system highlight colors
                 _textBox.Resources["TextControlForegroundPointerOver"] = textForeground;
                 _textBox.Resources["TextControlForegroundFocused"] = textForeground;
-                _textBox.Resources["TextControlForegroundDisabled"] = textForeground;
+                _textBox.Resources["TextControlForegroundDisabled"] = disabled;
 
                 // Set placeholder color
-                if (placeholderOverride != null)
-                {
-                    _textBox.PlaceholderForeground = placeholderOverride;
-                }
-                else if (textForeground is SolidColorBrush scb)
-                {
-                    var placeholderColor = Color.FromArgb(153, scb.Color.R, scb.Color.G, scb.Color.B); // ~60% opacity
-                    _textBox.PlaceholderForeground = new SolidColorBrush(placeholderColor);
-                }
+                _textBox.PlaceholderForeground = placeholderOverride ?? subtle;
             }
 
             if (_labelText != null)
@@ -1636,17 +1628,17 @@ namespace Flowery.Controls
 
             if (_optionalText != null)
             {
-                _optionalText.Foreground = textForeground;
+                _optionalText.Foreground = muted;
             }
 
             if (_hintTextBlock != null)
             {
-                _hintTextBlock.Foreground = textForeground;
+                _hintTextBlock.Foreground = muted;
             }
 
             if (_helperTextBlock != null)
             {
-                _helperTextBlock.Foreground = textForeground;
+                _helperTextBlock.Foreground = muted;
             }
 
             if (_startIconPath != null)

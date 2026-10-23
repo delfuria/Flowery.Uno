@@ -258,7 +258,6 @@ namespace Flowery.Controls
             // Title
             _titleBlock = new TextBlock
             {
-                Opacity = 0.6,
                 Margin = new Thickness(0, 0, 0, 4)
             };
             _contentPanel.Children.Add(_titleBlock);
@@ -273,7 +272,6 @@ namespace Flowery.Controls
             // Description
             _descriptionBlock = new TextBlock
             {
-                Opacity = 0.6,
                 Margin = new Thickness(0, 4, 0, 0)
             };
             _contentPanel.Children.Add(_descriptionBlock);
@@ -369,6 +367,7 @@ namespace Flowery.Controls
             var descFgOverride = DaisyResourceLookup.TryGetControlBrush(this, "DaisyStat", "DescriptionForeground");
 
             var baseContent = DaisyResourceLookup.GetBrush(resources, "DaisyBaseContentBrush");
+            var mutedContent = DaisyResourceLookup.GetBrush(resources, "DaisyBaseContentMutedBrush");
             var size = ResolvedSize;
             var labelFontSize = double.IsNaN(LabelFontSize)
                 ? FlowerySizeManager.GetFontSizeForTier(ResponsiveFontTier.Secondary, size)
@@ -377,7 +376,7 @@ namespace Flowery.Controls
             // Title styling
             if (_titleBlock != null)
             {
-                _titleBlock.Foreground = titleFgOverride ?? baseContent;
+                _titleBlock.Foreground = titleFgOverride ?? mutedContent;
                 _titleBlock.FontSize = labelFontSize;
             }
 
@@ -401,12 +400,9 @@ namespace Flowery.Controls
             // Description styling with variant
             if (_descriptionBlock != null)
             {
-                var descBrush = descFgOverride ?? GetVariantBrush(resources, DescriptionVariant, baseContent);
+                var descBrush = descFgOverride ?? GetVariantBrush(resources, DescriptionVariant, mutedContent);
                 _descriptionBlock.Foreground = descBrush;
                 _descriptionBlock.FontSize = labelFontSize;
-
-                // Full opacity for non-default description variant
-                _descriptionBlock.Opacity = DescriptionVariant == DaisyStatVariant.Default ? 0.6 : 1.0;
             }
         }
 

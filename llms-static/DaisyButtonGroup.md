@@ -24,6 +24,10 @@ It also supports non-clickable segments (for counters/labels) by using a `Border
 
 `ResolvedSize` exposes the group's concrete tier. Clear the group `Size` or set it to `Auto` to resume [global sizing](FlowerySizeManager.md).
 
+`ButtonStyle="Soft"` uses the same [Soft palette resources](DaisyButton.md#soft-palette-resources) as `DaisyButton`.
+Selected, hovered, and pressed segments use the Soft hover brush. Segment borders remain 1 pixel wide.
+Existing segment background, foreground, and border resources take precedence.
+
 ## Quick Examples
 
 ```xml

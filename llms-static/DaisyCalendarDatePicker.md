@@ -5,6 +5,10 @@
 
 DaisyCalendarDatePicker provides a themed CalendarDatePicker that matches Daisy input surfaces while keeping the native calendar flyout behavior.
 
+The placeholder uses `DaisyBaseContentMutedBrush`; a selected date uses `DaisyBaseContentBrush`.
+Override `DaisyCalendarDatePickerPlaceholderForeground` in resources to change only the placeholder, including a transparent brush.
+`DaisyCalendarDatePickerForeground` overrides both unless a separate placeholder override is present.
+
 ## Variant Options
 
 | Variant | Description |

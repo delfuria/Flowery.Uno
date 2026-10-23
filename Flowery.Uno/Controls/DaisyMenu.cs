@@ -310,7 +310,7 @@ namespace Flowery.Controls
             SetSelectionTarget(null);
         }
 
-        private void UpdateSelectionIndicator(bool animate)
+        internal void UpdateSelectionIndicator(bool animate)
         {
             if (!IsSelectionAnimationEnabled)
             {
@@ -364,7 +364,7 @@ namespace Flowery.Controls
             DaisyMenuItem? selectedItem = null;
             foreach (var item in _menuItems)
             {
-                if (item.IsActive)
+                if (item.IsActive && !item.IsTitle && !item.IsDisabled)
                 {
                     selectedItem = item;
                     break;
@@ -568,10 +568,28 @@ namespace Flowery.Controls
         }
         #endregion
 
+        /// <summary>
+        /// A non-interactive section heading with primary text and a bottom divider.
+        /// </summary>
+        public static readonly DependencyProperty IsTitleProperty =
+            DependencyProperty.Register(
+                nameof(IsTitle), typeof(bool), typeof(DaisyMenuItem),
+                new PropertyMetadata(false, OnAppearanceChanged));
+
+        public bool IsTitle
+        {
+            get => (bool)GetValue(IsTitleProperty);
+            set => SetValue(IsTitleProperty, value);
+        }
+
         private static void OnAppearanceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is DaisyMenuItem item && item.IsLoaded)
+            {
                 item.RebuildVisual();
+                if (e.Property == IsTitleProperty || e.Property == IsDisabledProperty)
+                    item.ParentMenu?.UpdateSelectionIndicator(animate: false);
+            }
         }
 
         private void BuildVisualTree()
@@ -598,7 +616,7 @@ namespace Flowery.Controls
 
         private void OnPointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
         {
-            if (IsDisabled)
+            if (IsDisabled || IsTitle)
                 return;
 
             _isPointerOver = true;
@@ -618,7 +636,7 @@ namespace Flowery.Controls
         {
             base.OnKeyDown(e);
 
-            if (e.Handled || IsDisabled)
+            if (e.Handled || IsDisabled || IsTitle)
                 return;
 
             DaisyAccessibility.TryHandleEnterOrSpace(e, OnBaseClick);
@@ -626,7 +644,7 @@ namespace Flowery.Controls
 
         protected override void OnBaseClick()
         {
-            if (IsDisabled)
+            if (IsDisabled || IsTitle)
                 return;
 
             // If the menu closes while the pointer is over this item,
@@ -666,35 +684,32 @@ namespace Flowery.Controls
             double fontSize = DaisyResourceLookup.GetDouble($"DaisyMenu{sizeKey}FontSize", 12);
 
             _rootBorder.Padding = padding;
+            _rootBorder.BorderBrush = DaisyResourceLookup.GetBrush(resources, "DaisyBase300Brush");
+            _rootBorder.BorderThickness = IsTitle ? new Thickness(0, 0, 0, 1) : new Thickness(0);
+            _rootBorder.CornerRadius = IsTitle ? new CornerRadius(0) : new CornerRadius(8);
+            _rootBorder.IsHitTestVisible = !IsTitle;
+            IsTabStop = !IsDisabled && !IsTitle;
 
             ResolvedActiveBackground = ActiveBackground ?? activeBgOverride ?? primaryBrush;
 
             // Apply colors based on state
-            if (IsDisabled)
+            if (IsDisabled || IsTitle)
             {
                 _rootBorder.Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-                _rootBorder.Opacity = 0.5;
-                IsTabStop = false;
             }
             else if (IsActive)
             {
                 _rootBorder.Background = useAnimatedSelection
                     ? new SolidColorBrush(Microsoft.UI.Colors.Transparent)
                     : ResolvedActiveBackground;
-                _rootBorder.Opacity = 1.0;
-                IsTabStop = true;
             }
             else if (_isPointerOver)
             {
                 _rootBorder.Background = hoverBrush ?? new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-                _rootBorder.Opacity = 1.0;
-                IsTabStop = true;
             }
             else
             {
                 _rootBorder.Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-                _rootBorder.Opacity = 1.0;
-                IsTabStop = true;
             }
 
             // Content
@@ -702,8 +717,17 @@ namespace Flowery.Controls
             {
                 FloweryMnemonicHelpers.SetPresenterContent(_contentPresenter, _userContent);
                 FontSize = fontSize;
+                _contentPresenter.FontWeight = IsTitle ? Microsoft.UI.Text.FontWeights.Bold : FontWeight;
 
-                if (IsActive && ActiveForeground != null)
+                if (IsTitle)
+                {
+                    Foreground = fgOverride ?? primaryBrush;
+                }
+                else if (IsDisabled)
+                {
+                    Foreground = fgOverride ?? DaisyResourceLookup.GetBrush(resources, "DaisyBaseContentDisabledBrush");
+                }
+                else if (IsActive && ActiveForeground != null)
                 {
                     Foreground = ActiveForeground;
                 }

@@ -24,8 +24,22 @@ DaisyButton delivers DaisyUI-styled actions with **11 color variants**, **4 visu
 | Default | Solid fill (or transparent for Ghost/Link) with hover transitions. |
 | Outline | Transparent background with colored border/text; fills with the variant color on hover. |
 | Dash | Dashed stroke around the button (shown via a dashed rectangle) with transparent fill until hover. |
-| Soft | Tinted background with colored text; hover deepens the tint. |
+| Soft | Tinted background, translucent border, and colored text. Hover deepens the tint. |
 | `IsOutline` (obsolete) | Legacy flag; prefer `ButtonStyle="Outline"`. |
+
+## Soft Palette Resources
+
+Primary, Secondary, Accent, Info, Success, Warning, and Error use three resources per variant:
+
+| Resource pattern | Default alpha relative to the variant color |
+| --- | --- |
+| `DaisyButton{Variant}SoftBrush` | 0.15 |
+| `DaisyButton{Variant}SoftHoverBrush` | 0.30, for hover and press |
+| `DaisyButton{Variant}SoftBorderBrush` | 0.45, with the thin border token |
+
+The Business palette uses 0.12 for the Primary surface. Default and Neutral use Base200, Base300, and the Base300 border.
+Variant text keeps its color during hover and press. Existing control-specific background, foreground, and border resources take precedence.
+The palette stores alpha in `Color`. Each generated brush has `Opacity=1`, so theme changes preserve alpha through existing brush instances.
 
 ## Shape Options
 

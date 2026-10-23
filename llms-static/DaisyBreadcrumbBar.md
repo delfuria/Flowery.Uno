@@ -9,6 +9,10 @@ DaisyBreadcrumbBar is a themed wrapper around WinUI's `BreadcrumbBar`. It aligns
 and colors with the Daisy token system while keeping standard breadcrumb behavior like
 overflow ellipsis.
 
+The native template uses the same foreground resource for normal links and separator chevrons.
+`DaisyBreadcrumbBar` therefore does not expose an independent separator brush or opacity.
+Use `DaisyBreadcrumbs` when separators need separate styling.
+
 ## When to Use (vs DaisyBreadcrumbs)
 
 - Use `DaisyBreadcrumbBar` when you already have an `ItemsSource` and want standard WinUI `BreadcrumbBar` behavior (overflow ellipsis, built-in item handling, and keyboard/automation support).

@@ -88,10 +88,10 @@ namespace Flowery.Controls
                 nameof(SeparatorOpacity),
                 typeof(double),
                 typeof(DaisyBreadcrumbs),
-                new PropertyMetadata(0.5, OnAppearanceChanged));
+                new PropertyMetadata(1.0, OnAppearanceChanged));
 
         /// <summary>
-        /// Gets or sets the opacity of the separator.
+        /// Gets or sets the separator's additional opacity multiplier. Default is 1.
         /// </summary>
         public double SeparatorOpacity
         {
@@ -220,7 +220,7 @@ namespace Flowery.Controls
         internal int Index { get; set; }
         internal bool IsFirst { get; set; }
         internal bool IsLast { get; set; }
-        internal double SeparatorOpacity { get; set; } = 0.5;
+        internal double SeparatorOpacity { get; set; } = 1;
         internal DaisySize Size { get; set; } = DaisySize.Medium;
 
         public DaisyBreadcrumbItem()
@@ -428,6 +428,7 @@ namespace Flowery.Controls
             var separatorFgOverride = DaisyResourceLookup.TryGetControlBrush(this, "DaisyBreadcrumbItem", "SeparatorForeground");
 
             var baseContentBrush = fgOverride ?? DaisyResourceLookup.GetBrush(resources, "DaisyBaseContentBrush");
+            var mutedBrush = fgOverride ?? DaisyResourceLookup.GetBrush(resources, "DaisyBaseContentMutedBrush");
             var primaryBrush = linkFgOverride ?? DaisyResourceLookup.GetBrush(resources, "DaisyPrimaryBrush");
 
             // Get font size based on size
@@ -439,7 +440,8 @@ namespace Flowery.Controls
             if (_separatorText != null)
             {
                 _separatorText.Text = Separator;
-                _separatorText.Foreground = SeparatorBrush ?? GetParentSeparatorBrush() ?? separatorFgOverride ?? baseContentBrush;
+                _separatorText.Foreground = SeparatorBrush ?? GetParentSeparatorBrush() ?? separatorFgOverride
+                    ?? DaisyResourceLookup.GetBrush(resources, "DaisyBaseContentSubtleBrush");
                 _separatorText.Opacity = SeparatorOpacity;
                 _separatorText.FontSize = fontSize;
                 _separatorText.Visibility = IsFirst ? Visibility.Collapsed : Visibility.Visible;
@@ -449,7 +451,7 @@ namespace Flowery.Controls
             if (_iconPath != null)
             {
                 _iconPath.Data = Icon;
-                _iconPath.Fill = IsLast ? baseContentBrush : primaryBrush;
+                _iconPath.Fill = IsLast ? mutedBrush : primaryBrush;
                 _iconPath.Width = iconSize;
                 _iconPath.Height = iconSize;
                 _iconPath.Visibility = Icon != null ? Visibility.Visible : Visibility.Collapsed;
@@ -457,8 +459,7 @@ namespace Flowery.Controls
 
             // Content
             bool isClickable = IsClickable && !IsLast;
-            var contentBrush = isClickable ? primaryBrush : baseContentBrush;
-            double contentOpacity = IsLast ? 0.7 : 1.0;
+            var contentBrush = isClickable ? primaryBrush : IsLast ? mutedBrush : baseContentBrush;
             IsTabStop = isClickable;
 
             if (_userContent is string text)
@@ -468,7 +469,6 @@ namespace Flowery.Controls
                     _contentText.Text = text;
                     _contentText.FontSize = fontSize;
                     _contentText.Foreground = contentBrush;
-                    _contentText.Opacity = contentOpacity;
                     _contentText.Visibility = Visibility.Visible;
                 }
                 if (_contentPresenter != null)
@@ -485,7 +485,7 @@ namespace Flowery.Controls
                 if (_contentPresenter != null)
                 {
                     _contentPresenter.Content = _userContent;
-                    _contentPresenter.Opacity = contentOpacity;
+                    _contentPresenter.Foreground = contentBrush;
                     _contentPresenter.Visibility = Visibility.Visible;
                 }
             }

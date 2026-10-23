@@ -314,7 +314,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
             await RuntimeTestHelpers.EnsureLoadedAsync(breadcrumbs);
 
             Assert.AreEqual("/", breadcrumbs.Separator);
-            Assert.AreEqual(0.5, breadcrumbs.SeparatorOpacity);
+            Assert.AreEqual(1.0, breadcrumbs.SeparatorOpacity);
             Assert.AreEqual(DaisySize.Auto, breadcrumbs.Size);
             Assert.AreEqual(FlowerySizeManager.CurrentSize, breadcrumbs.ResolvedSize);
         }

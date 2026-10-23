@@ -1421,21 +1421,27 @@ namespace Flowery.Controls
             }
             else if (effectiveStyle == DaisyButtonStyle.Soft)
             {
-                _normalBackground = DaisyResourceLookup.WithOpacity(variantBg, 0.18) ?? variantBg;
-                _pointerOverBackground = DaisyResourceLookup.WithOpacity(variantBg, 0.28) ?? variantHoverBg;
-                _pressedBackground = DaisyResourceLookup.WithOpacity(variantBg, 0.35) ?? variantHoverBg;
+                var hasSoftPalette = Variant is DaisyButtonVariant.Primary or DaisyButtonVariant.Secondary
+                    or DaisyButtonVariant.Accent or DaisyButtonVariant.Info or DaisyButtonVariant.Success
+                    or DaisyButtonVariant.Warning or DaisyButtonVariant.Error;
+                _normalBackground = hasSoftPalette
+                    ? DaisyResourceLookup.GetBrush(resources, $"DaisyButton{variantName}SoftBrush", base200) : base200;
+                _pointerOverBackground = hasSoftPalette
+                    ? DaisyResourceLookup.GetBrush(resources, $"DaisyButton{variantName}SoftHoverBrush", base300) : base300;
+                _pressedBackground = _pointerOverBackground;
 
-                _normalForeground = variantText;
-                _pointerOverForeground = variantText;
-                _pressedForeground = variantText;
+                _normalForeground = hasSoftPalette ? variantText : baseContent;
+                _pointerOverForeground = _normalForeground;
+                _pressedForeground = _normalForeground;
 
-                _normalBorderBrush = transparent;
-                _pointerOverBorderBrush = transparent;
-                _pressedBorderBrush = transparent;
+                _normalBorderBrush = hasSoftPalette
+                    ? DaisyResourceLookup.GetBrush(resources, $"DaisyButton{variantName}SoftBorderBrush", base300) : base300;
+                _pointerOverBorderBrush = _normalBorderBrush;
+                _pressedBorderBrush = _normalBorderBrush;
 
-                _normalBorderThickness = noBorder;
-                _pointerOverBorderThickness = noBorder;
-                _pressedBorderThickness = noBorder;
+                _normalBorderThickness = thinBorder;
+                _pointerOverBorderThickness = thinBorder;
+                _pressedBorderThickness = thinBorder;
             }
             else
             {

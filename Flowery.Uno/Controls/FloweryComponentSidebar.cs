@@ -990,7 +990,7 @@ namespace Flowery.Controls
 
                     // Add bottom border to last item for visual separation between sections
                     bool isLastItem = i == category.Items.Count - 1;
-                    if (isLastItem && itemElement is Border itemBorder)
+                    if (isLastItem && (itemElement is SidebarItemHost { Content: Border hostedBorder } ? hostedBorder : itemElement as Border) is { } itemBorder)
                     {
                         itemBorder.BorderBrush = _currentBase300Brush;
                         itemBorder.BorderThickness = new Thickness(0, 0, 0, 1);
@@ -1111,7 +1111,7 @@ namespace Flowery.Controls
         {
         }
 
-        private Border BuildSidebarItem(SidebarItem item, SidebarCategory category)
+        private SidebarItemHost BuildSidebarItem(SidebarItem item, SidebarCategory category)
         {
             var metrics = GetSidebarMetrics();
             var container = new Border
@@ -1261,7 +1261,7 @@ namespace Flowery.Controls
                 }
             }
 
-            return container;
+            return new SidebarItemHost(container, item, () => SelectItem(item, category, view, scrollToView: false));
         }
         protected void RegisterItemLabelUpdate(SidebarItem item, DaisyIconText iconText)
         {

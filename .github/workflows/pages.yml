@@ -1,5 +1,6 @@
 # A successful Docs OR WASM run updates only its own site folder.
 # pages-content is persistent: the other component keeps its last good version.
+# It holds a single snapshot without history; both components can be rebuilt at any time.
 name: Publish Pages
 
 on:
@@ -42,7 +43,6 @@ jobs:
       - name: Checkout repository for persistent site content
         uses: actions/checkout@v7
         with:
-          fetch-depth: 0
           persist-credentials: true
 
       - name: Update only the changed component
@@ -50,6 +50,7 @@ jobs:
           SOURCE_WORKFLOW: ${{ github.event.workflow_run.name }}
         run: |
           set -euo pipefail
+          git fetch --depth 1 origin pages-content:refs/remotes/origin/pages-content || true
           if git show-ref --verify --quiet refs/remotes/origin/pages-content; then
             git switch -C pages-content origin/pages-content
           else
@@ -83,9 +84,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "pages: update $SOURCE_WORKFLOW"
-            git push origin HEAD:pages-content
+          # Replace the branch with a parentless commit, so old site builds do not pile up in the repository.
+          tree=$(git write-tree)
+          if [ "$tree" != "$(git rev-parse -q --verify 'origin/pages-content^{tree}' || true)" ]; then
+            commit=$(git commit-tree "$tree" -m "pages: update $SOURCE_WORKFLOW")
+            git push --force origin "$commit:refs/heads/pages-content"
           fi
 
       - name: Configure Pages

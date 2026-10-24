@@ -46,11 +46,14 @@ namespace Flowery.Uno.RuntimeTests
             return tcs.Task;
         }
 
+        // CI runners can hold back low-priority dispatcher work for more than five seconds.
+        private static readonly TimeSpan LayoutTimeout = TimeSpan.FromSeconds(30);
+
         public static async Task CompleteLayoutAsync(FrameworkElement element, params FrameworkElement[] requiredElements)
         {
-            await EnsureLoadedAsync(element).WaitAsync(TimeSpan.FromSeconds(5));
+            await EnsureLoadedAsync(element).WaitAsync(LayoutTimeout);
             foreach (var required in requiredElements)
-                await EnsureLoadedAsync(required).WaitAsync(TimeSpan.FromSeconds(5));
+                await EnsureLoadedAsync(required).WaitAsync(LayoutTimeout);
             var completion = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
             if (!element.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
                 {
@@ -58,7 +61,7 @@ namespace Flowery.Uno.RuntimeTests
                     completion.TrySetResult(null);
                 }))
                 throw new InvalidOperationException("The runtime dispatcher rejected layout verification.");
-            await completion.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await completion.Task.WaitAsync(LayoutTimeout);
         }
     }
 }

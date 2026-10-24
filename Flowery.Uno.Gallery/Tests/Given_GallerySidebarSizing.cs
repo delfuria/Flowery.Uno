@@ -162,6 +162,9 @@ public class Given_GallerySidebarSizing
         }
     }
 
+    // CI runners can hold back low-priority dispatcher work for more than five seconds.
+    private static readonly TimeSpan SettleTimeout = TimeSpan.FromSeconds(30);
+
     private static async Task SettleAsync(FrameworkElement element)
     {
         if (!element.IsLoaded)
@@ -169,7 +172,7 @@ public class Given_GallerySidebarSizing
             var loaded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             RoutedEventHandler onLoaded = (_, _) => loaded.TrySetResult();
             element.Loaded += onLoaded;
-            try { await loaded.Task.WaitAsync(TimeSpan.FromSeconds(5)); }
+            try { await loaded.Task.WaitAsync(SettleTimeout); }
             finally { element.Loaded -= onLoaded; }
         }
         // MainView restores initial navigation through two low-priority dispatcher hops.
@@ -177,7 +180,7 @@ public class Given_GallerySidebarSizing
         {
             var queued = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             Assert.IsTrue(element.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () => queued.SetResult()));
-            await queued.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await queued.Task.WaitAsync(SettleTimeout);
         }
         var rendered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         EventHandler<object> onRendering = (_, _) => rendered.TrySetResult();
@@ -185,7 +188,7 @@ public class Given_GallerySidebarSizing
         try
         {
             element.UpdateLayout();
-            await rendered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await rendered.Task.WaitAsync(SettleTimeout);
         }
         finally { CompositionTarget.Rendering -= onRendering; }
     }

@@ -13,4 +13,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <!-- These heads use the static Regular fonts; the variable fonts are for Windows (see GalleryResources.xaml). -->
+  <ItemGroup>
+    <Content Remove="$(MSBuildThisFileDirectory)Flowery.Uno.Gallery.Core\Assets\Fonts\*-Variable.ttf" />
+  </ItemGroup>
 </Project>

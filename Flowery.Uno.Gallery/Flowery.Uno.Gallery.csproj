@@ -159,6 +159,8 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
+    <!-- Windows uses the variable fonts; the static Regular fonts are for the other heads (see GalleryResources.xaml). -->
+    <Content Remove="..\Flowery.Uno.Gallery.Core\Assets\Fonts\*-Regular.*" />
     <Content Include="..\Flowery.Uno.Gallery.Core\GalleryResources.xaml">
       <Link>Flowery.Uno.Gallery.Core\GalleryResources.xaml</Link>
       <TargetPath>Flowery.Uno.Gallery.Core\GalleryResources.xaml</TargetPath>

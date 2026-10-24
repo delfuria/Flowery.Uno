@@ -208,6 +208,41 @@ namespace Flowery.Uno.RuntimeTests.Controls
                 AssertRenderedCard(implicitCard, new Thickness(0));
             });
 
+        [TestMethod]
+        public Task When_ButtonMinWidthIsAuthored_SizeAndShapeChangesKeepIt() =>
+            WithSizeScopeAsync(static async host =>
+            {
+                var authored = new DaisyButton { Content = "Authored", MinWidth = 100, NeumorphicEnabled = false };
+                var style = new Style(typeof(DaisyButton));
+                style.Setters.Add(new Setter(FrameworkElement.MinWidthProperty, 120d));
+                var styled = new DaisyButton { Content = "Styled", Style = style, NeumorphicEnabled = false };
+                var wide = new DaisyButton { Content = "Wide", Shape = DaisyButtonShape.Wide, NeumorphicEnabled = false };
+                host.Children.Add(authored);
+                host.Children.Add(styled);
+                host.Children.Add(wide);
+                await CompleteLayoutAsync(host, authored, styled, wide);
+
+                FlowerySizeManager.ApplySize(DaisySize.Large);
+                await CompleteLayoutAsync(host);
+                Assert.AreEqual(100d, authored.MinWidth);
+                Assert.IsTrue(authored.ActualWidth >= 100, $"Authored MinWidth must reach layout: {authored.ActualWidth}.");
+                Assert.AreEqual(120d, styled.MinWidth);
+                Assert.AreEqual(DependencyProperty.UnsetValue, styled.ReadLocalValue(FrameworkElement.MinWidthProperty));
+                Assert.AreEqual(200d, wide.MinWidth);
+
+                authored.Shape = DaisyButtonShape.Wide;
+                styled.Shape = DaisyButtonShape.Wide;
+                Assert.AreEqual(100d, authored.MinWidth);
+                Assert.AreEqual(120d, styled.MinWidth);
+                wide.Shape = DaisyButtonShape.Default;
+                Assert.AreEqual(DependencyProperty.UnsetValue, wide.ReadLocalValue(FrameworkElement.MinWidthProperty));
+                Assert.AreEqual(0d, wide.MinWidth);
+                wide.MinWidth = 50;
+                wide.Shape = DaisyButtonShape.Wide;
+                FlowerySizeManager.ApplySize(DaisySize.Small);
+                Assert.AreEqual(50d, wide.MinWidth);
+            });
+
         private static (DaisyButton Button, DaisyCard Card) AddPair(Panel host)
         {
             var button = new DaisyButton { Content = "Save", NeumorphicEnabled = false };

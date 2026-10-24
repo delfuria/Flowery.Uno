@@ -149,12 +149,12 @@ namespace Flowery.Uno.RuntimeTests.Controls
             var root = Part<Grid>(controller, "CheckboxRoot");
             var indicator = Part<Border>(controller, "CheckboxMode");
             var checkmark = Part<Microsoft.UI.Xaml.Shapes.Path>(controller, "CheckMark");
-            var hitSize = DaisyResourceLookup.GetDouble($"DaisySize{key}Height", FlowerySizeManager.GetControlHeight(size));
+            var hitSize = DaisyResourceLookup.GetDouble($"DaisySize{key}Height", double.NaN);
             Assert.AreEqual(hitSize, root.MinWidth, 0.001);
             Assert.AreEqual(hitSize, root.MinHeight, 0.001);
-            Assert.AreEqual(DaisyResourceLookup.GetDouble($"DaisyCheckbox{key}Size", 20), indicator.Width, 0.001);
+            Assert.AreEqual(DaisyResourceLookup.GetDouble($"DaisyCheckbox{key}Size", double.NaN), indicator.Width, 0.001);
             Assert.AreEqual(indicator.Width, indicator.Height, 0.001);
-            Assert.AreEqual(DaisyResourceLookup.GetDouble($"DaisyCheckmark{key}Size", 12), checkmark.Width, 0.001);
+            Assert.AreEqual(DaisyResourceLookup.GetDouble($"DaisyCheckmark{key}Size", double.NaN), checkmark.Width, 0.001);
             Assert.AreEqual(checkmark.Width, checkmark.Height, 0.001);
         }
 

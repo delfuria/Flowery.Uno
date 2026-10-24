@@ -150,10 +150,10 @@ namespace Flowery.Uno.RuntimeTests.Controls
         };
 
         private static double DockItemSize(DaisySize size) =>
-            DaisyResourceLookup.GetDouble($"DaisyDock{DaisyResourceLookup.GetSizeKeyFull(size)}ItemSize", 32);
+            DaisyResourceLookup.GetDouble($"DaisyDock{DaisyResourceLookup.GetSizeKeyFull(size)}ItemSize", double.NaN);
 
         private static double DockIconSize(DaisySize size) =>
-            DockItemSize(size) * DaisyResourceLookup.GetDouble("DaisyDockIconSizeRatio", 0.6);
+            DockItemSize(size) * DaisyResourceLookup.GetDouble("DaisyDockIconSizeRatio", double.NaN);
 
         private static void AssertAutomaticIcon(DaisyIconText icon, DaisySize size)
         {

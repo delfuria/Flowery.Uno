@@ -91,7 +91,7 @@ The WASM Gallery now uses the Skia renderer and SkiaSharp 4 for backdrop blur an
 | --- | --- |
 | `BodyPadding` (`Thickness?`) | Authored padding around content. The default `null` follows `ResolvedSize` and `Variant`. Explicit values, including zero, take precedence. |
 | `ResolvedBodyPadding` (`Thickness`) | The concrete body padding used by the control template. |
-| `BodyFontSize` | Default body text size for custom layouts (default 14). |
+| `BodyFontSize` | Default body text size for custom layouts (default 14). With global sizing, the card uses the size tier's font instead; a `BodyFontSize` set on the card itself (attribute, code or binding) takes precedence over the tier. |
 | `TitleFontSize` | Default title text size for custom layouts (default 20). |
 
 Automatic body padding is 16, 24, 32, 40 and 48 for ExtraSmall through ExtraLarge. Compact uses half of each value. See [size precedence](FlowerySizeManager.md#size-ownership-and-precedence) for `Size` and `ResolvedSize`.

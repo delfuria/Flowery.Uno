@@ -243,6 +243,31 @@ namespace Flowery.Uno.RuntimeTests.Controls
                 Assert.AreEqual(50d, wide.MinWidth);
             });
 
+        [TestMethod]
+        public Task When_CardBodyFontSizeIsLocal_ItWinsOverTheSizeTier() =>
+            WithSizeScopeAsync(static async host =>
+            {
+                var automatic = new DaisyCard { Content = "Automatic", NeumorphicEnabled = false };
+                var local = new DaisyCard { Content = "Local", BodyFontSize = 13, NeumorphicEnabled = false };
+                host.Children.Add(automatic);
+                host.Children.Add(local);
+                await CompleteLayoutAsync(host, automatic, local);
+                Assert.AreEqual(TierFontSize("Small"), automatic.FontSize);
+                Assert.AreEqual(13d, local.FontSize);
+
+                FlowerySizeManager.ApplySize(DaisySize.ExtraLarge);
+                await CompleteLayoutAsync(host);
+                Assert.AreEqual(TierFontSize("ExtraLarge"), automatic.FontSize);
+                Assert.AreEqual(13d, local.FontSize, "A local BodyFontSize stays authoritative after a global size change.");
+
+                local.ClearValue(DaisyCard.BodyFontSizeProperty);
+                await CompleteLayoutAsync(host);
+                Assert.AreEqual(TierFontSize("ExtraLarge"), local.FontSize, "Clearing BodyFontSize returns to the size tier.");
+            });
+
+        private static double TierFontSize(string sizeKey) =>
+            DaisyResourceLookup.GetDouble($"DaisySize{sizeKey}FontSize", double.NaN);
+
         private static (DaisyButton Button, DaisyCard Card) AddPair(Panel host)
         {
             var button = new DaisyButton { Content = "Save", NeumorphicEnabled = false };

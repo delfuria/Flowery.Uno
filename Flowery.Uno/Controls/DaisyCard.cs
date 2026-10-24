@@ -625,8 +625,9 @@ namespace Flowery.Controls
                 DaisyTokenDefaults.EnsureDefaults(resources);
 
             // WinUI/Uno doesn't support TextElement.FontSize attached properties.
-            // If Size is set, we prefer its scaled font size over BodyFontSize.
-            if (Size != DaisySize.Auto || (FlowerySizeManager.UseGlobalSizeByDefault && !FlowerySizeManager.ShouldIgnoreGlobalSize(this)))
+            // If Size is set, we prefer its scaled font size over BodyFontSize, unless BodyFontSize is set locally.
+            if (ReadLocalValue(BodyFontSizeProperty) == DependencyProperty.UnsetValue
+                && (Size != DaisySize.Auto || (FlowerySizeManager.UseGlobalSizeByDefault && !FlowerySizeManager.ShouldIgnoreGlobalSize(this))))
             {
                 FontSize = FlowerySizeManager.GetFontSizeForTier(ResponsiveFontTier.Primary, ResolvedSize);
             }

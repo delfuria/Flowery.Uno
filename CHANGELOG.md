@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.0] - 2026-10-22
+## [1.5.0] - 2026-10-24
 
 - **Breaking:** Neumorphic: removed the rim light and surface gradient API (`NeumorphicRimLightEnabled`, `NeumorphicSurfaceGradientEnabled`, `GlobalNeumorphicRimLightEnabled`, `GlobalNeumorphicSurfaceGradientEnabled`, the matching `DaisyNeumorphic` attached properties and the `IsNeumorphic*EffectivelyEnabled()` helpers). No rendering code ever read them (#94).
 - **Breaking:** Neumorphic: `GlobalNeumorphicDarkShadowColor` and `GlobalNeumorphicLightShadowColor` are now `Color?`. `null` (the default) follows the theme; a color set by the app survives theme changes. The navy fallback before the first theme is gone (#94).
@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Gallery: the Toggle and Radio sections show a small `DaisyTable` with the controls in its cells, to check the row height in every size tier.
 - Neumorphic: table rows and cells, and list rows and columns, no longer draw their own surface; the table or list is the one surface (#67). The table's root border now sits in a `Grid`, so the surface is drawn next to it; before, it went into the row panel, where it had no height.
 - Gallery: the Table example is 670 px wide instead of 620, so the `Message` button in its last column is no longer clipped.
+- Release: every release asset has a signed build provenance attestation, verifiable with `gh attestation verify <file> --repo tobitege/Flowery.Uno`, and `SHA256SUMS.txt` lists the SHA-256 checksum of each asset. The release notes explain both checks.
 - Badge: the label is no longer cut off at the bottom. The default style fixed the height to the Medium token and drew a second border, so a badge in another size tier was squeezed; `DaisyBadge` now owns its border, padding and size, as in Flowery.WinUI.
 - Join: Default and Soft buttons keep the join's divider border, so a join shows its shared borders and rounded ends again. The buttons re-applied their own transparent border on load, theme change and hover.
 - Join and ButtonGroup: buttons keep their segment corners (square inside, rounded at the ends) after a size change. They could return to the size token's radius when the container set a radius equal to the button's current one.

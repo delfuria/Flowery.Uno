@@ -99,6 +99,10 @@ jobs:
     runs-on: windows-2025-vs2026
     permissions:
       contents: read
+    # The arm64 build is cross-compiled on the x64 runner.
+    strategy:
+      matrix:
+        arch: [x64, arm64]
 
     steps:
       - uses: actions/checkout@v7
@@ -112,19 +116,19 @@ jobs:
         run: |
           ./scripts/publish_windows.ps1 `
             -Configuration Release `
-            -RuntimeIdentifier win-x64 `
+            -RuntimeIdentifier win-${{ matrix.arch }} `
             -SelfContained:$true `
             -OutputDir publish
 
       - name: Zip Windows artifact
-        run: Compress-Archive -Path ./publish/* -DestinationPath ./Flowery.Gallery-Windows-x64.zip
+        run: Compress-Archive -Path ./publish/* -DestinationPath ./Flowery.Gallery-Windows-${{ matrix.arch }}.zip
         shell: pwsh
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Flowery.Gallery-Windows-x64
-          path: ./Flowery.Gallery-Windows-x64.zip
+          name: Flowery.Gallery-Windows-${{ matrix.arch }}
+          path: ./Flowery.Gallery-Windows-${{ matrix.arch }}.zip
 
   # Gallery packages built by scripts/gallery (see scripts/gallery/README.md).
   # Windows (Skia) zips and Linux .deb files are cross-published from one Linux runner.
@@ -413,6 +417,7 @@ jobs:
           | Platform | Download |
           |----------|----------|
           | Windows x64 (WinUI) | `Flowery.Gallery-Windows-x64.zip` |
+          | Windows arm64 (WinUI) | `Flowery.Gallery-Windows-arm64.zip` |
           | Windows x64 (Skia, portable) | `FloweryUnoGallery_win-x64.zip` |
           | Windows arm64 (Skia, portable) | `FloweryUnoGallery_win-arm64.zip` |
           | Linux x64 (.deb) | `flowery-uno-gallery_<version>_amd64.deb` |

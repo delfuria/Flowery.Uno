@@ -84,6 +84,8 @@ Selected items are visually distinct, using the project's **Primary** color pale
 - **Foreground:** `{DynamicResource DaisyPrimaryContentBrush}` (white/contrast text)
 - **Icons:** Favorite star outline syncs to the content brush color.
 
+Built-in items can also be selected without a pointer: each item is a tab stop that Enter or Space selects, and UI Automation exposes it as a list item with the Invoke pattern and the item's `DisplayName` as its name. Screen readers and automation tools select it the same way as a tap. Custom item elements from `TryCreateCustomItemElement` keep their own behavior.
+
 ## State Management
 
 The sidebar automatically persists its state via `StateStorageProvider`:

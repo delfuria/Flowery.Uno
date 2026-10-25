@@ -10,8 +10,7 @@
         are derived from the palette in code, so they follow theme changes; define them to override.
     -->
     <Thickness x:Key="DaisySchedulerToolbarMargin">8</Thickness>
-    <Thickness x:Key="DaisySchedulerToolbarItemMargin">2</Thickness>
-    <Thickness x:Key="DaisySchedulerViewButtonsMargin">8,0,8,0</Thickness>
+    <x:Double x:Key="DaisySchedulerToolbarIconSize">20</x:Double>
     <Thickness x:Key="DaisySchedulerTooltipPadding">12,8,12,8</Thickness>
 
     <Style TargetType="controls:DaisyScheduler">
@@ -32,18 +31,33 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
-                            <controls:WrapPanel x:Name="PART_Toolbar" Margin="{StaticResource DaisySchedulerToolbarMargin}" Orientation="Horizontal">
-                                <controls:DaisyButton Tag="Previous" Content="‹" Variant="Ghost" Margin="{StaticResource DaisySchedulerToolbarItemMargin}" />
-                                <controls:DaisyButton x:Name="PART_Date" Tag="Date" Variant="Ghost" Margin="{StaticResource DaisySchedulerToolbarItemMargin}" />
-                                <controls:DaisyButton Tag="Next" Content="›" Variant="Ghost" Margin="{StaticResource DaisySchedulerToolbarItemMargin}" />
-                                <controls:DaisyButton Tag="Today" Variant="Ghost" Margin="{StaticResource DaisySchedulerToolbarItemMargin}" />
-                                <controls:WrapPanel x:Name="PART_Views" Orientation="Horizontal" Margin="{StaticResource DaisySchedulerViewButtonsMargin}" />
-                                <controls:WrapPanel x:Name="PART_CustomButtons" Orientation="Horizontal" />
-                                <controls:DaisyButton Tag="Settings" Variant="Ghost" Margin="{StaticResource DaisySchedulerToolbarItemMargin}" />
-                            </controls:WrapPanel>
+                            <controls:DaisySchedulerToolbar x:Name="PART_Toolbar" Margin="{StaticResource DaisySchedulerToolbarMargin}" />
                             <Border x:Name="PART_ViewHost" Grid.Row="1" />
                         </Grid>
                     </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The buttons of DaisySchedulerToolbar. The toolbar sets their colors, paddings and heights for the size and the
+         state, so the template only draws them. -->
+    <Style x:Key="DaisySchedulerToolbarButtonStyle" TargetType="Button">
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="UseSystemFocusVisuals" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <ContentPresenter Background="{TemplateBinding Background}"
+                                      BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                      CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}"
+                                      Foreground="{TemplateBinding Foreground}" Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

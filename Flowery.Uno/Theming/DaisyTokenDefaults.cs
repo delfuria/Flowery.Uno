@@ -1,4 +1,4 @@
-using Flowery.Services;
+﻿using Flowery.Services;
 using Microsoft.UI.Xaml;
 
 namespace Flowery.Theming
@@ -390,8 +390,7 @@ namespace Flowery.Theming
             Ensure(resources, "DaisySchedulerSettingsMinimumWidth", 230d);
             Ensure(resources, "DaisySchedulerSettingsMaximumHeight", 600d);
             Ensure(resources, "DaisySchedulerToolbarMargin", new Thickness(8));
-            Ensure(resources, "DaisySchedulerToolbarItemMargin", new Thickness(2));
-            Ensure(resources, "DaisySchedulerViewButtonsMargin", new Thickness(8, 0, 8, 0));
+            Ensure(resources, "DaisySchedulerToolbarIconSize", 20d);
 
             // ---- Large display tokens ----
             Ensure(resources, "LargeDisplayFontSize", 36d);

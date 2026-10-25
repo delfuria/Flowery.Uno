@@ -1,4 +1,4 @@
-// Adapted from Xtreme.Components (MIT), commit a72f9fc92d41dc7c6c1785d2747b1f9677f31706.
+﻿// Adapted from Xtreme.Components (MIT), commit a72f9fc92d41dc7c6c1785d2747b1f9677f31706.
 // Copyright (c) 2026 Data Access Inc. and Xtreme.Components contributors.
 // See ThirdPartyNotices/Xtreme.Components.txt for the license.
 using System.Windows.Input;
@@ -21,6 +21,11 @@ public sealed class SchedulerToolbarButton
 
     /// <summary>Optional icon glyph from the symbol theme font (e.g. ""). Rendered as a FontIcon.</summary>
     public string? Glyph { get; set; }
+
+    /// <summary>Optional line icon as SVG path data on a 16 by 16 grid, drawn with a 1.5 stroke in the text color of
+    /// the toolbar, such as the icons in <see cref="SchedulerToolbarIcons"/>. The button then shows only the icon, with
+    /// <see cref="Tooltip"/> (or <see cref="Label"/>) as its tooltip. <see cref="Image"/> takes precedence.</summary>
+    public string? IconData { get; set; }
 
     /// <summary>Optional raw image bytes (PNG/JPG/…) rendered as the button icon. Takes precedence over
     /// <see cref="Glyph"/> — e.g. an adornment template's image.</summary>
@@ -56,4 +61,19 @@ public sealed class SchedulerToolbarButton
     /// menu the button becomes a submenu of the same entries.
     /// </summary>
     public IReadOnlyList<SchedulerToolbarButton>? MenuItems { get; set; }
+}
+
+/// <summary>
+/// Line icons for <see cref="SchedulerToolbarButton.IconData"/> in the style of the scheduler toolbar.
+/// </summary>
+public static class SchedulerToolbarIcons
+{
+    /// <summary>A plus, for creating an appointment.</summary>
+    public const string Add = "M8 3.5v9 M3.5 8h9";
+
+    /// <summary>A trash can, for deleting.</summary>
+    public const string Delete = "M3 4.5h10 M6.5 4.5V3h3v1.5 M4.5 4.5l0.6 8.4a1 1 0 0 0 1 0.9h3.8a1 1 0 0 0 1-0.9l0.6-8.4 M7 7v4.5 M9 7v4.5";
+
+    /// <summary>A pencil, for editing.</summary>
+    public const string Edit = "M10.5 3 13 5.5 6 12.5 3 13 3.5 10z M9 4.5 11.5 7";
 }

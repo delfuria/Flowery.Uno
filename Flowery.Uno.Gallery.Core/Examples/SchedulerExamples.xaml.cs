@@ -298,8 +298,8 @@ public sealed partial class SchedulerExamples : ScrollableExamplePage
             DemoScheduler.SchedulerResources = _resources.ToArray();
         DemoScheduler.Appointments = _appointments.ToArray();
         DemoScheduler.ToolbarButtons.Clear();
-        DemoScheduler.ToolbarButtons.Add(new SchedulerToolbarButton { Id = "new", Label = Text("New"), IsEnabled = !DemoScheduler.IsReadOnly });
-        DemoScheduler.ToolbarButtons.Add(new SchedulerToolbarButton { Id = "delete", Label = Text("Delete"), IsEnabled = !DemoScheduler.IsReadOnly });
+        DemoScheduler.ToolbarButtons.Add(new SchedulerToolbarButton { Id = "new", Label = Text("New"), IconData = SchedulerToolbarIcons.Add, IsEnabled = !DemoScheduler.IsReadOnly });
+        DemoScheduler.ToolbarButtons.Add(new SchedulerToolbarButton { Id = "delete", Label = Text("Delete"), IconData = SchedulerToolbarIcons.Delete, IsEnabled = !DemoScheduler.IsReadOnly });
         if (DemoScheduler.IsReadOnly)
             EditorPanel.Visibility = Visibility.Collapsed;
     }

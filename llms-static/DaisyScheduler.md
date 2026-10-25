@@ -157,6 +157,7 @@ The `DaisySchedulerToolTipStyle` and `DaisySchedulerFlyoutPresenterStyle` styles
 | `SelectedAppointment` | Single selected appointment, or null |
 | `SelectedAppointments` | Full selection, available for reading |
 | `ShowTiles` | Show data tiles on appointments |
+| `ShowToolbar` | Show the built-in `DaisySchedulerToolbar` (default `true`) |
 | `ShowWeekends` | Show Saturday and Sunday in Week, Month and Planner. Default: `true`; also in the settings menu. A Planner without weekends draws only the shown dates and reports real times |
 
 ## Quick examples
@@ -304,9 +305,38 @@ Each template receives an `AppointmentContext` with the appointment, brushes, st
 `AppointmentRenderer` and `AppointmentTooltipRenderer` provide optional code renderers that return a `FrameworkElement`.
 A null renderer result uses the template or default content.
 
-`ToolbarButtons` and `ToolbarAdornments` accept host actions. Replace a `SchedulerToolbarButton` to change it.
 `SetTileOptions()` supplies tile toggles for the settings menu.
 The control reports those toggles through `TileOptionToggled`.
+
+## Toolbar
+
+The toolbar is its own control, `DaisySchedulerToolbar`. The first row holds the date range as a title, which opens a date
+picker, previous and next, Today, the host buttons and the settings; the second row holds the views as icon segments with
+tooltips. Heights, icons and the title follow the `Size` of the scheduler through the design tokens
+(`DaisySize{Size}Height`, `DaisySize{Size}HeaderFontSize` and `DaisySchedulerToolbarIconSize`). The title writes month
+and day in the order of the culture. A culture that writes the year first keeps it first for a month, and for days only
+where it also writes the month before the day, such as Japanese; otherwise the year follows the days. Where the first row
+is too narrow, it wraps: the host buttons and the settings move right-aligned below the date and the navigation, which
+wrap as well where needed.
+
+To place the toolbar elsewhere, such as in a title bar, hide the built-in one and point another at the scheduler:
+
+```xml
+<controls:DaisySchedulerToolbar Scheduler="{x:Bind Scheduler}" />
+<controls:DaisyScheduler x:Name="Scheduler" ShowToolbar="False" />
+```
+
+`ToolbarButtons` and `ToolbarAdornments` accept host actions. Replace a `SchedulerToolbarButton` to change it.
+`SchedulerToolbarButton.IconData` takes a 16-unit line icon as path data, drawn in the toolbar's text color; the button
+then shows only the icon, with its tooltip. `SchedulerToolbarIcons.Add`, `.Delete` and `.Edit` are ready-made icons in the
+same style:
+
+```csharp
+scheduler.ToolbarButtons.Add(new SchedulerToolbarButton
+{
+    Id = "new", Label = "New appointment", IconData = SchedulerToolbarIcons.Add
+});
+```
 
 ## Localization
 

@@ -1,94 +1,103 @@
-using Flowery.Controls.Scheduler.Models;
-using Microsoft.UI.Xaml.Automation;
+﻿using Flowery.Controls.Scheduler.Models;
 
 namespace Flowery.Controls;
 
 public partial class DaisyScheduler
 {
-    private sealed record ToolbarAction(SchedulerToolbarButton Button, bool Adornment);
+    internal sealed record ToolbarAction(SchedulerToolbarButton Button, bool Adornment);
 
-    private static string Text(string key) => FloweryLocalization.GetStringInternal("Scheduler_" + key);
+    /// <summary>Raised when what the toolbars of this scheduler show has changed.</summary>
+    internal event EventHandler? ToolbarChanged;
+
+    internal static string Text(string key) => FloweryLocalization.GetStringInternal("Scheduler_" + key);
+
+    internal double ToolbarCornerRadius => Token<CornerRadius>($"DaisySize{SizeKey}CornerRadius").TopLeft;
+
+    internal CornerRadius ToolbarButtonCornerRadius => Token<CornerRadius>("DaisySizeSmallCornerRadius");
+
+    internal double ToolbarButtonHeight => Token<double>($"DaisySize{SizeKey}Height");
+
+    internal double ToolbarTitleFontSize => Token<double>($"DaisySize{SizeKey}HeaderFontSize");
+
+    internal double ToolbarIconSize => Math.Round(Token<double>("DaisySchedulerToolbarIconSize") * SizeScale);
 
     private void UpdateToolbar()
     {
-        if (_toolbar is null || _views is null || _customButtons is null || _dateButton is null)
-            return;
-        // The template binds these margins once; tokens set here follow host overrides.
-        _toolbar.Margin = Token<Thickness>("DaisySchedulerToolbarMargin");
-        _views.Margin = Token<Thickness>("DaisySchedulerViewButtonsMargin");
-        foreach (var button in _toolbar.Children.OfType<DaisyButton>())
+        if (_toolbar is not null)
         {
-            button.Size = ResolvedSize;
-            button.Margin = Token<Thickness>("DaisySchedulerToolbarItemMargin");
-            if (button.Tag is string key)
-            {
-                if (key is "Today" or "Settings")
-                    button.Content = Text(key);
-                AutomationProperties.SetName(button, Text(key == "Date" ? "ChooseDate" : key));
-            }
+            // The template binds the margin once; the token set here follows host overrides.
+            _toolbar.Margin = Token<Thickness>("DaisySchedulerToolbarMargin");
+            _toolbar.Visibility = ShowToolbar ? Visibility.Visible : Visibility.Collapsed;
         }
+        ToolbarChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>The title of the shown dates: the emphasized part, such as the month, and the rest, such as the year.</summary>
+    // The month or the days lead in bold and the year follows muted. A culture that writes the year first keeps it first
+    // in one text: for the month, and for days where it also writes the month before the day (such as Japanese or
+    // Chinese). Days are written in the culture's order of month and day, with the month abbreviated. A single day
+    // keeps the culture's long date with its weekday.
+    internal (string Primary, string Secondary) ToolbarTitle()
+    {
+        var format = Culture.DateTimeFormat;
+        var yearMonth = format.YearMonthPattern;
+        var yearFirst = yearMonth.IndexOf('y') < yearMonth.IndexOf('M');
+        if (CurrentView == SchedulerView.Month)
+            return yearFirst
+                ? (SelectedDate.ToString(yearMonth, Culture), string.Empty)
+                : (SelectedDate.ToString("MMMM", Culture), SelectedDate.ToString("yyyy", Culture));
         var dates = VisibleDates();
-        _dateButton.Content = CurrentView == SchedulerView.Month ? SelectedDate.ToString("MMMM yyyy", Culture) :
-            dates.Length == 1 ? dates[0].ToString("D", Culture) :
-            dates[0].ToString("d MMM", Culture) + " – " + dates[^1].ToString("d MMM yyyy", Culture);
-        _views.Children.Clear();
-        foreach (var view in Enum.GetValues<SchedulerView>())
+        var (first, last) = (dates[0], dates[^1]);
+        if (dates.Length == 1)
+            return (first.ToString("D", Culture), string.Empty);
+        var monthDay = format.MonthDayPattern.Replace("MMMM", "MMM");
+        // Years as the culture's calendar counts them, which need not change on 1 January.
+        var sameYear = format.Calendar.GetYear(first) == format.Calendar.GetYear(last);
+        // Only a culture that writes year, month and day in this order gets the year before the days; one that writes the
+        // year first but the day before the month (such as Persian) keeps the year after them.
+        if (yearFirst && monthDay.StartsWith('M'))
         {
-            var button = new DaisyButton
-            {
-                Content = Text(view.ToString()), Size = ResolvedSize, Tag = view,
-                Variant = view == CurrentView ? DaisyButtonVariant.Primary : DaisyButtonVariant.Ghost,
-                Margin = new Thickness(2)
-            };
-            button.Click += OnToolbarClick;
-            _views.Children.Add(button);
+            // The year as the culture writes it before the month, such as "yyyy年".
+            var withYear = yearMonth[..yearMonth.IndexOf('M')] + monthDay;
+            return (first.ToString(withYear, Culture) + " – " + last.ToString(sameYear ? monthDay : withYear, Culture), string.Empty);
         }
-        _customButtons.Children.Clear();
-        foreach (var button in ToolbarButtons)
-            _customButtons.Children.Add(CreateToolbarButton(button, false));
-        foreach (var button in ToolbarAdornments)
-            _customButtons.Children.Add(CreateToolbarButton(button, true));
+        var years = sameYear
+            ? last.ToString("yyyy", Culture)
+            : first.ToString("yyyy", Culture) + " – " + last.ToString("yyyy", Culture);
+        return (first.ToString(monthDay, Culture) + " – " + last.ToString(monthDay, Culture), years);
     }
 
-    // The Flowery WrapPanel measures its children with infinite width, so the nested view and custom-button
-    // panels would never wrap on a narrow screen. Avalonia's WrapPanel passes its width; this does the same.
-    private void OnToolbarSizeChanged(object? sender, SizeChangedEventArgs e) => RunOutsideLayout(LimitToolbarPanels);
-
-    private void LimitToolbarPanels()
+    internal void GoToToday()
     {
-        if (_toolbar is not { } toolbar)
-            return;
-        foreach (var panel in new[] { _views, _customButtons })
-            if (panel is not null)
-                panel.MaxWidth = Math.Max(0, toolbar.ActualWidth - panel.Margin.Left - panel.Margin.Right);
+        SelectedDates = null;
+        SelectedDate = new DateTimeOffset(DateTime.Today);
     }
 
-    private DaisyButton CreateToolbarButton(SchedulerToolbarButton model, bool adornment)
+    internal void ShowDatePicker(FrameworkElement anchor)
     {
-        var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
-        if (model.Image is { Length: > 0 } bytes)
-            content.Children.Add(CreateOwnedImage(bytes, 18 * SizeScale));
-        else if (model.Glyph is { Length: > 0 } glyph)
-            content.Children.Add(Label(glyph));
-        if (model.Label is { Length: > 0 } label)
-            content.Children.Add(Label(label));
-        var button = new DaisyButton
+        var calendar = new CalendarView
         {
-            Content = content, Size = ResolvedSize, IsEnabled = model.IsEnabled,
-            Variant = model.IsToggle && model.IsChecked ? DaisyButtonVariant.Primary : DaisyButtonVariant.Ghost,
-            Tag = new ToolbarAction(model, adornment), Margin = new Thickness(2)
+            SelectionMode = CalendarViewSelectionMode.Single,
+            FirstDayOfWeek = (Windows.Globalization.DayOfWeek)FirstDayOfWeek
         };
-        SetSchedulerTooltip(button, model.Tooltip);
-        AutomationProperties.SetName(button, model.Label ?? model.Tooltip ?? model.Id ?? string.Empty);
-        if (model.MenuItems is { Count: > 0 } entries)
-        {
-            var menu = new MenuFlyout();
-            foreach (var entry in entries)
-                menu.Items.Add(CreateMenuItem(entry, adornment));
-            button.Flyout = menu;
-        }
-        button.Click += OnToolbarClick;
-        return button;
+        calendar.SelectedDates.Add(SelectedDate);
+        calendar.SetDisplayDate(SelectedDate);
+        calendar.SelectedDatesChanged += OnDatePicked;
+        new Flyout { Content = calendar }.ShowAt(anchor);
+    }
+
+    internal void ShowSettings(FrameworkElement anchor) =>
+        new Flyout { Content = BuildSettings(), FlyoutPresenterStyle = WithTooltipPadding(SchedulerStyle("DaisySchedulerFlyoutPresenterStyle"), typeof(FlyoutPresenter)) }
+            .ShowAt(anchor);
+
+    internal void SetToolbarTooltip(FrameworkElement target, string? text) => SetSchedulerTooltip(target, text);
+
+    internal MenuFlyout CreateToolbarMenu(SchedulerToolbarButton model, bool adornment)
+    {
+        var menu = new MenuFlyout();
+        foreach (var entry in model.MenuItems ?? Array.Empty<SchedulerToolbarButton>())
+            menu.Items.Add(CreateMenuItem(entry, adornment));
+        return menu;
     }
 
     private MenuFlyoutItemBase CreateMenuItem(SchedulerToolbarButton model, bool adornment)
@@ -111,7 +120,7 @@ public partial class DaisyScheduler
             InvokeToolbarAction(action);
     }
 
-    private void InvokeToolbarAction(ToolbarAction action)
+    internal void InvokeToolbarAction(ToolbarAction action)
     {
         if (action.Button.Command is { } command && command.CanExecute(action.Button.CommandParameter))
             command.Execute(action.Button.CommandParameter);
@@ -119,41 +128,6 @@ public partial class DaisyScheduler
             AdornmentToggleRequested?.Invoke(this, action.Button);
         else
             ToolbarButtonClicked?.Invoke(this, action.Button);
-    }
-
-    private void OnToolbarClick(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Button button)
-            return;
-        switch (button.Tag)
-        {
-            case SchedulerView view:
-                CurrentView = view;
-                break;
-            case ToolbarAction action when action.Button.MenuItems is not { Count: > 0 }:
-                InvokeToolbarAction(action);
-                break;
-            case "Previous": Navigate(-1); break;
-            case "Next": Navigate(1); break;
-            case "Today":
-                SelectedDates = null;
-                SelectedDate = new DateTimeOffset(DateTime.Today);
-                break;
-            case "Date":
-                var calendar = new CalendarView
-                {
-                    SelectionMode = CalendarViewSelectionMode.Single,
-                    FirstDayOfWeek = (Windows.Globalization.DayOfWeek)FirstDayOfWeek
-                };
-                calendar.SelectedDates.Add(SelectedDate);
-                calendar.SetDisplayDate(SelectedDate);
-                calendar.SelectedDatesChanged += OnDatePicked;
-                new Flyout { Content = calendar }.ShowAt(button);
-                break;
-            case "Settings":
-                new Flyout { Content = BuildSettings(), FlyoutPresenterStyle = WithTooltipPadding(SchedulerStyle("DaisySchedulerFlyoutPresenterStyle"), typeof(FlyoutPresenter)) }.ShowAt(button);
-                break;
-        }
     }
 
     private void OnDatePicked(CalendarView sender, CalendarViewSelectedDatesChangedEventArgs e)

@@ -133,7 +133,7 @@
                                                 </Button>
                                                 <TextBlock x:Name="MitLicenseText"
                                                            Grid.Column="2"
-                                                           Text=" - 2025 - MIT licensed"
+                                                           Text=" - 2025, 2026 - MIT licensed"
                                                            FontSize="12"
                                                            Foreground="#64748B"
                                                            TextTrimming="CharacterEllipsis"

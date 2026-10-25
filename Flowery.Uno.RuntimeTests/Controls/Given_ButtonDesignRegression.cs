@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using Flowery.Controls;
 using Flowery.Enums;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Flowery.Uno.RuntimeTests.Controls
@@ -25,6 +26,21 @@ namespace Flowery.Uno.RuntimeTests.Controls
 
             resized.Size = DaisySize.ExtraLarge;
             Assert.AreEqual(large.CornerRadius, resized.CornerRadius, "ExtraSmall -> ExtraLarge");
+        }
+
+        [TestMethod]
+        public void When_ButtonsAreLaidOutTheFirstTime_TheyHaveTheirSizeHeight()
+        {
+            // Auto-sized panels keep the first measured height until something else invalidates them.
+            var large = new DaisyButton { Content = "Save", Size = DaisySize.Large, Variant = DaisyButtonVariant.Ghost };
+            var automatic = new DaisyButton { Content = "Save" };
+            var panel = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+            panel.Children.Add(large);
+            panel.Children.Add(automatic);
+            RuntimeTestHelpers.AttachToHost(panel);
+
+            Assert.AreEqual(Flowery.Theming.DaisyResourceLookup.GetDouble("DaisySizeLargeHeight"), large.ActualHeight, 0.5);
+            Assert.AreEqual(Flowery.Theming.DaisyResourceLookup.GetDouble($"DaisySize{automatic.ResolvedSize}Height"), automatic.ActualHeight, 0.5);
         }
 
         [TestMethod]

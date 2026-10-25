@@ -48,6 +48,7 @@ I hope this will be useful and fun to work with! -- tobitege
 - **Runtime Theme Switching**: Use `DaisyThemeDropdown` to switch themes at runtime.
 - **Lightweight Styling**: Customize individual controls with control-specific resource keys. [📖 Reference](llms-static/StylingResources.md)
 - **Localization Support**: Built-in i18n with **12 languages** (🇺🇸 🇩🇪 🇫🇷 🇪🇸 🇮🇹 🇨🇳 🇰🇷 🇯🇵 🇸🇦 🇹🇷 🇺🇦 🇮🇱), localizable theme names, and runtime language switching. [📖 Guide](LOCALIZATION.md) WinUI/Uno heads must use `{Binding [Key]}` with a `Localization` DataContext; `x:Bind` indexers are invalid on all heads. Desktop/Skia must force a `DataContext` refresh on culture change to update indexer bindings.
+- **Scheduler**: `DaisyScheduler` provides Day, Week, Month, Agenda, resource Planner, horizontal Timeline, and a Calendar navigator with a daily appointment list. It supports Flowery themes, five sizes, and twelve languages. [📖 Guide](llms-static/DaisyScheduler.md)
 - **FlowKanban**: Full Kanban board control with swimlanes, WIP limits, drag & drop, undo/redo history, multi-board home, and JSON persistence + migration. [📖 Guide](llms-static/FlowKanban.md)
 - **Variants**: Supports `Primary`, `Secondary`, `Accent`, `Ghost`, etc.
 - **Gallery App**: Demo application showcasing all controls and features.
@@ -220,6 +221,20 @@ A horizontal scrollable date picker:
 
 - **Date Timeline** (`DaisyDateTimeline`): Scrollable date picker with selectable date items.
 - **Date Timeline Item** (`DaisyDateTimelineItem`): Individual date cell with selection states.
+
+### Scheduler
+
+`DaisyScheduler` provides Day, Week, Month, Agenda, resource Planner, horizontal Timeline, and Calendar views with Flowery themes and size tiers.
+It is ported from Flowery.NET and adapted from the MIT-licensed [Xtreme.Components](https://github.com/XtremeCRM/Xtreme.Components) scheduler.
+The control reports move, resize, creation, and deletion requests to the host; it never changes the appointment list itself.
+Typed resources support occupancy queries by week or time range, and the Timeline supports named, collapsible groups.
+The Gallery demo is available under **Custom Controls → Scheduler**.
+
+```xml
+<daisy:DaisyScheduler CurrentView="Month" />
+```
+
+See [DaisyScheduler](llms-static/DaisyScheduler.md) for usage, and `Flowery.Uno/ThirdPartyNotices/Xtreme.Components.txt` for the license of the adapted code.
 
 ---
 

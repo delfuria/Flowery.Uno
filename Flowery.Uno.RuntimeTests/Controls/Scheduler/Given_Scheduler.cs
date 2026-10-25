@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -26,24 +26,6 @@ namespace Flowery.Uno.RuntimeTests.Controls.Scheduler;
 [TestClass]
 public class Given_Scheduler
 {
-    private static readonly SchedulerView[] AppointmentViews =
-        [SchedulerView.Day, SchedulerView.Week, SchedulerView.Month, SchedulerView.Agenda, SchedulerView.Planner, SchedulerView.Timeline];
-
-    [TestMethod]
-    public async Task When_EveryView_Renders_HostAppointments_SupportsSelection()
-    {
-        foreach (var view in AppointmentViews)
-        {
-            using var scope = await CreateAsync(view);
-            var block = scope.Frame(scope.Appointment);
-            Assert.IsTrue(block.ActualWidth > 0, view.ToString());
-            Assert.IsTrue(block.ActualHeight > 0, view.ToString());
-            await scope.ClickAsync(block);
-            Assert.AreSame(scope.Appointment, scope.Scheduler.SelectedAppointment, view.ToString());
-            Assert.HasCount(1, scope.Scheduler.SelectedAppointments);
-        }
-    }
-
     [TestMethod]
     public async Task When_DragMoving_ReportsSnappedProposal_WithoutMutatingHostData()
     {

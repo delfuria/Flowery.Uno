@@ -1,4 +1,4 @@
-// Uno Platform adaptation of Xtreme.Components Scheduler (MIT).
+﻿// Uno Platform adaptation of Xtreme.Components Scheduler (MIT).
 // See ThirdPartyNotices/Xtreme.Components.txt for attribution and license.
 using Flowery.Controls.Scheduler.Models;
 using Flowery.Controls.Scheduler.Rendering;
@@ -482,6 +482,13 @@ public partial class DaisyScheduler
     {
         if (ReferenceEquals(sender, _bodyScroll) && _bodyScroll is { } body)
         {
+#if __ANDROID__
+            // Uno restores the offset of the last ChangeView at every arrange and clears it on touch input only in
+            // its managed presenter, so the next layout jumped back to the initial hour after the user had scrolled.
+            // A ChangeView to the settled offsets makes them the restored ones without scrolling.
+            if (!e.IsIntermediate)
+                body.ChangeView(body.HorizontalOffset, body.VerticalOffset, null, true);
+#endif
             _headerScroll?.ChangeView(body.HorizontalOffset, null, null, true);
             _gutterScroll?.ChangeView(null, body.VerticalOffset, null, true);
         }

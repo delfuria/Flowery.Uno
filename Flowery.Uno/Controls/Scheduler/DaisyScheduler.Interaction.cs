@@ -49,7 +49,8 @@ public partial class DaisyScheduler
             Pointer = args.Pointer;
             PointerId = args.Pointer.PointerId;
             WindowPosition = point.Position;
-            IsTouch = args.Pointer.PointerDeviceType == PointerDeviceType.Touch;
+            // A pen counts as touch: no hover, and a tip as wide as a fingertip on the edges.
+            IsTouch = args.Pointer.PointerDeviceType != PointerDeviceType.Mouse;
             IsLeftButton = point.Properties.IsLeftButtonPressed;
             IsRightButton = point.Properties.IsRightButtonPressed;
             Modifiers = args.KeyModifiers;
@@ -74,6 +75,7 @@ public partial class DaisyScheduler
         public Pointer? Pointer { get; }
         public uint PointerId { get; }
         public Point WindowPosition { get; }
+        /// <summary>Touch or pen input.</summary>
         public bool IsTouch { get; }
         public bool IsLeftButton { get; }
         public bool IsRightButton { get; }
@@ -97,6 +99,11 @@ public partial class DaisyScheduler
 
     private Gesture? _gesture;
 
+    // A touch on an unselected appointment selects it only when it lifts without moving, so a swipe that starts on an
+    // appointment scrolls and selects nothing; the next touch on the selected appointment drags it.
+    private sealed record TouchTap(uint PointerId, Point WindowPosition, AppointmentTarget Target);
+    private TouchTap? _touchTap;
+
     private static ulong ReadDoubleClickMicroseconds()
     {
         try
@@ -112,6 +119,9 @@ public partial class DaisyScheduler
 
     /// <summary>The double-click time in microseconds, the unit of <see cref="PointerPoint.Timestamp"/>.</summary>
     internal static ulong DoubleClickMicroseconds => SystemDoubleClickMicroseconds;
+
+    // A press that became a scroll does not count toward a double tap.
+    private void ForgetPress() => _lastPressKey = null;
 
     private int ClickCount(object key, PointerInput input)
     {
@@ -170,6 +180,12 @@ public partial class DaisyScheduler
         var clickCount = ClickCount(appointment.Id ?? appointment, input);
         if (appointment.IsLocked)
             return true;
+        if (input.IsTouch && !selectedBefore)
+        {
+            CancelGesture();
+            _touchTap = new TouchTap(input.PointerId, input.WindowPosition, target);
+            return true;
+        }
         RememberSelectionResource(target);
         var multiple = (input.Modifiers & (VirtualKeyModifiers.Control | VirtualKeyModifiers.Windows)) != 0;
         if (multiple || !selectedBefore)
@@ -188,9 +204,11 @@ public partial class DaisyScheduler
         {
             var axis = lane.Horizontal ? position.X : position.Y;
             var length = lane.Horizontal ? frame.ActualWidth : frame.ActualHeight;
-            if (axis < 5)
+            // A finger needs wider edges; each stays at most a quarter of the appointment, so it can still be moved.
+            var edge = input.IsTouch ? Math.Min(12, length / 4) : 5;
+            if (axis < edge)
                 kind = GestureKind.ResizeStart;
-            else if (axis > length - 5)
+            else if (axis > length - edge)
                 kind = GestureKind.ResizeEnd;
         }
         BeginGesture(input, frame, lane, kind, clickCount, appointment, target.Displayed, touchDrags: selectedBefore);
@@ -294,12 +312,22 @@ public partial class DaisyScheduler
 
     private void OnGesturePointerMoved(object? sender, PointerRoutedEventArgs e)
     {
-        if (_gesture is not null && MovePointer(new PointerInput(e)))
+        if ((_gesture is not null || _touchTap is not null) && MovePointer(new PointerInput(e)))
             e.Handled = true;
     }
 
     internal bool MovePointer(PointerInput input)
     {
+        if (_touchTap is { } tap && tap.PointerId == input.PointerId)
+        {
+            var (x, y) = (input.WindowPosition.X - tap.WindowPosition.X, input.WindowPosition.Y - tap.WindowPosition.Y);
+            if (x * x + y * y >= 16)
+            {
+                _touchTap = null;
+                ForgetPress();
+            }
+            return false;
+        }
         if (_gesture is not { } gesture || gesture.PointerId != input.PointerId || IsReadOnly)
             return false;
         var position = input.PositionIn(this);
@@ -311,6 +339,7 @@ public partial class DaisyScheduler
         {
             // On touch, only a selected appointment is dragged; any other swipe scrolls the view.
             CancelGesture();
+            ForgetPress();
             return false;
         }
         gesture.Started = true;
@@ -377,12 +406,19 @@ public partial class DaisyScheduler
 
     private void OnGesturePointerReleased(object? sender, PointerRoutedEventArgs e)
     {
-        if (_gesture is not null && ReleasePointer(new PointerInput(e)))
+        if ((_gesture is not null || _touchTap is not null) && ReleasePointer(new PointerInput(e)))
             e.Handled = true;
     }
 
     internal bool ReleasePointer(PointerInput input)
     {
+        if (_touchTap is { } tap && tap.PointerId == input.PointerId)
+        {
+            _touchTap = null;
+            RememberSelectionResource(tap.Target);
+            SelectAppointment(tap.Target.Appointment, (input.Modifiers & (VirtualKeyModifiers.Control | VirtualKeyModifiers.Windows)) != 0);
+            return true;
+        }
         if (_gesture is not { } gesture || gesture.PointerId != input.PointerId)
             return false;
         CancelGesture();
@@ -531,6 +567,7 @@ public partial class DaisyScheduler
 
     private void CancelGesture()
     {
+        _touchTap = null;
         var gesture = _gesture;
         _gesture = null;
         if (gesture?.Ghost?.Parent is Panel panel)

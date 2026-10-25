@@ -166,5 +166,16 @@ internal sealed class SchedulerScope : IDisposable
         await LayoutAsync();
     }
 
+    /// <summary>A touch press and release at <paramref name="point"/> without moving.</summary>
+    /// <param name="elapsedMicroseconds">Time since the previous press; the default never forms a double tap.</param>
+    public async Task TouchTapAsync(Point point, VirtualKeyModifiers modifiers = VirtualKeyModifiers.None, ulong elapsedMicroseconds = 1_000_000)
+    {
+        _timestamp += elapsedMicroseconds;
+        var hit = HitTest(Scheduler, point) ?? throw new InvalidOperationException("Nothing to touch at " + point);
+        Scheduler.RoutePointerPressed(hit, Input(point, true, false, modifiers, touch: true));
+        Scheduler.ReleasePointer(Input(point, false, false, modifiers, touch: true));
+        await LayoutAsync();
+    }
+
     public void Dispose() => RuntimeTestHelpers.GetHostPanel().Children.Clear();
 }

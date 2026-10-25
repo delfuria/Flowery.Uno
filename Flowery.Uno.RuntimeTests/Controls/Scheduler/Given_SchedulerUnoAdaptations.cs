@@ -14,6 +14,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
+using Windows.System;
 using static Flowery.Uno.RuntimeTests.Controls.Scheduler.SchedulerScope;
 
 namespace Flowery.Uno.RuntimeTests.Controls.Scheduler;
@@ -258,7 +259,7 @@ public class Given_SchedulerUnoAdaptations
         Assert.AreEqual(ManipulationModes.System, scope.Frame(scope.Appointment).ManipulationMode);
     }
     [TestMethod]
-    public async Task When_ATouchSwipes_OnlyASelectedAppointmentIsDragged_AndOtherSwipesCreateNothing()
+    public async Task When_ATouchSwipes_OnlyASelectedAppointmentIsDragged_AndATapSelects()
     {
         using var scope = await CreateAsync(SchedulerView.Week);
         AppointmentMoveArgs? moved = null;
@@ -268,6 +269,7 @@ public class Given_SchedulerUnoAdaptations
         var center = scope.Center(scope.Frame(scope.Appointment));
         await scope.TouchDragAsync(center, new Point(center.X, center.Y + 60));
         Assert.IsNull(moved, "A swipe over an unselected appointment scrolls instead");
+        Assert.IsNull(scope.Scheduler.SelectedAppointment, "A swipe selects nothing");
         var lane = (Canvas)scope.Frame(scope.Appointment).Parent;
         var children = lane.Children.Count;
         // A free slot below the appointment, inside the viewport.
@@ -277,8 +279,61 @@ public class Given_SchedulerUnoAdaptations
         Assert.AreEqual(0, created, "A swipe over an empty slot scrolls instead");
         Assert.AreEqual(children, lane.Children.Count, "No creation preview stays behind");
         center = scope.Center(scope.Frame(scope.Appointment));
+        await scope.TouchTapAsync(center);
+        Assert.AreSame(scope.Appointment, scope.Scheduler.SelectedAppointment, "A tap selects");
+        Assert.IsNull(moved);
+        center = scope.Center(scope.Frame(scope.Appointment));
         await scope.TouchDragAsync(center, new Point(center.X, center.Y + 60));
-        Assert.IsNotNull(moved, "The appointment selected by the first touch is dragged");
+        Assert.IsNotNull(moved, "The next touch drags the selected appointment");
         Assert.IsTrue(moved.NewStart > scope.Appointment.Start);
+    }
+    [TestMethod]
+    public async Task When_ATouchGrabsASelectedAppointmentNearItsEdge_ItResizes_WhereAMouseMoves()
+    {
+        foreach (var view in new[] { SchedulerView.Week, SchedulerView.Timeline })
+        {
+            using var scope = await CreateAsync(view);
+            int moves = 0, resizes = 0;
+            scope.Scheduler.AppointmentMoveRequested += (_, _) => moves++;
+            scope.Scheduler.AppointmentResizeRequested += (_, _) => resizes++;
+            await scope.ClickAsync(scope.Frame(scope.Appointment));
+            var frame = scope.Frame(scope.Appointment);
+            var horizontal = view == SchedulerView.Timeline;
+            // 8 px before the end: inside the touch edge, outside the 5 px mouse edge.
+            var grab = horizontal
+                ? scope.Point(frame, frame.ActualWidth - 8, frame.ActualHeight / 2)
+                : scope.Point(frame, frame.ActualWidth / 2, frame.ActualHeight - 8);
+            var target = horizontal ? new Point(grab.X + 60, grab.Y) : new Point(grab.X, grab.Y + 60);
+            await scope.TouchDragAsync(grab, target);
+            Assert.AreEqual((0, 1), (moves, resizes), view + " touch");
+            frame = scope.Frame(scope.Appointment);
+            grab = horizontal
+                ? scope.Point(frame, frame.ActualWidth - 8, frame.ActualHeight / 2)
+                : scope.Point(frame, frame.ActualWidth / 2, frame.ActualHeight - 8);
+            target = horizontal ? new Point(grab.X + 60, grab.Y) : new Point(grab.X, grab.Y + 60);
+            await scope.DragAsync(grab, target);
+            Assert.AreEqual((1, 1), (moves, resizes), view + " mouse");
+        }
+    }
+    [TestMethod]
+    public async Task When_ATouchTapsWithControl_ItAddsToTheSelection_AndATapAfterASwipeIsNoDoubleTap()
+    {
+        using var scope = await CreateAsync(SchedulerView.Week);
+        var second = new AppointmentModel { Id = 2, Subject = "Second", Start = Monday.AddHours(13), End = Monday.AddHours(14), ResourceIds = { 1 } };
+        scope.Scheduler.Appointments = new[] { scope.Appointment, second };
+        await scope.LayoutAsync();
+        await scope.TouchTapAsync(scope.Center(scope.Frame(scope.Appointment)));
+        await scope.TouchTapAsync(scope.Center(scope.Frame(second)), VirtualKeyModifiers.Control);
+        Assert.HasCount(2, scope.Scheduler.SelectedAppointments);
+
+        // A swipe at an empty slot, then a quick tap there: the swipe's press does not count toward a double tap.
+        var created = 0;
+        scope.Scheduler.AppointmentCreateRequested += (_, _) => created++;
+        var frame = scope.Frame(scope.Appointment);
+        var lane = (Canvas)frame.Parent;
+        var empty = scope.Point(lane, lane.ActualWidth / 2, Canvas.GetTop(frame) + frame.ActualHeight + 40);
+        await scope.TouchDragAsync(empty, new Point(empty.X, empty.Y - 60));
+        await scope.TouchTapAsync(empty, elapsedMicroseconds: DaisyScheduler.DoubleClickMicroseconds / 2);
+        Assert.AreEqual(0, created);
     }
 }

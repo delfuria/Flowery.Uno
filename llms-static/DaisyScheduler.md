@@ -317,7 +317,8 @@ tooltips. Heights, icons and the title follow the `Size` of the scheduler throug
 and day in the order of the culture. A culture that writes the year first keeps it first for a month, and for days only
 where it also writes the month before the day, such as Japanese; otherwise the year follows the days. Where the first row
 is too narrow, it wraps: the host buttons and the settings move right-aligned below the date and the navigation, which
-wrap as well where needed.
+wrap as well where needed, and the view segments narrow evenly, so all of them fit a phone. The toolbar buttons take their
+template from the style `DaisySchedulerToolbarButtonStyle`; the toolbar sets their colors for hover, press and selection.
 
 To place the toolbar elsewhere, such as in a title bar, hide the built-in one and point another at the scheduler:
 

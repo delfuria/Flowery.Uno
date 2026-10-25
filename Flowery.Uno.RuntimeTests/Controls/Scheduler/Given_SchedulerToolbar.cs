@@ -9,7 +9,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Windows.Foundation;
 using static Flowery.Uno.RuntimeTests.Controls.Scheduler.SchedulerScope;
@@ -61,12 +60,27 @@ public class Given_SchedulerToolbar
         scope.Scheduler.CurrentView = SchedulerView.Month;
         await scope.LayoutAsync();
 
-        Assert.AreSame(settings, Action(toolbar, "Settings"));
-        Assert.AreSame(next, Action(toolbar, "Next"));
-        Assert.AreSame(next, FocusManager.GetFocusedElement(scope.Scheduler.XamlRoot!));
+        Assert.AreSame(next, FocusManager.GetFocusedElement(scope.Scheduler.XamlRoot!), "The keyboard focus stays on Next");
         CollectionAssert.AreNotEqual(title, Title(toolbar));
         var selected = Descendants<DaisySchedulerToolbar.ToolbarButton>(toolbar).Where(static button => button.IsSelected).ToArray();
         Assert.AreEqual(SchedulerView.Month, selected.Single().Tag);
+
+        // A setting changed in the open menu updates the scheduler, and the menu stays open.
+        Click(settings);
+        await scope.LayoutAsync();
+        var popups = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetOpenPopupsForXamlRoot(scope.Scheduler.XamlRoot);
+        try
+        {
+            Assert.IsTrue(popups.Any(static popup => popup.Child is FlyoutPresenter), "The settings menu opens");
+            scope.Scheduler.ShowTiles = false;
+            await scope.LayoutAsync();
+            Assert.IsTrue(popups.Any(static popup => popup.IsOpen && popup.Child is FlyoutPresenter), "The settings menu stays open");
+        }
+        finally
+        {
+            foreach (var popup in popups)
+                popup.IsOpen = false;
+        }
     }
 
     [TestMethod]
@@ -91,6 +105,12 @@ public class Given_SchedulerToolbar
             Assert.AreEqual(Monday.AddDays(7), scheduler.SelectedDate.Date);
             var builtIn = Descendants<DaisySchedulerToolbar>(scheduler).Single();
             Assert.AreEqual(Visibility.Collapsed, builtIn.Visibility);
+
+            // Shown again, the built-in toolbar has caught up with the navigation it missed while hidden.
+            scheduler.ShowToolbar = true;
+            await RuntimeTestHelpers.CompleteLayoutAsync(panel);
+            Assert.AreEqual(Visibility.Visible, builtIn.Visibility);
+            CollectionAssert.AreEqual(Title(toolbar), Title(builtIn));
         }
         finally
         {
@@ -161,6 +181,8 @@ public class Given_SchedulerToolbar
     {
         await AssertToolbarAsync(1100, below: false);
         await AssertToolbarAsync(420, below: true);
+        // A phone: the view segments narrow evenly, so all of them fit.
+        await AssertToolbarAsync(320, below: true);
     }
 
     private static async Task AssertToolbarAsync(double width, bool below)
@@ -187,6 +209,9 @@ public class Given_SchedulerToolbar
         var settings = buttons.Single(static button => button.Name == "Settings").Bounds;
         var date = buttons.Single(static button => button.Name == "Date").Bounds;
         Assert.AreEqual(below, settings.Y >= date.Bottom, $"Settings at {settings}, date at {date}");
+        var segments = Descendants<Button>(toolbar).Where(static button => button.Tag is SchedulerView).ToArray();
+        Assert.HasCount(Enum.GetValues<SchedulerView>().Length, segments.Where(static segment => segment.ActualWidth > 0).ToArray(), $"width {width}");
+        Assert.AreEqual(1, segments.Select(static segment => Math.Round(segment.ActualWidth)).Distinct().Count(), $"width {width}");
     }
 
     // A 1x1 transparent PNG.

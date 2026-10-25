@@ -56,8 +56,13 @@ public partial class DaisySchedulerToolbar : UserControl
         set => SetValue(SchedulerProperty, value);
     }
 
-    private static void OnSchedulerChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e) =>
-        ((DaisySchedulerToolbar)sender).Attach(e.NewValue as DaisyScheduler);
+    // A toolbar follows its scheduler only while it is in the tree; Loaded attaches it.
+    private static void OnSchedulerChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+    {
+        var toolbar = (DaisySchedulerToolbar)sender;
+        if (toolbar.IsLoaded || toolbar._loaded)
+            toolbar.Attach(e.NewValue as DaisyScheduler);
+    }
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
@@ -67,6 +72,9 @@ public partial class DaisySchedulerToolbar : UserControl
 
     private void OnUnloaded(object? sender, RoutedEventArgs e)
     {
+        // WinUI raises Unloaded of the old place after Loaded of a new one when the toolbar moves.
+        if (IsLoaded)
+            return;
         _loaded = false;
         Attach(null);
     }
@@ -79,12 +87,16 @@ public partial class DaisySchedulerToolbar : UserControl
 
     private void Attach(DaisyScheduler? scheduler)
     {
-        if (!ReferenceEquals(_attached, scheduler) && _attached is not null)
-            _attached.ToolbarChanged -= OnToolbarChanged;
-        if (scheduler is not null && !ReferenceEquals(_attached, scheduler))
-            scheduler.ToolbarChanged += OnToolbarChanged;
-        _attached = scheduler;
-        _builtFor = null;
+        // Loaded can come again without Unloaded; the same scheduler keeps the built parts, its focus and open menus.
+        if (!ReferenceEquals(_attached, scheduler))
+        {
+            if (_attached is not null)
+                _attached.ToolbarChanged -= OnToolbarChanged;
+            if (scheduler is not null)
+                scheduler.ToolbarChanged += OnToolbarChanged;
+            _attached = scheduler;
+            _builtFor = null;
+        }
         Update();
     }
 
@@ -233,7 +245,17 @@ public partial class DaisySchedulerToolbar : UserControl
         else if (model.IconData is { Length: > 0 } data)
             content = Icon(data);
         else if (model.Glyph is { Length: > 0 } glyph)
-            content = new TextBlock { Text = model.Label is { Length: > 0 } label ? glyph + " " + label : glyph };
+        {
+            // A glyph of the symbol font, which a text in the toolbar font would show as a box.
+            var symbol = new FontIcon { Glyph = glyph, FontSize = _iconSize };
+            content = model.Label is { Length: > 0 } label
+                ? new StackPanel
+                {
+                    Orientation = Orientation.Horizontal, Spacing = 4,
+                    Children = { symbol, new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center } }
+                }
+                : symbol;
+        }
         else
             content = new TextBlock { Text = model.Label ?? model.Id ?? string.Empty };
         var button = new ToolbarButton(scheduler, ToolbarButtonKind.Action)
@@ -243,7 +265,7 @@ public partial class DaisySchedulerToolbar : UserControl
         };
         Fit(button);
         AutomationProperties.SetName(button, model.Label ?? model.Tooltip ?? model.Id ?? string.Empty);
-        scheduler.SetToolbarTooltip(button, model.Tooltip ?? (content is Viewbox or Image ? model.Label : null));
+        scheduler.SetToolbarTooltip(button, model.Tooltip ?? (content is Viewbox or Image or FontIcon ? model.Label : null));
         if (model.MenuItems is { Count: > 0 })
             button.Flyout = scheduler.CreateToolbarMenu(model, adornment);
         else

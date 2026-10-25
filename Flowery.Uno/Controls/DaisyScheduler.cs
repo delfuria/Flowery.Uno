@@ -506,8 +506,8 @@ public partial class DaisyScheduler : Control
         else
             _savedOffset = null;
         _bodyScroll = null;
-        _headerScroll = null;
-        _gutterScroll = null;
+        _headerPane = null;
+        _gutterPane = null;
         _monthGrid = null;
         _timeColumns.Clear();
         _frames.Clear();

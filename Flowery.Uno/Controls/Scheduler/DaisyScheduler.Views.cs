@@ -8,8 +8,8 @@ namespace Flowery.Controls;
 
 public partial class DaisyScheduler
 {
-    private ScrollViewer? _headerScroll;
-    private ScrollViewer? _gutterScroll;
+    private FrozenPane? _headerPane;
+    private FrozenPane? _gutterPane;
     private readonly List<Lane> _lanes = new();
 
     /// <summary>A Planner or Timeline element placed by minutes along the shown days. A width of NaN minutes
@@ -448,24 +448,16 @@ public partial class DaisyScheduler
     private FrameworkElement FrozenGrid(FrameworkElement header, FrameworkElement gutter, FrameworkElement body, double gutterWidth)
     {
         var root = WithDefinitions(new Grid(), "Auto,*", "Auto,*");
-        _headerScroll = new ScrollViewer
-        {
-            Content = header, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            HorizontalScrollMode = ScrollMode.Enabled, VerticalScrollMode = ScrollMode.Disabled
-        };
-        _gutterScroll = new ScrollViewer
-        {
-            Content = gutter, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
-            HorizontalScrollMode = ScrollMode.Disabled, VerticalScrollMode = ScrollMode.Enabled
-        };
+        _headerPane = new FrozenPane(header, horizontal: true);
+        _gutterPane = new FrozenPane(gutter, horizontal: false);
         var scroll = CreateScroll(body);
         var corner = Cell(Label(CurrentView is SchedulerView.Planner or SchedulerView.Timeline ? Text("Resources") : Text("AllDay"), true), header: true);
         corner.Width = gutterWidth;
         root.Children.Add(corner);
-        Grid.SetColumn(_headerScroll, 1);
-        root.Children.Add(_headerScroll);
-        Grid.SetRow(_gutterScroll, 1);
-        root.Children.Add(_gutterScroll);
+        Grid.SetColumn(_headerPane, 1);
+        root.Children.Add(_headerPane);
+        Grid.SetRow(_gutterPane, 1);
+        root.Children.Add(_gutterPane);
         Grid.SetColumn(scroll, 1);
         Grid.SetRow(scroll, 1);
         root.Children.Add(scroll);
@@ -489,8 +481,10 @@ public partial class DaisyScheduler
             if (!e.IsIntermediate)
                 body.ChangeView(body.HorizontalOffset, body.VerticalOffset, null, true);
 #endif
-            _headerScroll?.ChangeView(body.HorizontalOffset, null, null, true);
-            _gutterScroll?.ChangeView(null, body.VerticalOffset, null, true);
+            if (_headerPane is { } header)
+                header.Offset = body.HorizontalOffset;
+            if (_gutterPane is { } gutter)
+                gutter.Offset = body.VerticalOffset;
         }
     }
 

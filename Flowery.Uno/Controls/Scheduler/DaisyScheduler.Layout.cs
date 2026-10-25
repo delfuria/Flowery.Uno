@@ -1,4 +1,4 @@
-using Flowery.Controls.Scheduler.Models;
+﻿using Flowery.Controls.Scheduler.Models;
 using Flowery.Controls.Scheduler.Rendering;
 
 namespace Flowery.Controls;
@@ -82,6 +82,60 @@ public partial class DaisyScheduler
 
     // A geometry belongs to one element, so every hidden part gets its own.
     private static RectangleGeometry CreateHiddenClip() => new() { Rect = new Rect(0, 0, 0, 0) };
+
+    // The frozen header or gutter beside the body: it shows its content shifted by the body's offset along one axis.
+    // It is no scroll viewer, so a touch or the mouse wheel cannot scroll it on its own (Android's native scroll views
+    // ignore ScrollMode), and following the body changes only a transform, not the layout.
+    // No primary constructor: Uno generates native constructors for Android views.
+    private sealed partial class FrozenPane : Panel
+    {
+        private readonly bool _horizontal;
+        private readonly TranslateTransform _shift = new();
+        private readonly RectangleGeometry _clip = new();
+
+        public FrozenPane(UIElement content, bool horizontal)
+        {
+            _horizontal = horizontal;
+            content.RenderTransform = _shift;
+            Children.Add(content);
+            Clip = _clip;
+        }
+
+        /// <summary>The body's offset along the pane's axis.</summary>
+        public double Offset
+        {
+            set
+            {
+                if (_horizontal)
+                    _shift.X = -value;
+                else
+                    _shift.Y = -value;
+            }
+        }
+
+        // Like a scroll viewer: the content gets unlimited space along the axis, and the pane takes at most what it gets.
+        protected override Size MeasureOverride(Size availableSize)
+        {
+            var content = Children[0];
+            content.Measure(_horizontal
+                ? new Size(double.PositiveInfinity, availableSize.Height)
+                : new Size(availableSize.Width, double.PositiveInfinity));
+            var desired = content.DesiredSize;
+            return _horizontal
+                ? new Size(Math.Min(desired.Width, availableSize.Width), desired.Height)
+                : new Size(desired.Width, Math.Min(desired.Height, availableSize.Height));
+        }
+
+        protected override Size ArrangeOverride(Size finalSize)
+        {
+            var desired = Children[0].DesiredSize;
+            Children[0].Arrange(_horizontal
+                ? new Rect(0, 0, Math.Max(desired.Width, finalSize.Width), finalSize.Height)
+                : new Rect(0, 0, finalSize.Width, Math.Max(desired.Height, finalSize.Height)));
+            _clip.Rect = new Rect(0, 0, finalSize.Width, finalSize.Height);
+            return finalSize;
+        }
+    }
 
     // Optional rows must fit in full; the subject and time take precedence over decoration and notes.
     // No primary constructor: Uno generates native constructors for Android views.

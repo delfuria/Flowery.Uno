@@ -36,7 +36,7 @@
                 <daisy:DaisyCheckBox x:Name="ReadOnlyOption" Content="{Binding [Scheduler_ReadOnly]}" Margin="0,0,16,8" />
                 <daisy:DaisyButton Content="{Binding [Scheduler_Reset]}" Variant="Ghost" Click="OnReset" />
             </daisy:WrapPanel>
-            <Grid Grid.Row="2" ColumnSpacing="12">
+            <Grid x:Name="SchedulerArea" Grid.Row="2" ColumnSpacing="12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />

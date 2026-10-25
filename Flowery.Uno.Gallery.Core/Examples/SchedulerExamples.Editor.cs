@@ -1,4 +1,4 @@
-using Flowery.Controls.Scheduler.Models;
+﻿using Flowery.Controls.Scheduler.Models;
 using Flowery.Uno.Gallery.Localization;
 
 namespace Flowery.Uno.Gallery.Examples;
@@ -39,7 +39,17 @@ public partial class SchedulerExamples
         EditorError.Text = string.Empty;
         _conflicts = Array.Empty<AppointmentModel>();
         RefreshEditorChoices();
+        PlaceEditor();
         EditorPanel.Visibility = Visibility.Visible;
+    }
+
+    // Beside the scheduler, the editor would leave it a narrow strip on a phone; there it covers the scheduler instead.
+    private void PlaceEditor()
+    {
+        var cover = SchedulerArea.ActualWidth < 720;
+        Grid.SetColumn(EditorPanel, cover ? 0 : 1);
+        Grid.SetColumnSpan(EditorPanel, cover ? 2 : 1);
+        EditorPanel.Width = cover ? double.NaN : 280;
     }
 
     private void RefreshEditorChoices()

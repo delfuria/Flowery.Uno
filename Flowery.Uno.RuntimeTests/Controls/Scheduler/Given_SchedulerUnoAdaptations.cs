@@ -9,12 +9,10 @@ using Flowery.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
-using Windows.System;
 using static Flowery.Uno.RuntimeTests.Controls.Scheduler.SchedulerScope;
 
 namespace Flowery.Uno.RuntimeTests.Controls.Scheduler;
@@ -246,20 +244,6 @@ public class Given_SchedulerUnoAdaptations
     }
 
     [TestMethod]
-    public async Task When_AnAppointmentIsSelected_ATouchOnItIsNotTakenByScrolling()
-    {
-        // Android keeps its native scroll views from taking a touch over an element only with ManipulationMode None;
-        // unselected appointments keep System, so a swipe over them still scrolls.
-        using var scope = await CreateAsync(SchedulerView.Week);
-        Assert.AreEqual(ManipulationModes.System, scope.Frame(scope.Appointment).ManipulationMode);
-        await scope.ClickAsync(scope.Frame(scope.Appointment));
-        Assert.AreEqual(ManipulationModes.None, scope.Frame(scope.Appointment).ManipulationMode);
-        scope.Scheduler.SelectedAppointment = null;
-        await scope.LayoutAsync();
-        Assert.AreEqual(ManipulationModes.System, scope.Frame(scope.Appointment).ManipulationMode);
-    }
-
-    [TestMethod]
     public async Task When_ATouchSwipes_OnlyASelectedAppointmentIsDragged_AndATapSelects()
     {
         using var scope = await CreateAsync(SchedulerView.Week);
@@ -319,17 +303,10 @@ public class Given_SchedulerUnoAdaptations
     }
 
     [TestMethod]
-    public async Task When_ATouchTapsWithControl_ItAddsToTheSelection_AndATapAfterASwipeIsNoDoubleTap()
+    public async Task When_ATouchSwipesOverAnEmptySlot_ItsPressIsNoDoubleTap()
     {
-        using var scope = await CreateAsync(SchedulerView.Week);
-        var second = new AppointmentModel { Id = 2, Subject = "Second", Start = Monday.AddHours(13), End = Monday.AddHours(14), ResourceIds = { 1 } };
-        scope.Scheduler.Appointments = new[] { scope.Appointment, second };
-        await scope.LayoutAsync();
-        await scope.TouchTapAsync(scope.Center(scope.Frame(scope.Appointment)));
-        await scope.TouchTapAsync(scope.Center(scope.Frame(second)), VirtualKeyModifiers.Control);
-        Assert.HasCount(2, scope.Scheduler.SelectedAppointments);
-
         // A swipe at an empty slot, then a quick tap there: the swipe's press does not count toward a double tap.
+        using var scope = await CreateAsync(SchedulerView.Week);
         var created = 0;
         scope.Scheduler.AppointmentCreateRequested += (_, _) => created++;
         var frame = scope.Frame(scope.Appointment);

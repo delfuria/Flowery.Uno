@@ -30,7 +30,7 @@
 Flowery.Uno provides native WinUI controls that mimic the utility-first, semantic class naming of DaisyUI, making it easy to build beautiful, themed UIs.
 
 > [!NOTE]
-> This is still in alpha. Features may be added/removed or need fixing. I'm just a *guy with an AI*! Took all of my spare time over 5+ weeks for just the initial alpha. This Flowery version has even more controls and features then the original. This repo is ~134K lines of code with 900+ files.  
+> I'm just a *guy with an AI*! This Flowery version has even more controls and features than the original. This repo is ~175K lines of C# and XAML in 1,000+ files, with 100+ controls.  
 I hope this will be useful and fun to work with! -- tobitege
 
 ## Relationship to Flowery.NET
@@ -182,7 +182,7 @@ xmlns:daisy="using:Flowery.Controls"
 
 - **Size Dropdown** (`DaisySizeDropdown`): Global size selector with localized size names.
 - **Theme Controller** (`DaisyThemeController`): Flexible toggle with multiple modes.
-- **Theme Dropdown** (`DaisyThemeDropdown`): Dropdown to select from all 35+ themes.
+- **Theme Dropdown** (`DaisyThemeDropdown`): Dropdown to select from all 53 themes.
 - **Theme Manager** (`DaisyThemeManager`): Static class for programmatic theme control.
 
 ---

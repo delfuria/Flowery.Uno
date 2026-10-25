@@ -106,7 +106,7 @@ if (palette != null)
 
 | Feature | DaisyThemeDropdown | DaisyProductThemeDropdown |
 | --- | --- | --- |
-| Theme source | 35+ DaisyUI themes | 96 product palettes |
+| Theme source | 53 built-in themes | 96 product palettes |
 | Default theme | "Dark" | "SaaS" |
 | Theme sync | Syncs with `CurrentThemeName` | Independent (no sync) |
 | Use case | General theming | Industry-specific apps |

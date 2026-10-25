@@ -67,7 +67,7 @@ namespace Flowery.Theming
 
     /// <summary>
     /// Factory for creating DaisyUI theme palettes as ResourceDictionary objects.
-    /// Contains all 36 DaisyUI themes ported from the Avalonia version.
+    /// Contains the 53 built-in themes: the 36 DaisyUI themes ported from the Avalonia version and 17 HappyHues themes.
     /// </summary>
     public static class DaisyPaletteFactory
     {

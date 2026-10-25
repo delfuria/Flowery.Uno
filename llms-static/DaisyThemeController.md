@@ -9,7 +9,7 @@ DaisyThemeController is a toggle-based switch for applying Daisy themes via `Dai
 
 This control uses `DaisyThemeManager` internally, which manages the application's theme resources:
 
-- Each of the 35+ built-in DaisyUI themes provides a unique color palette
+- Each of the 53 built-in themes provides a unique color palette
 - 96 additional industry-specific product themes are available via `DaisyProductThemeDropdown`
 - Theme changes are applied through resource dictionary updates
 - For custom themes beyond the built-in set, use `DaisyThemeLoader.ApplyThemeToApplication()` instead
@@ -72,7 +72,7 @@ xmlns:controls="using:Flowery.Controls"
 
 ## Related Controls
 
-- [DaisyThemeDropdown](DaisyThemeDropdown.md) - Dropdown for all 35+ DaisyUI themes
+- [DaisyThemeDropdown](DaisyThemeDropdown.md) - Dropdown for all 53 built-in themes
 - [DaisyProductThemeDropdown](DaisyProductThemeDropdown.md) - Dropdown for 96 industry-specific product themes
 - [DaisyThemeRadio](DaisyThemeRadio.md) - Radio button theme selection
 - [DaisyThemeSwap](DaisyThemeSwap.md) - Icon swap theme toggle

@@ -35,6 +35,7 @@
   "Scheduler_Cancel": "Annulla",
   "Scheduler_Unassigned": "Non assegnato",
   "Scheduler_Help": "Clic per selezionare · Ctrl/Cmd-clic per selezione multipla · Doppio clic per modificare o creare · Canc per eliminare · Clic destro per il menu contestuale",
+  "Scheduler_TouchHelp": "Tocca per selezionare · Tocca due volte per modificare o creare · Trascina un appuntamento selezionato per spostarlo, o il suo bordo per ridimensionarlo · Scorri per spostarti",
   "Scheduler_InvalidInput": "Inserisci un oggetto e date valide. La fine deve essere successiva all’inizio.",
   "Scheduler_Edit": "Modifica",
   "Scheduler_Duplicate": "Duplica",

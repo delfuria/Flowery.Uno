@@ -31,6 +31,8 @@ public partial class DaisyScheduler
         public DateTime Start { get; set; }
         public DateTime End { get; set; }
         public bool Started { get; set; }
+        /// <summary>A touch that did not start on a selected appointment gives way to scrolling once it moves.</summary>
+        public bool YieldsToScrolling { get; init; }
         public Border? Ghost { get; set; }
     }
 
@@ -47,6 +49,7 @@ public partial class DaisyScheduler
             Pointer = args.Pointer;
             PointerId = args.Pointer.PointerId;
             WindowPosition = point.Position;
+            IsTouch = args.Pointer.PointerDeviceType == PointerDeviceType.Touch;
             IsLeftButton = point.Properties.IsLeftButtonPressed;
             IsRightButton = point.Properties.IsRightButtonPressed;
             Modifiers = args.KeyModifiers;
@@ -55,10 +58,11 @@ public partial class DaisyScheduler
 
         /// <summary>Synthesized input; <paramref name="root"/> is the window content the position refers to.</summary>
         public PointerInput(UIElement root, Point windowPosition, bool isLeftButton, bool isRightButton,
-            VirtualKeyModifiers modifiers, ulong timestamp, uint pointerId = 1)
+            VirtualKeyModifiers modifiers, ulong timestamp, uint pointerId = 1, bool isTouch = false)
         {
             _root = root;
             PointerId = pointerId;
+            IsTouch = isTouch;
             WindowPosition = windowPosition;
             IsLeftButton = isLeftButton;
             IsRightButton = isRightButton;
@@ -70,6 +74,7 @@ public partial class DaisyScheduler
         public Pointer? Pointer { get; }
         public uint PointerId { get; }
         public Point WindowPosition { get; }
+        public bool IsTouch { get; }
         public bool IsLeftButton { get; }
         public bool IsRightButton { get; }
         public VirtualKeyModifiers Modifiers { get; }
@@ -188,7 +193,7 @@ public partial class DaisyScheduler
             else if (axis > length - 5)
                 kind = GestureKind.ResizeEnd;
         }
-        BeginGesture(input, frame, lane, kind, clickCount, appointment, target.Displayed);
+        BeginGesture(input, frame, lane, kind, clickCount, appointment, target.Displayed, touchDrags: selectedBefore);
         return true;
     }
 
@@ -270,7 +275,7 @@ public partial class DaisyScheduler
     }
 
     private void BeginGesture(PointerInput input, UIElement capture, Lane lane, GestureKind kind, int clickCount,
-        AppointmentModel? appointment, AppointmentModel? displayed = null)
+        AppointmentModel? appointment, AppointmentModel? displayed = null, bool touchDrags = false)
     {
         CancelGesture();
         var slot = SlotTime(lane, input.PositionIn(lane.Surface));
@@ -280,7 +285,8 @@ public partial class DaisyScheduler
         {
             PointerId = input.PointerId, Pointer = input.Pointer, Capture = capture, Source = lane, Target = lane,
             PressPoint = input.PositionIn(this), PressTime = slot, Kind = kind, ClickCount = clickCount, Appointment = appointment,
-            OriginalStart = start, OriginalEnd = end, Start = start, End = end
+            OriginalStart = start, OriginalEnd = end, Start = start, End = end,
+            YieldsToScrolling = input.IsTouch && !touchDrags
         };
         if (input.Pointer is { } pointer)
             capture.CapturePointer(pointer);
@@ -301,6 +307,12 @@ public partial class DaisyScheduler
         var distanceY = position.Y - gesture.PressPoint.Y;
         if (!gesture.Started && distanceX * distanceX + distanceY * distanceY < 16)
             return false;
+        if (gesture.YieldsToScrolling)
+        {
+            // On touch, only a selected appointment is dragged; any other swipe scrolls the view.
+            CancelGesture();
+            return false;
+        }
         gesture.Started = true;
         var target = gesture.Source;
         if (gesture.Kind == GestureKind.Move)

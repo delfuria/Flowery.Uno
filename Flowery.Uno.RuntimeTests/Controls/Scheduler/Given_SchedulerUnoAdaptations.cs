@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Flowery.Controls;
+using Flowery.Controls.Scheduler.Contracts;
 using Flowery.Controls.Scheduler.Models;
 using Flowery.Controls.Scheduler.Utilities;
 using Flowery.Services;
@@ -255,5 +256,29 @@ public class Given_SchedulerUnoAdaptations
         scope.Scheduler.SelectedAppointment = null;
         await scope.LayoutAsync();
         Assert.AreEqual(ManipulationModes.System, scope.Frame(scope.Appointment).ManipulationMode);
+    }
+    [TestMethod]
+    public async Task When_ATouchSwipes_OnlyASelectedAppointmentIsDragged_AndOtherSwipesCreateNothing()
+    {
+        using var scope = await CreateAsync(SchedulerView.Week);
+        AppointmentMoveArgs? moved = null;
+        var created = 0;
+        scope.Scheduler.AppointmentMoveRequested += (_, args) => moved = args;
+        scope.Scheduler.AppointmentCreateRequested += (_, _) => created++;
+        var center = scope.Center(scope.Frame(scope.Appointment));
+        await scope.TouchDragAsync(center, new Point(center.X, center.Y + 60));
+        Assert.IsNull(moved, "A swipe over an unselected appointment scrolls instead");
+        var lane = (Canvas)scope.Frame(scope.Appointment).Parent;
+        var children = lane.Children.Count;
+        // A free slot below the appointment, inside the viewport.
+        var frame = scope.Frame(scope.Appointment);
+        var empty = scope.Point(lane, lane.ActualWidth / 2, Canvas.GetTop(frame) + frame.ActualHeight + 40);
+        await scope.TouchDragAsync(empty, new Point(empty.X, empty.Y - 60));
+        Assert.AreEqual(0, created, "A swipe over an empty slot scrolls instead");
+        Assert.AreEqual(children, lane.Children.Count, "No creation preview stays behind");
+        center = scope.Center(scope.Frame(scope.Appointment));
+        await scope.TouchDragAsync(center, new Point(center.X, center.Y + 60));
+        Assert.IsNotNull(moved, "The appointment selected by the first touch is dragged");
+        Assert.IsTrue(moved.NewStart > scope.Appointment.Start);
     }
 }

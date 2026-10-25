@@ -126,8 +126,8 @@ internal sealed class SchedulerScope : IDisposable
     public void MouseUp(Point point, VirtualKeyModifiers modifiers = VirtualKeyModifiers.None) =>
         Scheduler.ReleasePointer(Input(point, false, false, modifiers));
 
-    private DaisyScheduler.PointerInput Input(Point point, bool left, bool right, VirtualKeyModifiers modifiers) =>
-        new(Root, point, left, right, modifiers, _timestamp);
+    private DaisyScheduler.PointerInput Input(Point point, bool left, bool right, VirtualKeyModifiers modifiers, bool touch = false) =>
+        new(Root, point, left, right, modifiers, _timestamp, isTouch: touch);
 
     public async Task ClickAsync(FrameworkElement element, bool right = false, VirtualKeyModifiers modifiers = VirtualKeyModifiers.None)
     {
@@ -152,6 +152,17 @@ internal sealed class SchedulerScope : IDisposable
         MouseDown(origin, modifiers: modifiers);
         MouseMove(destination);
         MouseUp(destination, modifiers);
+        await LayoutAsync();
+    }
+
+    /// <summary>A touch press at <paramref name="origin"/>, a move to <paramref name="destination"/> and a release.</summary>
+    public async Task TouchDragAsync(Point origin, Point destination)
+    {
+        _timestamp += 1_000_000;
+        var hit = HitTest(Scheduler, origin) ?? throw new InvalidOperationException("Nothing to touch at " + origin);
+        Scheduler.RoutePointerPressed(hit, Input(origin, true, false, VirtualKeyModifiers.None, touch: true));
+        Scheduler.MovePointer(Input(destination, true, false, VirtualKeyModifiers.None, touch: true));
+        Scheduler.ReleasePointer(Input(destination, false, false, VirtualKeyModifiers.None, touch: true));
         await LayoutAsync();
     }
 

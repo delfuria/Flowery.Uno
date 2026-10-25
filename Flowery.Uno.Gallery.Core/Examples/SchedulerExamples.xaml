@@ -16,7 +16,7 @@
 
     <ScrollViewer x:Name="MainScrollViewer" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto" IsTabStop="True"
                   Background="Transparent" Padding="0" DataContext="{x:Bind Localization, Mode=OneWay}">
-        <Grid Margin="24,0,24,16" RowSpacing="12" MinHeight="720"
+        <Grid x:Name="PageGrid" Margin="24,0,24,16" RowSpacing="12" MinHeight="720"
               Height="{Binding ElementName=MainScrollViewer, Path=ViewportHeight}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />

@@ -76,8 +76,11 @@ public partial class DaisyScheduler
         /// <summary>Microseconds, as <see cref="PointerPoint.Timestamp"/>.</summary>
         public ulong Timestamp { get; }
 
-        public Point PositionIn(UIElement element) =>
-            _args?.GetCurrentPoint(element).Position ?? _root!.TransformToVisual(element).TransformPoint(WindowPosition);
+        // From the window position: on Android, GetCurrentPoint(element) reports a captured pointer relative to the
+        // capturing element instead of the given one.
+        public Point PositionIn(UIElement element) => _args is null
+            ? _root!.TransformToVisual(element).TransformPoint(WindowPosition)
+            : element.TransformToVisual(null).Inverse.TransformPoint(WindowPosition);
     }
 
     // WinUI reports no click count: count presses on the same target within the system double-click time.
@@ -283,9 +286,8 @@ public partial class DaisyScheduler
             capture.CapturePointer(pointer);
     }
 
-    protected override void OnPointerMoved(PointerRoutedEventArgs e)
+    private void OnGesturePointerMoved(object? sender, PointerRoutedEventArgs e)
     {
-        base.OnPointerMoved(e);
         if (_gesture is not null && MovePointer(new PointerInput(e)))
             e.Handled = true;
     }
@@ -361,9 +363,8 @@ public partial class DaisyScheduler
         Canvas.SetTop(gesture.Ghost, lane.Horizontal ? 4 : begin);
     }
 
-    protected override void OnPointerReleased(PointerRoutedEventArgs e)
+    private void OnGesturePointerReleased(object? sender, PointerRoutedEventArgs e)
     {
-        base.OnPointerReleased(e);
         if (_gesture is not null && ReleasePointer(new PointerInput(e)))
             e.Handled = true;
     }

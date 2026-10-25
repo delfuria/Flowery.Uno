@@ -11,6 +11,17 @@ public partial class DaisyScheduler
     private readonly List<TimeColumn> _timeColumns = new();
     private Grid? _monthGrid;
 
+    // Uno raises SizeChanged and Loaded inside the layout pass. Android drops a layout request made there once the
+    // pass completes, so the scheduler's subtree would never lay out again; run size writes after the pass instead.
+    private void RunOutsideLayout(Action action)
+    {
+#if __ANDROID__
+        if (DispatcherQueue?.TryEnqueue(action.Invoke) == true)
+            return;
+#endif
+        action();
+    }
+
     private void UpdateViewGeometry()
     {
         if (_bodyScroll is not { } scroll)

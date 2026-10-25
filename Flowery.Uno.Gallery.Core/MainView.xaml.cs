@@ -46,7 +46,7 @@ namespace Flowery.Uno.Gallery
         private bool? _isCollapsedLayout;
         private bool _hasRenderedFrame;
         private bool _isWaitingForFirstFrame;
-        private string _licenseText = "2025 - MIT licensed";
+        private string _licenseText = "2025, 2026 - MIT licensed";
         private readonly bool _isMobilePlatform;
         private ScrollViewer? _currentScrollViewer;
         private readonly RectangleGeometry _headerClip = new();
@@ -96,7 +96,7 @@ namespace Flowery.Uno.Gallery
             if (MitLicenseText != null)
             {
                 var platform = GetPlatformName();
-                _licenseText = $"2025 - MIT licensed ({platform})";
+                _licenseText = $"2025, 2026 - MIT licensed ({platform})";
                 MitLicenseText.Text = $" - {_licenseText}";
             }
 

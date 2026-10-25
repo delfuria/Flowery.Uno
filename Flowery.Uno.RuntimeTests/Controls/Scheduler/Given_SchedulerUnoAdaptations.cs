@@ -8,6 +8,7 @@ using Flowery.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Windows.ApplicationModel.DataTransfer;
@@ -240,5 +241,19 @@ public class Given_SchedulerUnoAdaptations
             Assert.AreEqual(size, new Size(frame.ActualWidth, frame.ActualHeight), view.ToString());
             Assert.AreEqual(position, content.TransformToVisual(scope.Scheduler).TransformPoint(default), view.ToString());
         }
+    }
+
+    [TestMethod]
+    public async Task When_AnAppointmentIsSelected_ATouchOnItIsNotTakenByScrolling()
+    {
+        // Android keeps its native scroll views from taking a touch over an element only with ManipulationMode None;
+        // unselected appointments keep System, so a swipe over them still scrolls.
+        using var scope = await CreateAsync(SchedulerView.Week);
+        Assert.AreEqual(ManipulationModes.System, scope.Frame(scope.Appointment).ManipulationMode);
+        await scope.ClickAsync(scope.Frame(scope.Appointment));
+        Assert.AreEqual(ManipulationModes.None, scope.Frame(scope.Appointment).ManipulationMode);
+        scope.Scheduler.SelectedAppointment = null;
+        await scope.LayoutAsync();
+        Assert.AreEqual(ManipulationModes.System, scope.Frame(scope.Appointment).ManipulationMode);
     }
 }

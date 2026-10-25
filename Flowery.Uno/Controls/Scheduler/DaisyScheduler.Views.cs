@@ -475,7 +475,7 @@ public partial class DaisyScheduler
     private void OnBodySizeChanged(object? sender, SizeChangedEventArgs e)
     {
         if (ReferenceEquals(sender, _bodyScroll))
-            UpdateViewGeometry();
+            RunOutsideLayout(UpdateViewGeometry);
     }
 
     private void OnBodyScrolled(object? sender, ScrollViewerViewChangedEventArgs e)
@@ -492,6 +492,13 @@ public partial class DaisyScheduler
         if (!ReferenceEquals(sender, _bodyScroll) || _bodyScroll is null)
             return;
         _bodyScroll.Loaded -= OnBodyLoaded;
+        RunOutsideLayout(ShowInitialPosition);
+    }
+
+    private void ShowInitialPosition()
+    {
+        if (_bodyScroll is null)
+            return;
         UpdateViewGeometry();
         var initial = CurrentView switch
         {

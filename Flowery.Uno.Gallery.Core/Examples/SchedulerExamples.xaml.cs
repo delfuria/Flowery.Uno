@@ -56,13 +56,12 @@ public sealed partial class SchedulerExamples : ScrollableExamplePage
         foreach (var property in new[]
         {
             DaisyScheduler.CurrentViewProperty, DaisyScheduler.DateTimeFormatProperty, DaisyScheduler.ClockFormatProperty,
-            DaisyScheduler.ResourceKindFilterProperty, DaisyScheduler.TimeSlotStartProperty, DaisyScheduler.TimeSlotEndProperty,
-            DaisyScheduler.TimeSlotIntervalProperty, DaisyScheduler.AppointmentColorsProperty
+            DaisyScheduler.TimeSlotStartProperty, DaisyScheduler.TimeSlotEndProperty, DaisyScheduler.TimeSlotIntervalProperty,
+            DaisyScheduler.AppointmentColorsProperty
         })
             DemoScheduler.RegisterPropertyChangedCallback(property, OnSchedulerPropertyChanged);
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
-        RefreshFormatOptions();
         SeedAppointments();
         OnSelectionChanged(this, DemoScheduler.SelectedAppointments);
     }
@@ -88,7 +87,6 @@ public sealed partial class SchedulerExamples : ScrollableExamplePage
         // Desktop/Skia does not always refresh indexer bindings from INotifyPropertyChanged.
         MainScrollViewer.DataContext = null;
         MainScrollViewer.DataContext = Localization;
-        RefreshFormatOptions();
         foreach (var group in DemoScheduler.ResourceGroups ?? Array.Empty<ResourceGroupModel>())
             group.Name = Text(group.Id switch
             {
@@ -113,9 +111,6 @@ public sealed partial class SchedulerExamples : ScrollableExamplePage
     {
         if (property == DaisyScheduler.CurrentViewProperty)
             Refresh();
-        if (property == DaisyScheduler.DateTimeFormatProperty || property == DaisyScheduler.ClockFormatProperty ||
-            property == DaisyScheduler.ResourceKindFilterProperty)
-            RefreshFormatOptions();
         if (EditorPanel.Visibility == Visibility.Visible && (property == DaisyScheduler.TimeSlotStartProperty ||
             property == DaisyScheduler.TimeSlotEndProperty || property == DaisyScheduler.TimeSlotIntervalProperty ||
             property == DaisyScheduler.ClockFormatProperty || property == DaisyScheduler.DateTimeFormatProperty ||

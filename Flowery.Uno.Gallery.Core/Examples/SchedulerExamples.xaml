@@ -35,24 +35,6 @@
                 <daisy:DaisyCheckBox x:Name="DetailsOption" Content="{Binding [Scheduler_Details]}" IsChecked="True" Margin="0,0,16,8" />
                 <daisy:DaisyCheckBox x:Name="ReadOnlyOption" Content="{Binding [Scheduler_ReadOnly]}" Margin="0,0,16,8" />
                 <daisy:DaisyButton Content="{Binding [Scheduler_Reset]}" Variant="Ghost" Click="OnReset" />
-                <StackPanel Spacing="4" Margin="12,0,0,8">
-                    <TextBlock Text="{Binding [Scheduler_ResourceKind]}" Foreground="{ThemeResource DaisyBaseContentBrush}"
-                               daisy:FlowerySizeManager.ResponsiveFont="Secondary" />
-                    <daisy:DaisySelect x:Name="ResourceKindOption" MinWidth="160" SelectionChanged="OnResourceKindChanged"
-                                       AutomationProperties.Name="{Binding [Scheduler_ResourceKind]}" />
-                </StackPanel>
-                <StackPanel Spacing="4" Margin="12,0,12,8">
-                    <TextBlock Text="{Binding [Scheduler_DateTimeFormat]}" Foreground="{ThemeResource DaisyBaseContentBrush}"
-                               daisy:FlowerySizeManager.ResponsiveFont="Secondary" />
-                    <daisy:DaisySelect x:Name="DateTimeFormatOption" MinWidth="190" SelectionChanged="OnDateTimeFormatChanged"
-                                       AutomationProperties.Name="{Binding [Scheduler_DateTimeFormat]}" />
-                </StackPanel>
-                <StackPanel Spacing="4" Margin="0,0,12,8">
-                    <TextBlock Text="{Binding [Scheduler_ClockFormat]}" Foreground="{ThemeResource DaisyBaseContentBrush}"
-                               daisy:FlowerySizeManager.ResponsiveFont="Secondary" />
-                    <daisy:DaisySelect x:Name="ClockFormatOption" MinWidth="160" SelectionChanged="OnClockFormatChanged"
-                                       AutomationProperties.Name="{Binding [Scheduler_ClockFormat]}" />
-                </StackPanel>
             </daisy:WrapPanel>
             <Grid Grid.Row="2" ColumnSpacing="12">
                 <Grid.ColumnDefinitions>

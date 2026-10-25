@@ -306,6 +306,10 @@ public partial class DaisyScheduler : Control
         FlowerySizeManager.Register(this, OnResolvedSizeRefreshed, () => ResolvedSize);
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+        // A running gesture owns the pointer it captured. On Android a scroll viewer between the appointment and the
+        // scheduler marks touch moves handled, so the gesture also listens to handled events.
+        AddHandler(PointerMovedEvent, new PointerEventHandler(OnGesturePointerMoved), true);
+        AddHandler(PointerReleasedEvent, new PointerEventHandler(OnGesturePointerReleased), true);
         IsTabStop = true;
     }
 
@@ -457,7 +461,7 @@ public partial class DaisyScheduler : Control
     }
 
     // Planner and Timeline hours fill the visible width; a new width rescales them in place.
-    private void OnViewHostResized(object? sender, SizeChangedEventArgs e) => RescaleHours();
+    private void OnViewHostResized(object? sender, SizeChangedEventArgs e) => RunOutsideLayout(RescaleHours);
 
     private IEnumerable<DaisyButton> TemplateButtons() =>
         _toolbar?.Children.OfType<DaisyButton>() ?? Enumerable.Empty<DaisyButton>();
@@ -687,6 +691,9 @@ public partial class DaisyScheduler : Control
             selection.BorderBrush = Brush("DaisyPrimaryBrush");
             selection.Visibility = selected ? Visibility.Visible : Visibility.Collapsed;
             Canvas.SetZIndex(frame, selected ? 10 : 0);
+            // A touch drag on a selected appointment moves or resizes it; elsewhere it scrolls the view. On Android
+            // only None keeps the native scroll views from taking over the touch; Skia and WinUI also accept it.
+            frame.ManipulationMode = selected ? ManipulationModes.None : ManipulationModes.System;
         }
     }
 

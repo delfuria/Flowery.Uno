@@ -118,8 +118,17 @@ namespace Flowery.Controls
             if (_toolTip == null)
                 SetupToolTip();
             ApplyColors();
-            // IsOpen set before loading, or kept true while unloaded, opens the tooltip now.
-            _toolTip!.IsOpen = IsOpen;
+            // IsOpen set before loading, or kept true while unloaded, opens the tooltip once loaded. Uno raises the
+            // Closed event of the popup that OnUnloaded closed later, through the dispatcher, and the native tooltip
+            // closes itself on it; opening after that event keeps a tooltip that moved to a new parent open.
+            if (IsOpen)
+                DispatcherQueue.TryEnqueue(OpenIfRequested);
+        }
+
+        private void OpenIfRequested()
+        {
+            if (IsLoaded && IsOpen && _toolTip is { } toolTip)
+                toolTip.IsOpen = true;
         }
 
         protected override void OnUnloaded()

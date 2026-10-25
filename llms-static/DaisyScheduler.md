@@ -112,7 +112,8 @@ Scheduler widths and time-axis metrics use the `DaisyScheduler*` tokens, whose d
 Hosts can override these resources in the application or in the scheduler's own `Resources`. `ColumnMinWidth` and `AppointmentCornerRadius` override their token defaults when set.
 Day and Week columns reserve space for complete time ranges, status icons, and overlapping appointments.
 The time gutter is as wide as its widest hour label.
-One-line chips and Planner bars show a compact 12-hour start such as `7a` or `12:30p`; 24-hour clocks keep `07:00`.
+One-line chips and Planner and Timeline bars never trim their start time. Status glyphs and tiles show only when they fit beside it; the subject takes the rest and hides when fewer than two characters and an ellipsis fit.
+A Planner or Timeline hour is as wide as a one-hour bar with its full start time (for the current size, font, culture, and clock format), every hour has a header label, and hours widen to fill the visible width. `DaisySchedulerTimelineMinimumHourWidth` (default: 0) can raise the minimum.
 Short appointments give priority to the subject and time. Optional notes and tiles appear only when complete rows fit.
 Window resizing keeps the existing appointment controls, selection, and scroll position.
 
@@ -120,7 +121,7 @@ The control uses the active Flowery palette.
 `DaisySchedulerTodayBrush` controls the current-day highlight (default: `DaisyPrimaryBrush` at 8 % opacity).
 `DaisySchedulerEventBackgroundBrush` controls the default appointment background (default: `DaisyBase200Brush`).
 Both follow theme changes; an application or scheduler resource with the key replaces the default.
-`DaisyPrimaryBrush` supplies the default appointment accent and selection border.
+`DaisyPrimaryBrush` supplies the default appointment accent and the selection ring. The ring lies over the frame border, so selecting an appointment neither moves nor resizes it.
 Appointments can override their background and accent through `BackColor` and `BarColor`.
 The control chooses black or white text for a custom background.
 Data tiles and filled decorations also select text colors from their own background.

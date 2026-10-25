@@ -35,7 +35,7 @@ public static class TimeZoneConverter
     }
 
     /// <summary>
-    /// Inverse of <see cref="ToZone"/>: convert a wall-clock time in <paramref name="ianaId"/>
+    /// Inverse of <see cref="ToZone(DateTime, string?)"/>: convert a wall-clock time in <paramref name="ianaId"/>
     /// back to a UTC instant. Used when a Planner gesture in a per-resource-timezone lane produces
     /// a new wall-clock time that must be stored in the appointment's UTC convention.
     /// Null/blank/unknown id → <paramref name="zoned"/> unchanged.

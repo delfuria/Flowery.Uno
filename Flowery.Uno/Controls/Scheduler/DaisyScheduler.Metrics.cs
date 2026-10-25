@@ -41,20 +41,34 @@ public partial class DaisyScheduler
         return Math.Ceiling(length * scaling) / scaling;
     }
 
-    private double TimelinePixelsPerMinute
+    // Planner and Timeline hours fit their header label and a one-hour bar that shows its start time whole
+    // (frame and accent borders, content margins, the gap between bars and one spacing of slack). The width
+    // follows the size, font, culture and clock format, and hours widen to fill the visible width. Hosts can
+    // raise the minimum with DaisySchedulerTimelineMinimumHourWidth. Text widths are rounded up to device pixels
+    // as layout rounds them.
+    private double MinimumPixelsPerMinute()
     {
-        get
+        var infinite = new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity);
+        var barChrome = SpacingXS * 4 + LineThickness * 4 + 2;
+        var width = Token<double>("DaisySchedulerTimelineMinimumHourWidth") * SizeScale;
+        for (var hour = 0; hour < 24; hour++)
         {
-            var width = Token<double>("DaisySchedulerTimelineMinimumHourWidth") * SizeScale;
-            for (var hour = 0; hour < 24; hour++)
-            {
-                var label = Label(FormatTime(DateTime.Today.AddHours(hour)), true);
-                label.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
-                width = Math.Max(width, label.DesiredSize.Width + SpacingSmall * 2);
-            }
-            return RoundToPixel(width) / 60;
+            var text = FormatTime(DateTime.Today.AddHours(hour));
+            var header = Label(text, true);
+            header.Measure(infinite);
+            // Bars show their start time in the subject's font size.
+            var start = Label(text);
+            start.FontWeight = FontWeights.SemiBold;
+            start.Measure(infinite);
+            width = Math.Max(width, Math.Max(RoundToPixel(header.DesiredSize.Width) + SpacingSmall * 2,
+                RoundToPixel(start.DesiredSize.Width) + barChrome));
         }
+        return RoundToPixel(width) / 60;
     }
+
+    // Only this part depends on the visible width, so a resize does not measure the labels again.
+    private double FillPixelsPerMinute(double minimum, int dayCount, double gutterWidth) =>
+        Math.Max(minimum, ((_viewHost?.ActualWidth ?? 0) - gutterWidth) / (dayCount * 1440));
 
     // Avalonia's "Auto,*" definition strings, so the view builders read like the original.
     private static Grid WithDefinitions(Grid grid, string columns, string rows = "")

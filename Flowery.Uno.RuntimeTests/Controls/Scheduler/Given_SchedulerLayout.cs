@@ -247,4 +247,67 @@ public class Given_SchedulerLayout
         Assert.AreEqual(new DateTime(2021, 2, 15), scope.Scheduler.SelectedDate.Date);
         Assert.IsFalse(string.IsNullOrEmpty(AutomationProperties.GetName(date)));
     }
+
+    [TestMethod]
+    public async Task When_OneHourBarsHaveALongBadge_TheStartTimeStaysWhole()
+    {
+        foreach (var view in new[] { SchedulerView.Planner, SchedulerView.Timeline })
+            foreach (var size in new[] { DaisySize.ExtraSmall, DaisySize.Medium, DaisySize.ExtraLarge })
+            {
+                using var scope = await CreateAsync(view);
+                scope.Scheduler.Size = size;
+                scope.Scheduler.ClockFormat = SchedulerClockFormat.TwelveHour;
+                scope.Appointment.Tiles.Add(new AppointmentDecoration { Text = "A long resource badge" });
+                scope.Scheduler.Appointments = new[] { scope.Appointment };
+                await scope.LayoutAsync();
+                var label = view + "/" + size;
+                var frame = scope.Frame(scope.Appointment);
+                // The line panel measures the start time with unlimited width, so its desired size is the whole text;
+                // an element is clipped only when its layout slot is smaller than that.
+                var start = Descendants<TextBlock>(frame).Single(text => text.Text == ((AppointmentContext)frame.DataContext).StartTime);
+                var slot = LayoutInformation.GetLayoutSlot(start);
+                Assert.AreEqual(TextTrimming.None, start.TextTrimming, label);
+                Assert.IsTrue(slot.Width + 0.01 >= start.DesiredSize.Width, $"{label}: start time slot {slot.Width} of {start.DesiredSize.Width}");
+                AssertFullyInside(start, frame, label);
+            }
+    }
+
+    [TestMethod]
+    public async Task When_TheTimelineGetsWider_ItsHoursFillTheVisibleWidth()
+    {
+        using var scope = await CreateAsync(SchedulerView.Timeline);
+        Canvas Lane() => (Canvas)scope.Frame(scope.Appointment).Parent;
+        ScrollViewer Body() => Ancestors(Lane()).OfType<ScrollViewer>().First();
+        var narrow = Lane().Width;
+        Assert.IsTrue(narrow + 1 >= Body().ViewportWidth, $"{narrow} for {Body().ViewportWidth}");
+        scope.Host.Width = 2600;
+        await scope.LayoutAsync();
+        Assert.IsTrue(Lane().Width > narrow);
+        Assert.IsTrue(Lane().Width + 1 >= Body().ViewportWidth, $"{Lane().Width} for {Body().ViewportWidth}");
+    }
+
+    [TestMethod]
+    public async Task When_CalendarMonthChanges_DayButtonsAreReusedAndOtherMonthsAreMuted()
+    {
+        using var scope = await CreateAsync(SchedulerView.Calendar);
+        DaisyButton[] Buttons() => scope.Descendants<Grid>().Single(grid => grid.Name == "PART_CalendarDays").Children.OfType<DaisyButton>().ToArray();
+        // The first layout already uses the size height; a later month change must not resize the rows.
+        foreach (var button in Buttons())
+            Assert.AreEqual(button.Height, button.ActualHeight, 0.5, (string)button.Content);
+        scope.Scheduler.SelectedDate = new DateTimeOffset(new DateTime(2021, 2, 10));
+        await scope.LayoutAsync();
+        var muted = ((SolidColorBrush)Flowery.Theming.DaisyResourceLookup.GetBrush("DaisyBaseContentMutedBrush")).Color;
+        Windows.UI.Color Color(DateTime day) => ((SolidColorBrush)DayButton(scope, day).Foreground).Color;
+        // February 2021 starts on a Monday, so the grid ends with March days.
+        Assert.AreEqual(muted, Color(new DateTime(2021, 3, 1)));
+        Assert.AreNotEqual(muted, Color(new DateTime(2021, 2, 1)));
+        var buttons = Buttons();
+        scope.Scheduler.SelectedDate = new DateTimeOffset(new DateTime(2021, 3, 10));
+        await scope.LayoutAsync();
+        CollectionAssert.AreEqual(buttons, Buttons());
+        Assert.AreNotEqual(muted, Color(new DateTime(2021, 3, 1)));
+        Assert.AreEqual(muted, Color(new DateTime(2021, 4, 1)));
+        Assert.AreEqual(DaisyButtonVariant.Primary, DayButton(scope, new DateTime(2021, 3, 10)).Variant);
+        Assert.AreEqual(DaisyButtonVariant.Ghost, DayButton(scope, new DateTime(2021, 3, 11)).Variant);
+    }
 }

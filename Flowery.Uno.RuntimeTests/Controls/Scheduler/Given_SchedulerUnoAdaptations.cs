@@ -92,9 +92,10 @@ public class Given_SchedulerUnoAdaptations
             var frame = scope.Frame(scope.Appointment);
             var lane = (Canvas)frame.Parent;
             var ppm = lane.Width / (5 * 1440);
-            frame.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false });
-            await scope.LayoutAsync();
             var x = edge switch { "start" => 2, "end" => frame.ActualWidth - 2, _ => frame.ActualWidth / 2 };
+            // Hours fit their start times, so a long bar can be wider than the viewport: show the grabbed point.
+            frame.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false, TargetRect = new Rect(x - 1, 0, 2, frame.ActualHeight) });
+            await scope.LayoutAsync();
             var origin = scope.Point(frame, x, frame.ActualHeight / 2);
             await scope.DragAsync(origin, new(origin.X + minutes * ppm, origin.Y));
             Assert.AreEqual(expectedStart, start, label);
@@ -220,5 +221,24 @@ public class Given_SchedulerUnoAdaptations
         await scope.LayoutAsync();
         Assert.AreEqual(3, scope.Scheduler.VisibleDays);
         Assert.IsNotNull(scope.Scheduler.GetBindingExpression(DaisyScheduler.VisibleDaysProperty));
+    }
+
+    [TestMethod]
+    public async Task When_AnAppointmentIsSelected_ItsFrameAndContentDoNotMove()
+    {
+        // Flowery.NET widens the frame border on selection; the overlay ring takes no layout space.
+        foreach (var view in new[] { SchedulerView.Month, SchedulerView.Week, SchedulerView.Timeline })
+        {
+            using var scope = await CreateAsync(view);
+            var frame = scope.Frame(scope.Appointment);
+            var content = (FrameworkElement)((Panel)frame.Child).Children[0];
+            var size = new Size(frame.ActualWidth, frame.ActualHeight);
+            var position = content.TransformToVisual(scope.Scheduler).TransformPoint(default);
+            await scope.ClickAsync(frame);
+            Assert.AreSame(scope.Appointment, scope.Scheduler.SelectedAppointment, view.ToString());
+            Assert.AreSame(frame, scope.Frame(scope.Appointment), view.ToString());
+            Assert.AreEqual(size, new Size(frame.ActualWidth, frame.ActualHeight), view.ToString());
+            Assert.AreEqual(position, content.TransformToVisual(scope.Scheduler).TransformPoint(default), view.ToString());
+        }
     }
 }

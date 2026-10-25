@@ -281,13 +281,15 @@ public partial class DaisyScheduler : Control
     private DaisyButton? _dateButton;
     private readonly List<AppointmentModel> _selection = new();
     private readonly Dictionary<AppointmentModel, object> _selectionResourceIds = new();
-    private readonly List<(Border Frame, AppointmentModel Appointment)> _frames = new();
+    private readonly List<(Border Frame, Border Selection, AppointmentModel Appointment)> _frames = new();
     private bool _selectionSyncing;
     private bool _renderPending;
     private bool _attached;
     private ScrollViewer? _bodyScroll;
     private Point? _savedOffset;
     private SchedulerView? _renderedView;
+    private double _horizontalPixelsPerMinute;
+    private DaisySize? _renderedSize;
     private IReadOnlyList<SchedulerTileOption> _tileOptions = Array.Empty<SchedulerTileOption>();
 
     public DaisyScheduler()
@@ -301,7 +303,7 @@ public partial class DaisyScheduler : Control
         RegisterPropertyChangedCallback(FontSizeProperty, OnFontChanged);
         RegisterPropertyChangedCallback(FontFamilyProperty, OnFontChanged);
         RegisterPropertyChangedCallback(CornerRadiusProperty, OnCornerRadiusChanged);
-        FlowerySizeManager.Register(this, RequestRender, () => ResolvedSize);
+        FlowerySizeManager.Register(this, OnResolvedSizeRefreshed, () => ResolvedSize);
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
         IsTabStop = true;
@@ -419,13 +421,27 @@ public partial class DaisyScheduler : Control
 
     private void OnCultureChanged(object? sender, string culture) => RequestRender();
 
+    // The size manager refreshes every registered control whenever any size policy changes (for example while
+    // the Gallery sidebar builds its items); rebuilding the views is only needed when this tier changed.
+    private void OnResolvedSizeRefreshed()
+    {
+        if (ResolvedSize != _renderedSize)
+            RequestRender();
+    }
+
     protected override void OnApplyTemplate()
     {
         CancelGesture();
         foreach (var button in TemplateButtons())
             button.Click -= OnToolbarClick;
+        if (_toolbar is not null)
+            _toolbar.SizeChanged -= OnToolbarSizeChanged;
+        if (_viewHost is not null)
+            _viewHost.SizeChanged -= OnViewHostResized;
         base.OnApplyTemplate();
         _viewHost = GetTemplateChild("PART_ViewHost") as Border;
+        if (_viewHost is not null)
+            _viewHost.SizeChanged += OnViewHostResized;
         _toolbar = GetTemplateChild("PART_Toolbar") as WrapPanel;
         _views = GetTemplateChild("PART_Views") as WrapPanel;
         _customButtons = GetTemplateChild("PART_CustomButtons") as WrapPanel;
@@ -434,16 +450,25 @@ public partial class DaisyScheduler : Control
             ClipToBounds(_viewHost);
         foreach (var button in TemplateButtons())
             button.Click += OnToolbarClick;
+        if (_toolbar is not null)
+            _toolbar.SizeChanged += OnToolbarSizeChanged;
         ApplySizing();
         RenderActiveView();
     }
 
+    // Planner and Timeline hours fill the visible width; a new width rescales them in place.
+    private void OnViewHostResized(object? sender, SizeChangedEventArgs e) => RescaleHours();
+
     private IEnumerable<DaisyButton> TemplateButtons() =>
         _toolbar?.Children.OfType<DaisyButton>() ?? Enumerable.Empty<DaisyButton>();
 
+    // WinUI sets IsLoaded when the control enters the live tree and raises Loaded later; either one means the
+    // control is in the tree.
+    private bool IsAttached => IsLoaded || _attached;
+
     private void RequestRender()
     {
-        if (!_attached)
+        if (!IsAttached)
             return;
         // Sizing runs before the render is queued, so its font change does not queue a second render.
         ApplySizing();
@@ -457,7 +482,7 @@ public partial class DaisyScheduler : Control
     private void OnRenderRequested()
     {
         _renderPending = false;
-        if (_attached)
+        if (IsAttached)
             RenderActiveView();
     }
 
@@ -478,6 +503,7 @@ public partial class DaisyScheduler : Control
         _frames.Clear();
         _occurrenceSources.Clear();
         _lanes.Clear();
+        _hourItems.Clear();
         _visibleItems = GetVisibleOccurrences().ToArray();
         var appointments = Appointments ?? Array.Empty<AppointmentModel>();
         var retained = _selection.Select(old => appointments.FirstOrDefault(a => Same(a, old)))
@@ -498,6 +524,7 @@ public partial class DaisyScheduler : Control
             _ => BuildTimeGrid()
         };
         _renderedView = CurrentView;
+        _renderedSize = ResolvedSize;
         ApplySelection();
     }
 
@@ -653,11 +680,12 @@ public partial class DaisyScheduler : Control
 
     private void ApplySelection()
     {
-        foreach (var (frame, appointment) in _frames)
+        foreach (var (frame, selection, appointment) in _frames)
         {
             var selected = _selection.Any(item => Same(item, appointment));
-            frame.BorderBrush = Brush(selected ? "DaisyPrimaryBrush" : "DaisyBase300Brush");
-            frame.BorderThickness = new Thickness(selected ? SelectionThickness : LineThickness);
+            // The selection ring is an overlay, so selecting neither moves nor resizes the appointment.
+            selection.BorderBrush = Brush("DaisyPrimaryBrush");
+            selection.Visibility = selected ? Visibility.Visible : Visibility.Collapsed;
             Canvas.SetZIndex(frame, selected ? 10 : 0);
         }
     }

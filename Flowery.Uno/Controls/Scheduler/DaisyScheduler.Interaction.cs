@@ -526,7 +526,8 @@ public partial class DaisyScheduler
             gesture.Capture.ReleasePointerCapture(pointer);
     }
 
-    private void OnLaneDragOver(object? sender, DragEventArgs e)
+    // Qualified: on Android the base View declares its own DragEventArgs.
+    private void OnLaneDragOver(object? sender, Microsoft.UI.Xaml.DragEventArgs e)
     {
         if (sender is Canvas surface)
             e.AcceptedOperation = DragOverLane(surface, e.DataView, e.GetPosition(surface));
@@ -538,7 +539,7 @@ public partial class DaisyScheduler
         TryStoredTime(SlotTime(lane, position), lane, out _)
             ? DataPackageOperation.Copy : DataPackageOperation.None;
 
-    private void OnLaneDrop(object? sender, DragEventArgs e)
+    private void OnLaneDrop(object? sender, Microsoft.UI.Xaml.DragEventArgs e)
     {
         if (sender is not Canvas surface || IsReadOnly || !ExternalDropHandler.TryGetItem(e.DataView, out _))
             return;

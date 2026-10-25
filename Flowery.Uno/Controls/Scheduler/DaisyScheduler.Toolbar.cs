@@ -50,6 +50,15 @@ public partial class DaisyScheduler
             _customButtons.Children.Add(CreateToolbarButton(button, true));
     }
 
+    // The Flowery WrapPanel measures its children with infinite width, so the nested view and custom-button
+    // panels would never wrap on a narrow screen. Avalonia's WrapPanel passes its width; this does the same.
+    private void OnToolbarSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        foreach (var panel in new[] { _views, _customButtons })
+            if (panel is not null)
+                panel.MaxWidth = Math.Max(0, e.NewSize.Width - panel.Margin.Left - panel.Margin.Right);
+    }
+
     private DaisyButton CreateToolbarButton(SchedulerToolbarButton model, bool adornment)
     {
         var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };

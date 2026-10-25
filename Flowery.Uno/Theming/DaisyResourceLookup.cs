@@ -60,7 +60,12 @@ namespace Flowery.Theming
                 return true;
             }
 
-            // WinUI/Uno does not consistently surface merged dictionary values via TryGetValue
+#if WINDOWS
+            // WinUI's TryGetValue already searches nested merged and theme dictionaries. Searching them again by
+            // hand only repeated every miss through XamlControlsResources, and controls look up many optional keys.
+            return false;
+#else
+            // Uno does not consistently surface merged dictionary values via TryGetValue
             // across platforms/versions. Search merged dictionaries recursively.
             if (resources.MergedDictionaries != null)
             {
@@ -72,6 +77,7 @@ namespace Flowery.Theming
             }
 
             return false;
+#endif
         }
 
         public static double GetDouble(ResourceDictionary? resources, string key, double fallback)

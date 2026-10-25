@@ -51,15 +51,17 @@ public class Given_SchedulerFeatures
     }
 
     [TestMethod]
-    public async Task When_SingleLineChipsRender_TheyUseTheCompactStartTime()
+    public async Task When_SingleLineChipsRender_TheyShowTheWholeStartTimeBesideTheSubject()
     {
-        foreach (var (clock, expected) in new[] { (SchedulerClockFormat.TwelveHour, "9a  Install"), (SchedulerClockFormat.TwentyFourHour, "09:00  Install") })
+        foreach (var (clock, expected) in new[] { (SchedulerClockFormat.TwelveHour, "9:00 AM"), (SchedulerClockFormat.TwentyFourHour, "09:00") })
         {
             using var scope = await CreateAsync(SchedulerView.Month);
             scope.Scheduler.DateTimeFormat = SchedulerDateTimeFormat.US;
             scope.Scheduler.ClockFormat = clock;
             await scope.LayoutAsync();
-            Assert.IsTrue(Descendants<TextBlock>(scope.Frame(scope.Appointment)).Any(text => text.Text == expected), clock.ToString());
+            var texts = Descendants<TextBlock>(scope.Frame(scope.Appointment)).Select(static text => text.Text).ToArray();
+            CollectionAssert.Contains(texts, expected, clock + ": " + string.Join(" | ", texts));
+            CollectionAssert.Contains(texts, "Install", clock.ToString());
         }
     }
 
@@ -260,7 +262,11 @@ public class Given_SchedulerFeatures
         scope.Scheduler.CollapsedResourceGroupIds = Array.Empty<object>();
         await scope.LayoutAsync();
         Assert.AreEqual(2, scope.Frames(scope.Appointment).Count());
-        await scope.ClickAsync(scope.Frames(scope.Appointment).First());
+        var frame = scope.Frames(scope.Appointment).First();
+        // Hours fit their start times, so the appointment can lie beyond the viewport.
+        frame.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false });
+        await scope.LayoutAsync();
+        await scope.ClickAsync(frame);
         Assert.AreSame(scope.Appointment, scope.Scheduler.SelectedAppointment);
         scope.Scheduler.Navigate(1);
         await scope.LayoutAsync();

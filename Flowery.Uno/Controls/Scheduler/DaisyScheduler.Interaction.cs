@@ -1,4 +1,4 @@
-// Uno Platform adaptation of Xtreme.Components Scheduler (MIT).
+﻿// Uno Platform adaptation of Xtreme.Components Scheduler (MIT).
 // See ThirdPartyNotices/Xtreme.Components.txt for attribution and license.
 using Flowery.Controls.Scheduler.Contracts;
 using Flowery.Controls.Scheduler.Models;
@@ -14,9 +14,15 @@ public partial class DaisyScheduler
     private sealed record DayTarget(DateTime Date, ResourceModel? Resource);
     private enum GestureKind { Create, Move, ResizeStart, ResizeEnd }
 
-    private sealed class Gesture
+    /// <summary>A pointer the scheduler follows from its press to its release.</summary>
+    private abstract class Press
     {
         public required uint PointerId { get; init; }
+        public required bool IsTouch { get; init; }
+    }
+
+    private sealed class Gesture : Press
+    {
         public Pointer? Pointer { get; init; }
         public required UIElement Capture { get; init; }
         public required Lane Source { get; init; }
@@ -31,6 +37,8 @@ public partial class DaisyScheduler
         public DateTime Start { get; set; }
         public DateTime End { get; set; }
         public bool Started { get; set; }
+        /// <summary>A touch that did not start on a selected appointment gives way to scrolling once it moves.</summary>
+        public bool YieldsToScrolling { get; init; }
         public Border? Ghost { get; set; }
     }
 
@@ -47,6 +55,8 @@ public partial class DaisyScheduler
             Pointer = args.Pointer;
             PointerId = args.Pointer.PointerId;
             WindowPosition = point.Position;
+            // A pen counts as touch: no hover, and a tip as wide as a fingertip on the edges.
+            IsTouch = args.Pointer.PointerDeviceType != PointerDeviceType.Mouse;
             IsLeftButton = point.Properties.IsLeftButtonPressed;
             IsRightButton = point.Properties.IsRightButtonPressed;
             Modifiers = args.KeyModifiers;
@@ -55,10 +65,11 @@ public partial class DaisyScheduler
 
         /// <summary>Synthesized input; <paramref name="root"/> is the window content the position refers to.</summary>
         public PointerInput(UIElement root, Point windowPosition, bool isLeftButton, bool isRightButton,
-            VirtualKeyModifiers modifiers, ulong timestamp, uint pointerId = 1)
+            VirtualKeyModifiers modifiers, ulong timestamp, uint pointerId = 1, bool isTouch = false)
         {
             _root = root;
             PointerId = pointerId;
+            IsTouch = isTouch;
             WindowPosition = windowPosition;
             IsLeftButton = isLeftButton;
             IsRightButton = isRightButton;
@@ -70,6 +81,8 @@ public partial class DaisyScheduler
         public Pointer? Pointer { get; }
         public uint PointerId { get; }
         public Point WindowPosition { get; }
+        /// <summary>Touch or pen input.</summary>
+        public bool IsTouch { get; }
         public bool IsLeftButton { get; }
         public bool IsRightButton { get; }
         public VirtualKeyModifiers Modifiers { get; }
@@ -90,7 +103,17 @@ public partial class DaisyScheduler
     private Point _lastPressPoint;
     private int _lastClickCount;
 
-    private Gesture? _gesture;
+    // A touch on an unselected appointment or an empty day acts only when it lifts without moving, so a swipe that
+    // starts there scrolls and changes nothing; the next touch on a selected appointment drags it.
+    private sealed class TouchTap : Press
+    {
+        public required Point WindowPosition { get; init; }
+        public required int ClickCount { get; init; }
+        public AppointmentTarget? Appointment { get; init; }
+        public DayTarget? Day { get; init; }
+    }
+
+    private Press? _press;
 
     private static ulong ReadDoubleClickMicroseconds()
     {
@@ -107,6 +130,13 @@ public partial class DaisyScheduler
 
     /// <summary>The double-click time in microseconds, the unit of <see cref="PointerPoint.Timestamp"/>.</summary>
     internal static ulong DoubleClickMicroseconds => SystemDoubleClickMicroseconds;
+
+    // A press that became a scroll does not count toward a double tap.
+    private void ForgetPress() => _lastPressKey = null;
+
+    // Control, or the Windows key that stands for Command on a Mac keyboard.
+    private static bool HasControl(VirtualKeyModifiers modifiers) =>
+        (modifiers & (VirtualKeyModifiers.Control | VirtualKeyModifiers.Windows)) != 0;
 
     private int ClickCount(object key, PointerInput input)
     {
@@ -165,8 +195,13 @@ public partial class DaisyScheduler
         var clickCount = ClickCount(appointment.Id ?? appointment, input);
         if (appointment.IsLocked)
             return true;
+        if (input.IsTouch && !selectedBefore)
+        {
+            BeginTouchTap(input, clickCount, appointment: target);
+            return true;
+        }
         RememberSelectionResource(target);
-        var multiple = (input.Modifiers & (VirtualKeyModifiers.Control | VirtualKeyModifiers.Windows)) != 0;
+        var multiple = HasControl(input.Modifiers);
         if (multiple || !selectedBefore)
             SelectAppointment(appointment, multiple);
         else
@@ -183,12 +218,14 @@ public partial class DaisyScheduler
         {
             var axis = lane.Horizontal ? position.X : position.Y;
             var length = lane.Horizontal ? frame.ActualWidth : frame.ActualHeight;
-            if (axis < 5)
+            // A finger needs wider edges; each stays at most a quarter of the appointment, so it can still be moved.
+            var edge = input.IsTouch ? Math.Min(12, length / 4) : 5;
+            if (axis < edge)
                 kind = GestureKind.ResizeStart;
-            else if (axis > length - 5)
+            else if (axis > length - edge)
                 kind = GestureKind.ResizeEnd;
         }
-        BeginGesture(input, frame, lane, kind, clickCount, appointment, target.Displayed);
+        BeginGesture(input, frame, lane, kind, clickCount, appointment, target.Displayed, touchDrags: selectedBefore);
         return true;
     }
 
@@ -232,8 +269,22 @@ public partial class DaisyScheduler
     {
         if (IsReadOnly || control.Tag is not DayTarget target || !input.IsLeftButton)
             return false;
-        SelectSlot(target.Date, target.Resource, true, ClickCount(target, input), input.WindowPosition);
+        var clickCount = ClickCount(target, input);
+        if (input.IsTouch)
+            BeginTouchTap(input, clickCount, day: target);
+        else
+            SelectSlot(target.Date, target.Resource, true, clickCount, input.WindowPosition);
         return true;
+    }
+
+    private void BeginTouchTap(PointerInput input, int clickCount, AppointmentTarget? appointment = null, DayTarget? day = null)
+    {
+        CancelGesture();
+        _press = new TouchTap
+        {
+            PointerId = input.PointerId, IsTouch = true, WindowPosition = input.WindowPosition, ClickCount = clickCount,
+            Appointment = appointment, Day = day
+        };
     }
 
     private void AttachLane(Lane lane)
@@ -270,17 +321,18 @@ public partial class DaisyScheduler
     }
 
     private void BeginGesture(PointerInput input, UIElement capture, Lane lane, GestureKind kind, int clickCount,
-        AppointmentModel? appointment, AppointmentModel? displayed = null)
+        AppointmentModel? appointment, AppointmentModel? displayed = null, bool touchDrags = false)
     {
         CancelGesture();
         var slot = SlotTime(lane, input.PositionIn(lane.Surface));
         var start = displayed?.Start ?? (appointment is null ? slot : ShownTime(appointment.Start, lane));
         var end = displayed?.End ?? (appointment is null ? slot.AddMinutes(SnapMinutes) : ShownTime(appointment.End, lane));
-        _gesture = new Gesture
+        _press = new Gesture
         {
-            PointerId = input.PointerId, Pointer = input.Pointer, Capture = capture, Source = lane, Target = lane,
+            PointerId = input.PointerId, IsTouch = input.IsTouch, Pointer = input.Pointer, Capture = capture, Source = lane, Target = lane,
             PressPoint = input.PositionIn(this), PressTime = slot, Kind = kind, ClickCount = clickCount, Appointment = appointment,
-            OriginalStart = start, OriginalEnd = end, Start = start, End = end
+            OriginalStart = start, OriginalEnd = end, Start = start, End = end,
+            YieldsToScrolling = input.IsTouch && !touchDrags
         };
         if (input.Pointer is { } pointer)
             capture.CapturePointer(pointer);
@@ -288,19 +340,32 @@ public partial class DaisyScheduler
 
     private void OnGesturePointerMoved(object? sender, PointerRoutedEventArgs e)
     {
-        if (_gesture is not null && MovePointer(new PointerInput(e)))
+        if (_press is not null && MovePointer(new PointerInput(e)))
             e.Handled = true;
     }
 
     internal bool MovePointer(PointerInput input)
     {
-        if (_gesture is not { } gesture || gesture.PointerId != input.PointerId || IsReadOnly)
+        if (_press is TouchTap tap && tap.PointerId == input.PointerId)
+        {
+            var (x, y) = (input.WindowPosition.X - tap.WindowPosition.X, input.WindowPosition.Y - tap.WindowPosition.Y);
+            if (x * x + y * y >= 16)
+                CancelPointer(input.PointerId);
+            return false;
+        }
+        if (_press is not Gesture gesture || gesture.PointerId != input.PointerId || IsReadOnly)
             return false;
         var position = input.PositionIn(this);
         var distanceX = position.X - gesture.PressPoint.X;
         var distanceY = position.Y - gesture.PressPoint.Y;
         if (!gesture.Started && distanceX * distanceX + distanceY * distanceY < 16)
             return false;
+        if (gesture.YieldsToScrolling)
+        {
+            // On touch, only a selected appointment is dragged; any other swipe scrolls the view.
+            CancelPointer(input.PointerId);
+            return false;
+        }
         gesture.Started = true;
         var target = gesture.Source;
         if (gesture.Kind == GestureKind.Move)
@@ -365,13 +430,25 @@ public partial class DaisyScheduler
 
     private void OnGesturePointerReleased(object? sender, PointerRoutedEventArgs e)
     {
-        if (_gesture is not null && ReleasePointer(new PointerInput(e)))
+        if (_press is not null && ReleasePointer(new PointerInput(e)))
             e.Handled = true;
     }
 
     internal bool ReleasePointer(PointerInput input)
     {
-        if (_gesture is not { } gesture || gesture.PointerId != input.PointerId)
+        if (_press is TouchTap tap && tap.PointerId == input.PointerId)
+        {
+            _press = null;
+            if (tap.Appointment is { } target)
+            {
+                RememberSelectionResource(target);
+                SelectAppointment(target.Appointment, HasControl(input.Modifiers));
+            }
+            else if (tap.Day is { } day)
+                SelectSlot(day.Date, day.Resource, true, tap.ClickCount, tap.WindowPosition);
+            return true;
+        }
+        if (_press is not Gesture gesture || gesture.PointerId != input.PointerId)
             return false;
         CancelGesture();
         if (IsReadOnly)
@@ -413,7 +490,7 @@ public partial class DaisyScheduler
         if (!IsValidGestureRange(appointment, start, end, gesture.Kind != GestureKind.Move))
             return;
         var withShift = modifiers.HasFlag(VirtualKeyModifiers.Shift);
-        var copy = (modifiers & (VirtualKeyModifiers.Control | VirtualKeyModifiers.Windows)) != 0;
+        var copy = HasControl(modifiers);
         var multi = !lane.Horizontal && _selection.Count > 1;
         if (gesture.Kind == GestureKind.Move)
         {
@@ -512,18 +589,31 @@ public partial class DaisyScheduler
 
     protected override void OnPointerCaptureLost(PointerRoutedEventArgs e)
     {
-        if (_gesture?.PointerId == e.Pointer.PointerId)
-            CancelGesture();
+        CancelPointer(e.Pointer.PointerId);
         base.OnPointerCaptureLost(e);
+    }
+
+    private void OnGesturePointerCanceled(object? sender, PointerRoutedEventArgs e) => CancelPointer(e.Pointer.PointerId);
+
+    /// <summary>Drops the press of a pointer the system took, e.g. a swipe that a native scroll view took over.</summary>
+    internal void CancelPointer(uint pointerId)
+    {
+        if (_press is not { } press || press.PointerId != pointerId)
+            return;
+        if (press.IsTouch)
+            ForgetPress();
+        CancelGesture();
     }
 
     private void CancelGesture()
     {
-        var gesture = _gesture;
-        _gesture = null;
-        if (gesture?.Ghost?.Parent is Panel panel)
+        var press = _press;
+        _press = null;
+        if (press is not Gesture gesture)
+            return;
+        if (gesture.Ghost?.Parent is Panel panel)
             panel.Children.Remove(gesture.Ghost);
-        if (gesture?.Pointer is { } pointer)
+        if (gesture.Pointer is { } pointer)
             gesture.Capture.ReleasePointerCapture(pointer);
     }
 

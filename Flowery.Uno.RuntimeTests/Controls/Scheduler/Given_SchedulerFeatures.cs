@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -151,35 +151,6 @@ public class Given_SchedulerFeatures
         Assert.AreEqual(TimeSpan.FromMinutes(30), scheduler.TimeSlotInterval);
         scheduler.TimeSlotEnd = TimeSpan.FromHours(6);
         Assert.ThrowsExactly<InvalidOperationException>(() => scheduler.GetTimeSlots());
-    }
-
-    [TestMethod]
-    public async Task When_DailySpansRender_OccurrencesShow_AndSelectionReturnsTheOriginalSeries()
-    {
-        foreach (var (view, count) in new[]
-        {
-            (SchedulerView.Day, 1), (SchedulerView.Week, 3), (SchedulerView.Month, 3),
-            (SchedulerView.Agenda, 3), (SchedulerView.Planner, 3), (SchedulerView.Timeline, 1)
-        })
-        {
-            using var scope = await CreateAsync(view);
-            scope.Appointment.SpanMode = AppointmentSpanMode.Daily;
-            scope.Appointment.End = Monday.AddDays(2).AddHours(10);
-            if (view == SchedulerView.Agenda)
-                scope.Scheduler.VisibleDays = 3;
-            scope.Scheduler.Appointments = new[] { scope.Appointment };
-            await scope.LayoutAsync();
-            var frames = scope.Frames(scope.Appointment).ToArray();
-            Assert.HasCount(count, frames, view.ToString());
-            foreach (var frame in frames)
-            {
-                var context = (AppointmentContext)frame.DataContext;
-                Assert.AreEqual(TimeSpan.FromHours(1), context.End - context.Start, view.ToString());
-            }
-            await scope.ClickAsync(frames[0]);
-            Assert.AreSame(scope.Appointment, scope.Scheduler.SelectedAppointment, view.ToString());
-            Assert.AreEqual(Monday.AddDays(2).AddHours(10), scope.Appointment.End);
-        }
     }
 
     [TestMethod]

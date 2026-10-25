@@ -106,7 +106,7 @@
                                        TextWrapping="Wrap" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <daisy:DaisyButton Content="Get started" Variant="Default" />
-                            <daisy:DaisyButton Content="Learn more" Variant="Ghost" Foreground="{ThemeResource DaisyPrimaryContentBrush}" />
+                            <daisy:DaisyButton Content="Learn more" Variant="Ghost" />
                         </StackPanel>
                     </StackPanel>
                 </daisy:DaisyHero>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -126,8 +126,8 @@ internal sealed class SchedulerScope : IDisposable
     public void MouseUp(Point point, VirtualKeyModifiers modifiers = VirtualKeyModifiers.None) =>
         Scheduler.ReleasePointer(Input(point, false, false, modifiers));
 
-    private DaisyScheduler.PointerInput Input(Point point, bool left, bool right, VirtualKeyModifiers modifiers) =>
-        new(Root, point, left, right, modifiers, _timestamp);
+    private DaisyScheduler.PointerInput Input(Point point, bool left, bool right, VirtualKeyModifiers modifiers, bool touch = false) =>
+        new(Root, point, left, right, modifiers, _timestamp, isTouch: touch);
 
     public async Task ClickAsync(FrameworkElement element, bool right = false, VirtualKeyModifiers modifiers = VirtualKeyModifiers.None)
     {
@@ -152,6 +152,38 @@ internal sealed class SchedulerScope : IDisposable
         MouseDown(origin, modifiers: modifiers);
         MouseMove(destination);
         MouseUp(destination, modifiers);
+        await LayoutAsync();
+    }
+
+    /// <param name="elapsedMicroseconds">Time since the previous press; the default never forms a double tap.</param>
+    public void TouchDown(Point point, VirtualKeyModifiers modifiers = VirtualKeyModifiers.None, ulong elapsedMicroseconds = 1_000_000)
+    {
+        _timestamp += elapsedMicroseconds;
+        var hit = HitTest(Scheduler, point) ?? throw new InvalidOperationException("Nothing to touch at " + point);
+        Scheduler.RoutePointerPressed(hit, Input(point, true, false, modifiers, touch: true));
+    }
+
+    public void TouchUp(Point point, VirtualKeyModifiers modifiers = VirtualKeyModifiers.None) =>
+        Scheduler.ReleasePointer(Input(point, false, false, modifiers, touch: true));
+
+    /// <summary>The system takes the touch, as a native scroll view does with a swipe.</summary>
+    public void TouchCancel() => Scheduler.CancelPointer(1);
+
+    /// <summary>A touch press at <paramref name="origin"/>, a move to <paramref name="destination"/> and a release.</summary>
+    public async Task TouchDragAsync(Point origin, Point destination)
+    {
+        TouchDown(origin);
+        Scheduler.MovePointer(Input(destination, true, false, VirtualKeyModifiers.None, touch: true));
+        TouchUp(destination);
+        await LayoutAsync();
+    }
+
+    /// <summary>A touch press and release at <paramref name="point"/> without moving.</summary>
+    /// <param name="elapsedMicroseconds">Time since the previous press; the default never forms a double tap.</param>
+    public async Task TouchTapAsync(Point point, VirtualKeyModifiers modifiers = VirtualKeyModifiers.None, ulong elapsedMicroseconds = 1_000_000)
+    {
+        TouchDown(point, modifiers, elapsedMicroseconds);
+        TouchUp(point, modifiers);
         await LayoutAsync();
     }
 

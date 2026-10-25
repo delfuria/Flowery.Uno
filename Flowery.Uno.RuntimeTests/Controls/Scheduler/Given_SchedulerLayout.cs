@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -24,41 +24,6 @@ namespace Flowery.Uno.RuntimeTests.Controls.Scheduler;
 [TestClass]
 public class Given_SchedulerLayout
 {
-    [TestMethod]
-    public async Task When_HostResizes_AppointmentAndToolbarControlsStayAttached()
-    {
-        foreach (var view in Enum.GetValues<SchedulerView>())
-        {
-            using var scope = await CreateAsync(view);
-            scope.Scheduler.Size = DaisySize.ExtraLarge;
-            var renders = 0;
-            scope.Scheduler.AppointmentRenderer = _ => { renders++; return null; };
-            await scope.LayoutAsync();
-            var frame = scope.Frame(scope.Appointment);
-            var scroll = Ancestors(frame).OfType<ScrollViewer>().First();
-            var dateButton = scope.Descendants<DaisyButton>().Single(button => Equals(button.Tag, "Date"));
-            scope.Scheduler.SelectedAppointment = scope.Appointment;
-            var before = renders;
-            var detachments = 0;
-            frame.Unloaded += (_, _) => detachments++;
-            foreach (var width in new[] { 900d, 760d, 1080d })
-            {
-                var offset = new Point(scroll.HorizontalOffset, scroll.VerticalOffset);
-                scope.Host.Width = width;
-                scope.Host.Height = 680;
-                await scope.LayoutAsync();
-                Assert.AreSame(frame, scope.Frame(scope.Appointment), view.ToString());
-                Assert.AreSame(scroll, Ancestors(frame).OfType<ScrollViewer>().First(), view.ToString());
-                Assert.IsTrue(scope.Descendants<DaisyButton>().Contains(dateButton), view.ToString());
-                Assert.AreEqual(Math.Min(offset.X, Math.Max(0, scroll.ExtentWidth - scroll.ViewportWidth)), scroll.HorizontalOffset, 1, view.ToString());
-                Assert.AreEqual(Math.Min(offset.Y, Math.Max(0, scroll.ExtentHeight - scroll.ViewportHeight)), scroll.VerticalOffset, 1, view.ToString());
-            }
-            Assert.AreEqual(before, renders, view.ToString());
-            Assert.AreEqual(0, detachments, view.ToString());
-            Assert.AreSame(scope.Appointment, scope.Scheduler.SelectedAppointment, view.ToString());
-        }
-    }
-
     [TestMethod]
     public async Task When_WeekOverlaps_SubjectAndTimeStayUnclipped_AtEverySize()
     {

@@ -1,4 +1,4 @@
-using Flowery.Controls.Scheduler.Contracts;
+﻿using Flowery.Controls.Scheduler.Contracts;
 using Flowery.Controls.Scheduler.Models;
 using Flowery.Uno.Gallery.Localization;
 
@@ -26,6 +26,14 @@ public sealed partial class SchedulerExamples : ScrollableExamplePage
     public SchedulerExamples()
     {
         InitializeComponent();
+        if (IsTouchPlatform)
+        {
+            // A scrolling page takes every vertical swipe from the scheduler's own scroll views on a phone, so the
+            // page keeps the viewport height and the scheduler scrolls its days and hours itself.
+            MainScrollViewer.VerticalScrollMode = ScrollMode.Disabled;
+            MainScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
+            PageGrid.MinHeight = 0;
+        }
         DemoScheduler.ResourceGroups = new[]
         {
             new ResourceGroupModel { Id = "all", Name = Text("AllPeople"), Kind = ResourceKind.Person },
@@ -117,6 +125,10 @@ public sealed partial class SchedulerExamples : ScrollableExamplePage
             property == DaisyScheduler.AppointmentColorsProperty))
             RefreshEditorChoices();
     }
+
+    // Phones and tablets: the help names taps and swipes instead of mouse and keyboard input.
+    private static bool IsTouchPlatform => OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
+
     private static string Text(string key) => GalleryLocalization.GetString("Scheduler_" + key);
 
     private static Color? ThemeColor(string key) =>
@@ -303,7 +315,7 @@ public sealed partial class SchedulerExamples : ScrollableExamplePage
 
     private void OnSelectionChanged(object? sender, IReadOnlyList<AppointmentModel> selected)
     {
-        StatusText.Text = selected.Count == 0 ? Text("Help") : string.Join(", ", selected.Select(static appointment => appointment.Subject));
+        StatusText.Text = selected.Count == 0 ? Text(IsTouchPlatform ? "TouchHelp" : "Help") : string.Join(", ", selected.Select(static appointment => appointment.Subject));
     }
 
     private void OnCreate(object? sender, AppointmentCreateArgs e)

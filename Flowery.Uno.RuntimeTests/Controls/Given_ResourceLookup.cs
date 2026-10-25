@@ -10,7 +10,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
         [TestMethod]
         public void When_AKeyIsInANestedMergedOrThemeDictionary_TheLookupFindsIt()
         {
-            // On Windows the lookup relies on TryGetValue searching nested dictionaries; elsewhere it searches them itself.
+            // The lookup relies on TryGetValue searching nested merged and theme dictionaries on every target.
             var themed = new ResourceDictionary();
             themed.ThemeDictionaries["Default"] = new ResourceDictionary { ["ThemedKey"] = 2d };
             var nested = new ResourceDictionary { ["NestedKey"] = 1d };

@@ -182,16 +182,12 @@ public class Given_SchedulerUnoAdaptations
     {
         using var scope = await CreateAsync(SchedulerView.Day);
         scope.Scheduler.Resources["DaisySchedulerToolbarMargin"] = new Thickness(20);
-        scope.Scheduler.Resources["DaisySchedulerToolbarItemMargin"] = new Thickness(5);
-        scope.Scheduler.Resources["DaisySchedulerViewButtonsMargin"] = new Thickness(11, 0, 11, 0);
         scope.Scheduler.Resources["DaisySchedulerTooltipPadding"] = new Thickness(3);
         scope.Scheduler.Appointments = new[] { scope.Appointment };
         await scope.LayoutAsync();
-        Assert.AreEqual(new Thickness(20), scope.Descendants<Flowery.Controls.WrapPanel>().Single(panel => panel.Name == "PART_Toolbar").Margin);
-        Assert.AreEqual(new Thickness(11, 0, 11, 0), scope.Descendants<Flowery.Controls.WrapPanel>().Single(panel => panel.Name == "PART_Views").Margin);
-        Assert.AreEqual(new Thickness(5), scope.Descendants<DaisyButton>().Single(button => Equals(button.Tag, "Today")).Margin);
+        Assert.AreEqual(new Thickness(20), scope.Descendants<DaisySchedulerToolbar>().Single().Margin);
         Assert.AreEqual(new Thickness(3), ((ToolTip)ToolTipService.GetToolTip(scope.Frame(scope.Appointment))).Padding);
-        var settings = scope.Descendants<DaisyButton>().Single(button => Equals(button.Tag, "Settings"));
+        var settings = scope.Descendants<Button>().Single(button => Equals(button.Tag, "Settings"));
         new Microsoft.UI.Xaml.Automation.Peers.ButtonAutomationPeer(settings).Invoke();
         await scope.LayoutAsync();
         var popups = VisualTreeHelper.GetOpenPopupsForXamlRoot(scope.Scheduler.XamlRoot);

@@ -352,18 +352,14 @@ public class Given_Scheduler
 
                 FloweryLocalization.SetCulture(language);
                 await scope.LayoutAsync();
-                foreach (var button in scope.Descendants<DaisyButton>())
+                var toolbar = scope.Descendants<DaisySchedulerToolbar>().Single();
+                foreach (var button in Descendants<Button>(toolbar).Where(static button => button.Tag is SchedulerView or string))
                 {
-                    if (button.Tag is SchedulerView view)
-                        Assert.AreEqual(document.RootElement.GetProperty("Scheduler_" + view).GetString(), button.Content, language);
-                    else if (button.Tag is string action)
-                    {
-                        if (action is "Today" or "Settings")
-                            Assert.AreEqual(document.RootElement.GetProperty("Scheduler_" + action).GetString(), button.Content, language);
-                        var key = action == "Date" ? "ChooseDate" : action;
-                        Assert.AreEqual(document.RootElement.GetProperty("Scheduler_" + key).GetString(), AutomationProperties.GetName(button), language);
-                    }
+                    var key = button.Tag switch { SchedulerView view => view.ToString(), "Date" => "ChooseDate", var action => (string)action };
+                    Assert.AreEqual(document.RootElement.GetProperty("Scheduler_" + key).GetString(), AutomationProperties.GetName(button), language);
                 }
+                var today = Descendants<Button>(toolbar).Single(static button => Equals(button.Tag, "Today"));
+                Assert.AreEqual(document.RootElement.GetProperty("Scheduler_Today").GetString(), ((TextBlock)today.Content).Text, language);
                 var resourceHeading = document.RootElement.GetProperty("Scheduler_Resources").GetString();
                 Assert.IsTrue(scope.Descendants<TextBlock>().Any(text => text.Text == resourceHeading), language);
                 Assert.AreEqual("Install", scope.Appointment.Subject);

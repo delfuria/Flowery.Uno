@@ -1,4 +1,4 @@
-namespace Flowery.Controls;
+﻿namespace Flowery.Controls;
 
 public partial class DaisyScheduler
 {
@@ -16,7 +16,7 @@ public partial class DaisyScheduler
     private T Token<T>(string key) => TryFindResource(key, out var resource) && resource is T value
         ? value : throw new InvalidOperationException("Missing Flowery design token: " + key);
 
-    private Brush Brush(string key)
+    internal Brush Brush(string key)
     {
         if (TryFindResource(key, out var resource) && resource is Brush brush)
             return brush;
@@ -27,11 +27,11 @@ public partial class DaisyScheduler
 
     private static SolidColorBrush Transparent => new(Colors.Transparent);
 
-    private double SpacingXS => Token<double>("DaisySpacingXS");
+    internal double SpacingXS => Token<double>("DaisySpacingXS");
     private double SpacingSmall => Token<double>("DaisySpacingSmall");
     private double SpacingMedium => Token<double>("DaisySpacingMedium");
     private double SpacingLarge => Token<double>("DaisySpacingLarge");
-    private double LineThickness => Token<Thickness>("DaisyBorderThicknessThin").Left;
+    internal double LineThickness => Token<Thickness>("DaisyBorderThicknessThin").Left;
     private double SelectionThickness => Token<Thickness>("DaisyBorderThicknessMedium").Left;
     private double EventCornerRadius => AppointmentCornerRadius ?? Token<CornerRadius>($"DaisySize{SizeKey}CornerRadius").TopLeft;
     private double RowHeight => RoundToPixel(Token<double>($"DaisySize{SizeKey}Height") + SpacingSmall);

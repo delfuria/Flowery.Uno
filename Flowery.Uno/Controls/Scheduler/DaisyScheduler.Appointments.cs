@@ -1,4 +1,4 @@
-// Uno Platform adaptation of Xtreme.Components Scheduler (MIT).
+﻿// Uno Platform adaptation of Xtreme.Components Scheduler (MIT).
 // See ThirdPartyNotices/Xtreme.Components.txt for attribution and license.
 using System.Runtime.InteropServices.WindowsRuntime;
 using Flowery.Controls.Scheduler.Models;
@@ -307,7 +307,7 @@ public partial class DaisyScheduler
         ToolTipService.SetToolTip(target, tooltip);
     }
 
-    private Style? SchedulerStyle(string key) => TryFindResource(key, out var resource) ? resource as Style : null;
+    internal Style? SchedulerStyle(string key) => TryFindResource(key, out var resource) ? resource as Style : null;
 
     // A flyout presenter only takes a style; derive one that applies the padding token.
     private Style WithTooltipPadding(Style? style, Type targetType) => new(targetType)
@@ -328,7 +328,7 @@ public partial class DaisyScheduler
     }
 
     // WinUI's Image is sealed: decode the bytes while the image is loaded and release the bitmap afterwards.
-    private static Image CreateOwnedImage(byte[] bytes, double size)
+    internal static Image CreateOwnedImage(byte[] bytes, double size)
     {
         var image = new Image { Width = size, Height = size, Tag = bytes };
         image.Loaded += OnOwnedImageLoaded;

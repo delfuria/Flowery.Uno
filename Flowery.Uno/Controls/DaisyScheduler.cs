@@ -17,7 +17,7 @@ namespace Flowery.Controls;
 /// Reassign the appointment list after editing a model to refresh the view.
 /// </summary>
 [TemplatePart(Name = "PART_ViewHost", Type = typeof(Border))]
-[TemplatePart(Name = "PART_Toolbar", Type = typeof(WrapPanel))]
+[TemplatePart(Name = "PART_Toolbar", Type = typeof(DaisySchedulerToolbar))]
 public partial class DaisyScheduler : Control
 {
     public static readonly DependencyProperty AppointmentsProperty =
@@ -175,6 +175,17 @@ public partial class DaisyScheduler : Control
         set => SetValue(ShowTilesProperty, value);
     }
 
+    public static readonly DependencyProperty ShowToolbarProperty =
+        Register(nameof(ShowToolbar), true);
+
+    /// <summary>Whether the built-in <see cref="DaisySchedulerToolbar"/> shows. Turn it off to place a toolbar elsewhere,
+    /// with its <see cref="DaisySchedulerToolbar.Scheduler"/> set to this scheduler.</summary>
+    public bool ShowToolbar
+    {
+        get => (bool)GetValue(ShowToolbarProperty);
+        set => SetValue(ShowToolbarProperty, value);
+    }
+
     public static readonly DependencyProperty SizeProperty =
         Register(nameof(Size), DaisySize.Auto);
 
@@ -276,10 +287,7 @@ public partial class DaisyScheduler : Control
 
     private readonly DaisyControlLifecycle _lifecycle;
     private Border? _viewHost;
-    private WrapPanel? _toolbar;
-    private WrapPanel? _views;
-    private WrapPanel? _customButtons;
-    private DaisyButton? _dateButton;
+    private DaisySchedulerToolbar? _toolbar;
     private readonly List<AppointmentModel> _selection = new();
     private readonly Dictionary<AppointmentModel, object> _selectionResourceIds = new();
     private readonly List<(Border Frame, Border Selection, AppointmentModel Appointment)> _frames = new();
@@ -442,26 +450,19 @@ public partial class DaisyScheduler : Control
     protected override void OnApplyTemplate()
     {
         CancelGesture();
-        foreach (var button in TemplateButtons())
-            button.Click -= OnToolbarClick;
         if (_toolbar is not null)
-            _toolbar.SizeChanged -= OnToolbarSizeChanged;
+            _toolbar.Scheduler = null;
         if (_viewHost is not null)
             _viewHost.SizeChanged -= OnViewHostResized;
         base.OnApplyTemplate();
         _viewHost = GetTemplateChild("PART_ViewHost") as Border;
         if (_viewHost is not null)
             _viewHost.SizeChanged += OnViewHostResized;
-        _toolbar = GetTemplateChild("PART_Toolbar") as WrapPanel;
-        _views = GetTemplateChild("PART_Views") as WrapPanel;
-        _customButtons = GetTemplateChild("PART_CustomButtons") as WrapPanel;
-        _dateButton = GetTemplateChild("PART_Date") as DaisyButton;
+        _toolbar = GetTemplateChild("PART_Toolbar") as DaisySchedulerToolbar;
+        if (_toolbar is not null)
+            _toolbar.Scheduler = this;
         if (_viewHost is not null)
             ClipToBounds(_viewHost);
-        foreach (var button in TemplateButtons())
-            button.Click += OnToolbarClick;
-        if (_toolbar is not null)
-            _toolbar.SizeChanged += OnToolbarSizeChanged;
         ApplySizing();
         RenderActiveView();
     }
@@ -469,12 +470,9 @@ public partial class DaisyScheduler : Control
     // Planner and Timeline hours fill the visible width; a new width rescales them in place.
     private void OnViewHostResized(object? sender, SizeChangedEventArgs e) => RunOutsideLayout(RescaleHours);
 
-    private IEnumerable<DaisyButton> TemplateButtons() =>
-        _toolbar?.Children.OfType<DaisyButton>() ?? Enumerable.Empty<DaisyButton>();
-
     // WinUI sets IsLoaded when the control enters the live tree and raises Loaded later; either one means the
     // control is in the tree.
-    private bool IsAttached => IsLoaded || _attached;
+    internal bool IsAttached => IsLoaded || _attached;
 
     private void RequestRender()
     {
@@ -563,7 +561,7 @@ public partial class DaisyScheduler : Control
     }
 
     private string SizeKey => DaisyResourceLookup.GetSizeKeyFull(ResolvedSize);
-    private double SizeScale => Token<double>($"DaisySize{SizeKey}FontSize") / Token<double>("DaisySizeMediumFontSize");
+    internal double SizeScale => Token<double>($"DaisySize{SizeKey}FontSize") / Token<double>("DaisySizeMediumFontSize");
     private double ChipHeight => RoundToPixel(Token<double>($"DaisyBadge{SizeKey}Height"));
     private CultureInfo Culture => FormattingCulture;
     private double SnapMinutes => Math.Clamp(TimeIncrement?.MinorTick.TotalMinutes ?? 30, 1, 1440);

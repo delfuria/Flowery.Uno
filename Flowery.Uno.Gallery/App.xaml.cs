@@ -91,7 +91,8 @@ namespace Flowery.Uno.Gallery
             EnsureGalleryResources(isRuntimeTests);
             if (isRuntimeTests)
             {
-                _window = new Window();
+                // Without a title WinUI shows its default "WinUI Desktop".
+                _window = new Window { Title = "Uno Desktop" };
                 _window.Activate();
                 StartRuntimeTestsIfRequested(args);
                 return;

@@ -1,4 +1,4 @@
-using Flowery.Services;
+﻿using Flowery.Services;
 using Microsoft.UI.Xaml;
 
 namespace Flowery.Theming
@@ -372,6 +372,25 @@ namespace Flowery.Theming
             Ensure(resources, "DaisyDateTimelineMediumHeaderFontSize", 16d);
             Ensure(resources, "DaisyDateTimelineSmallHeaderFontSize", 14d);
             Ensure(resources, "DaisyDateTimelineExtraSmallHeaderFontSize", 12d);
+
+            // ---- Scheduler ----
+            // Fonts, chip heights, row heights, spacing and borders reuse the shared size tokens.
+            // Planner and Timeline hours fit their start times; this only raises that minimum.
+            Ensure(resources, "DaisySchedulerTimelineMinimumHourWidth", 0d);
+            Ensure(resources, "DaisySchedulerTimelineResourceWidth", 220d);
+            Ensure(resources, "DaisySchedulerPlannerResourceWidth", 150d);
+            Ensure(resources, "DaisySchedulerMonthMinimumWidth", 560d);
+            Ensure(resources, "DaisySchedulerMonthMinimumCellHeight", 106d);
+            Ensure(resources, "DaisySchedulerTimeGutterMinimumWidth", 56d);
+            Ensure(resources, "DaisySchedulerColumnMinimumWidth", 100d);
+            Ensure(resources, "DaisySchedulerAgendaTimeWidth", 130d);
+            Ensure(resources, "DaisySchedulerCalendarWidth", 300d);
+            Ensure(resources, "DaisySchedulerTooltipMaximumWidth", 360d);
+            Ensure(resources, "DaisySchedulerTooltipPadding", new Thickness(12, 8, 12, 8));
+            Ensure(resources, "DaisySchedulerSettingsMinimumWidth", 230d);
+            Ensure(resources, "DaisySchedulerSettingsMaximumHeight", 600d);
+            Ensure(resources, "DaisySchedulerToolbarMargin", new Thickness(8));
+            Ensure(resources, "DaisySchedulerToolbarIconSize", 20d);
 
             // ---- Large display tokens ----
             Ensure(resources, "LargeDisplayFontSize", 36d);

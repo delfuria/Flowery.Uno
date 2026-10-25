@@ -674,31 +674,9 @@ namespace Flowery.Controls
             return path;
         }
 
-        private static Geometry? FindGeometryResource(string key)
-        {
-            var resources = Application.Current?.Resources;
-            if (resources == null)
-                return null;
-
-            var found = FindResourceRecursive(resources, key);
-            return found as Geometry;
-        }
-
-        private static object? FindResourceRecursive(ResourceDictionary dictionary, string key)
-        {
-            if (dictionary.TryGetValue(key, out var value))
-                return value;
-
-            // Search merged dictionaries (this is where Flowery.Uno/Themes/DaisyIcons.xaml lives)
-            foreach (var merged in dictionary.MergedDictionaries)
-            {
-                var found = FindResourceRecursive(merged, key);
-                if (found != null)
-                    return found;
-            }
-
-            return null;
-        }
+        // TryGetValue also searches the merged dictionaries, where Flowery.Uno/Themes/DaisyIcons.xaml lives.
+        private static Geometry? FindGeometryResource(string key) =>
+            Application.Current?.Resources is { } resources && resources.TryGetValue(key, out var value) ? value as Geometry : null;
 
         #endregion
 

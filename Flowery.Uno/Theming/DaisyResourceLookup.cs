@@ -54,21 +54,13 @@ namespace Flowery.Theming
             if (resources == null)
                 return false;
 
+            // TryGetValue already searches nested merged and theme dictionaries, in WinUI and in Uno, whose lookup is
+            // the same code on Skia, WebAssembly and Android. Searching them again by hand only repeated every miss,
+            // and controls look up many optional keys.
             if (resources.TryGetValue(key, out var found))
             {
                 value = found;
                 return true;
-            }
-
-            // WinUI/Uno does not consistently surface merged dictionary values via TryGetValue
-            // across platforms/versions. Search merged dictionaries recursively.
-            if (resources.MergedDictionaries != null)
-            {
-                foreach (var merged in resources.MergedDictionaries)
-                {
-                    if (merged != null && TryGetResource(merged, key, out value))
-                        return true;
-                }
             }
 
             return false;

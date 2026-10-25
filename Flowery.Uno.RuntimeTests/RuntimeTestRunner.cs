@@ -62,6 +62,7 @@ namespace Flowery.Uno.RuntimeTests
             {
                 var methods = testClass.GetMethods(BindingFlags.Instance | BindingFlags.Public)
                     .Where(method => method.GetCustomAttribute<TestMethodAttribute>() != null)
+                    .Where(method => method.GetCustomAttribute<IgnoreAttribute>() == null)
                     .Where(method => method.GetParameters().Length == 0);
 
                 foreach (var method in methods)

@@ -39,6 +39,8 @@ Primary, Secondary, Accent, Info, Success, Warning, and Error use three resource
 
 The Business palette uses 0.12 for the Primary surface. Default and Neutral use Base200, Base300, and the Base300 border.
 Variant text keeps its color during hover and press. Existing control-specific background, foreground, and border resources take precedence.
+`DaisyButton` sets its own `Foreground` for every state, so a local `Foreground` is replaced. To change the text color of one button,
+set `DaisyButtonForeground` and `DaisyButtonForegroundPointerOver` in the button's `Resources`.
 The palette stores alpha in `Color`. Each generated brush has `Opacity=1`, so theme changes preserve alpha through existing brush instances.
 
 ## Shape Options

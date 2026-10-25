@@ -29,7 +29,7 @@ xmlns:daisy="using:Flowery.Controls"
 
 ## Available Themes
 
-Flowery.Uno includes all 36 official DaisyUI themes:
+Flowery.Uno includes 53 built-in themes: the 36 DaisyUI themes below and 17 HappyHues themes (`HappyHues01` to `HappyHues17`).
 
 | Light Themes | Dark Themes |
 | --- | --- |
@@ -41,7 +41,7 @@ Flowery.Uno includes all 36 official DaisyUI themes:
 
 ### DaisyThemeDropdown
 
-Dropdown listing all 36 themes with color previews. Automatically syncs with `DaisyThemeManager.CurrentThemeName`.
+Dropdown listing all 53 themes with color previews. Automatically syncs with `DaisyThemeManager.CurrentThemeName`.
 
 ```xml
 <daisy:DaisyThemeDropdown MinWidth="220" />

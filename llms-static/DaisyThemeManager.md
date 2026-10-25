@@ -3,7 +3,7 @@
 
 # Overview
 
-DaisyThemeManager is the central theme loader/applicator for the **35+ built-in DaisyUI themes**. It tracks available themes, applies palette ResourceDictionaries, and notifies listeners via `ThemeChanged`. Helpers expose current/alternate theme names and light/dark metadata.
+DaisyThemeManager is the central theme loader/applicator for the **53 built-in themes**. It tracks available themes, applies palette ResourceDictionaries, and notifies listeners via `ThemeChanged`. Helpers expose current/alternate theme names and light/dark metadata.
 
 ## When to Use
 
@@ -16,7 +16,7 @@ DaisyThemeManager is the central theme loader/applicator for the **35+ built-in 
 
 ## Product Themes (96 Industry Palettes)
 
-In addition to the 35+ DaisyUI themes, Flowery.Uno includes **96 industry-specific product palettes** from the [UI UX Pro Max Skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) project. These are professionally crafted color schemes for specific industries:
+In addition to the 53 built-in themes, Flowery.Uno includes **96 industry-specific product palettes** from the [UI UX Pro Max Skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) project. These are professionally crafted color schemes for specific industries:
 
 | Industry | Example Themes |
 | --- | --- |

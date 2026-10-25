@@ -28,8 +28,8 @@
                     
                     <!-- Feature list with stacked fade-in animation -->
                     <StackPanel x:Name="FeaturesList" Spacing="3">
-                        <TextBlock x:Name="Feature1" Text="✓ 35+ themes inspired by DaisyUI" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource DaisyBaseContentBrush}" />
-                        <TextBlock x:Name="Feature2" Text="✓ 80+ themed and sizable controls" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource DaisyBaseContentBrush}" />
+                        <TextBlock x:Name="Feature1" Text="✓ 50+ themes inspired by DaisyUI" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource DaisyBaseContentBrush}" />
+                        <TextBlock x:Name="Feature2" Text="✓ 100+ themed and sizable controls" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource DaisyBaseContentBrush}" />
                         <TextBlock x:Name="Feature3" Text="✓ Runtime Sizing and Scaling features" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource DaisyBaseContentBrush}" />
                         <TextBlock x:Name="Feature4" Text="✓ Weather cards and Color picker controls" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource DaisyBaseContentBrush}" />
                         <TextBlock x:Name="Feature5" Text="✓ Genuine animations and status indicators" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource DaisyBaseContentBrush}" />

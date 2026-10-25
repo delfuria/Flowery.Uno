@@ -43,7 +43,7 @@ DaisyThemeRadio is a theme-selecting RadioButton. When checked, it applies its `
 
 ## Related Controls
 
-- [DaisyThemeDropdown](DaisyThemeDropdown.md) - Dropdown for all 35+ DaisyUI themes
+- [DaisyThemeDropdown](DaisyThemeDropdown.md) - Dropdown for all 53 built-in themes
 - [DaisyProductThemeDropdown](DaisyProductThemeDropdown.md) - Dropdown for 96 industry-specific product themes
 - [DaisyThemeController](DaisyThemeController.md) - Toggle-based theme switching
 - [DaisyThemeSwap](DaisyThemeSwap.md) - Icon swap theme toggle

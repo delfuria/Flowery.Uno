@@ -9,7 +9,7 @@ DaisyThemeDropdown is a ComboBox listing available themes from `DaisyThemeManage
 
 This control uses `DaisyThemeManager` internally, which manages the application's theme resources:
 
-- Each of the 35+ built-in themes provides a unique color palette
+- Each of the 53 built-in themes provides a unique color palette
 - Theme changes are applied through resource dictionary updates
 - Themes added with `DaisyThemeManager.RegisterTheme` appear in the list and use that factory for preview swatches
 - For custom CSS themes loaded at runtime, use `DaisyThemeLoader.ApplyThemeToApplication()`
@@ -45,7 +45,7 @@ In your `.xaml` file (e.g., `MainWindow.xaml`), add the namespace and control:
 <!-- Add at top of file -->
 xmlns:controls="using:Flowery.Controls"
 
-<!-- Default theme dropdown - shows all 35+ themes with color previews -->
+<!-- Default theme dropdown - shows all 53 themes with color previews -->
 <controls:DaisyThemeDropdown Width="220" />
 
 <!-- Binding selected theme to ViewModel -->

@@ -182,7 +182,7 @@ xmlns:daisy="using:Flowery.Controls"
 
 - **Size Dropdown** (`DaisySizeDropdown`): Global size selector with localized size names.
 - **Theme Controller** (`DaisyThemeController`): Flexible toggle with multiple modes.
-- **Theme Dropdown** (`DaisyThemeDropdown`): Dropdown to select from all 35+ themes.
+- **Theme Dropdown** (`DaisyThemeDropdown`): Dropdown to select from all 53 themes.
 - **Theme Manager** (`DaisyThemeManager`): Static class for programmatic theme control.
 
 ---

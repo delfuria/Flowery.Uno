@@ -45,7 +45,7 @@ DaisyThemeSwap is a themed variant of DaisySwap for toggling light/dark (or any 
 
 ## Related Controls
 
-- [DaisyThemeDropdown](DaisyThemeDropdown.md) - Dropdown for all 35+ DaisyUI themes
+- [DaisyThemeDropdown](DaisyThemeDropdown.md) - Dropdown for all 53 built-in themes
 - [DaisyProductThemeDropdown](DaisyProductThemeDropdown.md) - Dropdown for 96 industry-specific product themes
 - [DaisyThemeController](DaisyThemeController.md) - Toggle-based theme switching
 - [DaisyThemeRadio](DaisyThemeRadio.md) - Radio button theme selection

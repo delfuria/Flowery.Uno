@@ -1,4 +1,4 @@
-using Flowery.Controls.Scheduler.Contracts;
+﻿using Flowery.Controls.Scheduler.Contracts;
 using Flowery.Controls.Scheduler.Models;
 using Flowery.Uno.Gallery.Localization;
 
@@ -125,6 +125,7 @@ public sealed partial class SchedulerExamples : ScrollableExamplePage
             property == DaisyScheduler.AppointmentColorsProperty))
             RefreshEditorChoices();
     }
+
     // Phones and tablets: the help names taps and swipes instead of mouse and keyboard input.
     private static bool IsTouchPlatform => OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
 

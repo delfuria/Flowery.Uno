@@ -85,7 +85,7 @@ Double-click an appointment to request an edit.
 Drag a selected appointment edge to change its duration. The resize edges are up to 12 DIP wide with touch or a pen, at most a quarter of the appointment each, and 5 DIP with a mouse.
 Press Delete to request removal of the selection.
 Press Escape to cancel a drag or clear the selection.
-On touch, a tap selects an appointment, and a drag moves or resizes only an appointment that was already selected; a swipe that starts elsewhere scrolls the view and selects nothing, and a double tap edits or creates.
+On touch, a tap selects an appointment or an empty day, and a drag moves or resizes only an appointment that was already selected; a swipe that starts elsewhere scrolls the view and changes nothing, also when the system takes the touch over, and a double tap edits or creates.
 
 The control never changes the input appointment list or its models.
 The host accepts requests and assigns a new list after each change.

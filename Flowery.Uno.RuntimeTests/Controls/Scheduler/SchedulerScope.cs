@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -155,14 +155,26 @@ internal sealed class SchedulerScope : IDisposable
         await LayoutAsync();
     }
 
+    /// <param name="elapsedMicroseconds">Time since the previous press; the default never forms a double tap.</param>
+    public void TouchDown(Point point, VirtualKeyModifiers modifiers = VirtualKeyModifiers.None, ulong elapsedMicroseconds = 1_000_000)
+    {
+        _timestamp += elapsedMicroseconds;
+        var hit = HitTest(Scheduler, point) ?? throw new InvalidOperationException("Nothing to touch at " + point);
+        Scheduler.RoutePointerPressed(hit, Input(point, true, false, modifiers, touch: true));
+    }
+
+    public void TouchUp(Point point, VirtualKeyModifiers modifiers = VirtualKeyModifiers.None) =>
+        Scheduler.ReleasePointer(Input(point, false, false, modifiers, touch: true));
+
+    /// <summary>The system takes the touch, as a native scroll view does with a swipe.</summary>
+    public void TouchCancel() => Scheduler.CancelPointer(1);
+
     /// <summary>A touch press at <paramref name="origin"/>, a move to <paramref name="destination"/> and a release.</summary>
     public async Task TouchDragAsync(Point origin, Point destination)
     {
-        _timestamp += 1_000_000;
-        var hit = HitTest(Scheduler, origin) ?? throw new InvalidOperationException("Nothing to touch at " + origin);
-        Scheduler.RoutePointerPressed(hit, Input(origin, true, false, VirtualKeyModifiers.None, touch: true));
+        TouchDown(origin);
         Scheduler.MovePointer(Input(destination, true, false, VirtualKeyModifiers.None, touch: true));
-        Scheduler.ReleasePointer(Input(destination, false, false, VirtualKeyModifiers.None, touch: true));
+        TouchUp(destination);
         await LayoutAsync();
     }
 
@@ -170,10 +182,8 @@ internal sealed class SchedulerScope : IDisposable
     /// <param name="elapsedMicroseconds">Time since the previous press; the default never forms a double tap.</param>
     public async Task TouchTapAsync(Point point, VirtualKeyModifiers modifiers = VirtualKeyModifiers.None, ulong elapsedMicroseconds = 1_000_000)
     {
-        _timestamp += elapsedMicroseconds;
-        var hit = HitTest(Scheduler, point) ?? throw new InvalidOperationException("Nothing to touch at " + point);
-        Scheduler.RoutePointerPressed(hit, Input(point, true, false, modifiers, touch: true));
-        Scheduler.ReleasePointer(Input(point, false, false, modifiers, touch: true));
+        TouchDown(point, modifiers, elapsedMicroseconds);
+        TouchUp(point, modifiers);
         await LayoutAsync();
     }
 

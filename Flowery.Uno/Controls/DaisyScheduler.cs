@@ -1,4 +1,4 @@
-// Uno Platform adaptation of Xtreme.Components Scheduler (MIT).
+﻿// Uno Platform adaptation of Xtreme.Components Scheduler (MIT).
 // Copyright (c) 2026 Data Access Inc. and Xtreme.Components contributors.
 // See ThirdPartyNotices/Xtreme.Components.txt for attribution and license.
 using System.Collections.ObjectModel;
@@ -308,9 +308,11 @@ public partial class DaisyScheduler : Control
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
         // A running gesture owns the pointer it captured. On Android a scroll viewer between the appointment and the
-        // scheduler marks touch moves handled, so the gesture also listens to handled events.
+        // scheduler marks touch moves handled, so the gesture also listens to handled events; a native scroll view
+        // that takes a swipe cancels the pointer.
         AddHandler(PointerMovedEvent, new PointerEventHandler(OnGesturePointerMoved), true);
         AddHandler(PointerReleasedEvent, new PointerEventHandler(OnGesturePointerReleased), true);
+        AddHandler(PointerCanceledEvent, new PointerEventHandler(OnGesturePointerCanceled), true);
         IsTabStop = true;
     }
 

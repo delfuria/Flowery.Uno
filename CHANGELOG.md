@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-10-25
+
+- README: the note no longer calls Flowery.Uno an alpha and gives the current size of the repo (~175K lines of C# and XAML in 1,000+ files, with 100+ controls; it said ~134K lines in 900+ files).
+- Kiosk.Browser: the login slide lists 100+ controls (was 80+) and 50+ themes (was 35+).
+- Docs: the theme counts match the 53 built-in themes (36 DaisyUI themes and 17 HappyHues themes) that `DaisyThemeDropdown` lists. The README, `THEMING.md` and the `llms-static` pages for the theme dropdown, controller, manager, radio, swap and product dropdown said 35+ or 36.
+
 ## [1.5.0] - 2026-10-24
 
 - **Breaking:** Neumorphic: removed the rim light and surface gradient API (`NeumorphicRimLightEnabled`, `NeumorphicSurfaceGradientEnabled`, `GlobalNeumorphicRimLightEnabled`, `GlobalNeumorphicSurfaceGradientEnabled`, the matching `DaisyNeumorphic` attached properties and the `IsNeumorphic*EffectivelyEnabled()` helpers). No rendering code ever read them (#94).

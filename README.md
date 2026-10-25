@@ -30,7 +30,7 @@
 Flowery.Uno provides native WinUI controls that mimic the utility-first, semantic class naming of DaisyUI, making it easy to build beautiful, themed UIs.
 
 > [!NOTE]
-> I'm just a *guy with an AI*! This Flowery version has even more controls and features than the original. This repo is ~134K lines of code with 900+ files.  
+> I'm just a *guy with an AI*! This Flowery version has even more controls and features than the original. This repo is ~175K lines of C# and XAML in 1,000+ files, with 100+ controls.  
 I hope this will be useful and fun to work with! -- tobitege
 
 ## Relationship to Flowery.NET

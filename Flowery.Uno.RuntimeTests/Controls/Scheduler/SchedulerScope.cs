@@ -49,7 +49,22 @@ internal sealed class SchedulerScope : IDisposable
         RuntimeTestHelpers.AttachToHost(scope.Host);
         await RuntimeTestHelpers.CompleteLayoutAsync(scope.Host, scope.Scheduler);
         await scope.LayoutAsync();
+        await scope.SettleScrollAsync();
         return scope;
+    }
+
+    /// <summary>Waits until the scroll offsets stay put, for at most two seconds. The scheduler scrolls to its start hour
+    /// when a view loads and keeps the offset when it renders again, and WinUI applies both after the layout pass.</summary>
+    public async Task SettleScrollAsync()
+    {
+        string? last = null;
+        for (int attempt = 0, steady = 0; attempt < 40 && steady < 3; attempt++)
+        {
+            var offsets = string.Join(";", Descendants<ScrollViewer>().Select(static scroll => $"{scroll.HorizontalOffset},{scroll.VerticalOffset}"));
+            steady = offsets == last ? steady + 1 : 0;
+            last = offsets;
+            await Task.Delay(50);
+        }
     }
 
     private UIElement Root => Scheduler.XamlRoot?.Content ?? throw new InvalidOperationException("The scheduler is not in a window.");
@@ -59,6 +74,14 @@ internal sealed class SchedulerScope : IDisposable
     {
         for (var pass = 0; pass < 2; pass++)
             await RuntimeTestHelpers.CompleteLayoutAsync(Host);
+    }
+
+    /// <summary>Waits until <paramref name="condition"/> holds, for at most two seconds. WinUI applies some changes,
+    /// such as a ScrollViewer's ChangeView, after the layout pass, and a test checks the result, not its speed.</summary>
+    public static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        for (var attempt = 0; attempt < 40 && !condition(); attempt++)
+            await Task.Delay(50);
     }
 
     public IEnumerable<T> Descendants<T>() where T : DependencyObject => Descendants<T>(Scheduler);

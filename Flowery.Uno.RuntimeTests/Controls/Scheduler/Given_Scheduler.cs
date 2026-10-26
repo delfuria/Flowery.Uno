@@ -26,6 +26,24 @@ namespace Flowery.Uno.RuntimeTests.Controls.Scheduler;
 [TestClass]
 public class Given_Scheduler
 {
+    private static readonly SchedulerView[] AppointmentViews =
+        [SchedulerView.Day, SchedulerView.Week, SchedulerView.Month, SchedulerView.Agenda, SchedulerView.Planner, SchedulerView.Timeline];
+
+    [TestMethod]
+    public async Task When_EveryView_Renders_HostAppointments_SupportsSelection()
+    {
+        foreach (var view in AppointmentViews)
+        {
+            using var scope = await CreateAsync(view);
+            var block = scope.Frame(scope.Appointment);
+            Assert.IsTrue(block.ActualWidth > 0, view.ToString());
+            Assert.IsTrue(block.ActualHeight > 0, view.ToString());
+            await scope.ClickAsync(block);
+            Assert.AreSame(scope.Appointment, scope.Scheduler.SelectedAppointment, view.ToString());
+            Assert.HasCount(1, scope.Scheduler.SelectedAppointments);
+        }
+    }
+
     [TestMethod]
     public async Task When_DragMoving_ReportsSnappedProposal_WithoutMutatingHostData()
     {
@@ -135,11 +153,13 @@ public class Given_Scheduler
             scroll.HorizontalScrollBarVisibility == ScrollBarVisibility.Auto && scroll.VerticalScrollBarVisibility == ScrollBarVisibility.Auto);
         Body().ChangeView(null, 480, null, true);
         await scope.LayoutAsync();
+        await WaitUntilAsync(() => Math.Abs(Body().VerticalOffset - 480) < 1);
         scope.Scheduler.SelectedAppointment = scope.Appointment;
         var updated = scope.Appointment.Clone();
         updated.Subject = "Updated";
         scope.Scheduler.Appointments = new[] { updated };
         await scope.LayoutAsync();
+        await WaitUntilAsync(() => Math.Abs(Body().VerticalOffset - 480) < 1);
         Assert.AreEqual(480, Body().VerticalOffset, 1);
         Assert.AreSame(updated, scope.Scheduler.SelectedAppointment);
         Assert.IsTrue(scope.Descendants<TextBlock>().Any(text => text.Text == "Updated"));

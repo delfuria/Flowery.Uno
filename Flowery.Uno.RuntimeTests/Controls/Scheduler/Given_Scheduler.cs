@@ -153,14 +153,13 @@ public class Given_Scheduler
             scroll.HorizontalScrollBarVisibility == ScrollBarVisibility.Auto && scroll.VerticalScrollBarVisibility == ScrollBarVisibility.Auto);
         Body().ChangeView(null, 480, null, true);
         await scope.LayoutAsync();
-        await WaitUntilAsync(() => Math.Abs(Body().VerticalOffset - 480) < 1);
+        Assert.IsTrue(await WaitUntilAsync(() => Math.Abs(Body().VerticalOffset - 480) < 1), "The day scrolls to 480 before the refresh");
         scope.Scheduler.SelectedAppointment = scope.Appointment;
         var updated = scope.Appointment.Clone();
         updated.Subject = "Updated";
         scope.Scheduler.Appointments = new[] { updated };
         await scope.LayoutAsync();
-        await WaitUntilAsync(() => Math.Abs(Body().VerticalOffset - 480) < 1);
-        Assert.AreEqual(480, Body().VerticalOffset, 1);
+        Assert.IsTrue(await WaitUntilAsync(() => Math.Abs(Body().VerticalOffset - 480) < 1), $"The refresh keeps the scroll offset, not {Body().VerticalOffset}");
         Assert.AreSame(updated, scope.Scheduler.SelectedAppointment);
         Assert.IsTrue(scope.Descendants<TextBlock>().Any(text => text.Text == "Updated"));
     }

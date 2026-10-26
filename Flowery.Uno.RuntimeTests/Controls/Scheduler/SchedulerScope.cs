@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Flowery.Controls;
@@ -53,18 +54,38 @@ internal sealed class SchedulerScope : IDisposable
         return scope;
     }
 
-    /// <summary>Waits until the scroll offsets stay put, for at most two seconds. The scheduler scrolls to its start hour
-    /// when a view loads and keeps the offset when it renders again, and WinUI applies both after the layout pass.</summary>
+    // A test checks a result, not its speed: waits end when the condition holds, after at most this long.
+    private static readonly TimeSpan WaitLimit = TimeSpan.FromSeconds(2);
+    private const int SteadyFrames = 3;
+
+    /// <summary>Waits until the scroll offsets stay the same for a few rendered frames. The scheduler scrolls to its start
+    /// hour when a view loads and keeps the offset when it renders again, and WinUI applies both when it renders, after
+    /// the layout pass.</summary>
     public async Task SettleScrollAsync()
     {
-        string? last = null;
-        for (int attempt = 0, steady = 0; attempt < 40 && steady < 3; attempt++)
+        var limit = Stopwatch.StartNew();
+        double[]? last = null;
+        var steady = 0;
+        while (steady < SteadyFrames && limit.Elapsed < WaitLimit)
         {
-            var offsets = string.Join(";", Descendants<ScrollViewer>().Select(static scroll => $"{scroll.HorizontalOffset},{scroll.VerticalOffset}"));
-            steady = offsets == last ? steady + 1 : 0;
+            await NextFrameAsync();
+            var offsets = Descendants<ScrollViewer>().SelectMany(static scroll => new[] { scroll.HorizontalOffset, scroll.VerticalOffset }).ToArray();
+            steady = last is not null && offsets.SequenceEqual(last) ? steady + 1 : 0;
             last = offsets;
-            await Task.Delay(50);
         }
+    }
+
+    // The next rendered frame, or a short delay where nothing renders.
+    private static Task NextFrameAsync()
+    {
+        var frame = new TaskCompletionSource();
+        void OnRendering(object? sender, object e)
+        {
+            CompositionTarget.Rendering -= OnRendering;
+            frame.TrySetResult();
+        }
+        CompositionTarget.Rendering += OnRendering;
+        return Task.WhenAny(frame.Task, Task.Delay(100));
     }
 
     private UIElement Root => Scheduler.XamlRoot?.Content ?? throw new InvalidOperationException("The scheduler is not in a window.");
@@ -76,12 +97,18 @@ internal sealed class SchedulerScope : IDisposable
             await RuntimeTestHelpers.CompleteLayoutAsync(Host);
     }
 
-    /// <summary>Waits until <paramref name="condition"/> holds, for at most two seconds. WinUI applies some changes,
-    /// such as a ScrollViewer's ChangeView, after the layout pass, and a test checks the result, not its speed.</summary>
-    public static async Task WaitUntilAsync(Func<bool> condition)
+    /// <summary>Waits until <paramref name="condition"/> holds, for at most two seconds, and tells whether it did. WinUI
+    /// applies some changes, such as a ScrollViewer's ChangeView, when it renders after the layout pass.</summary>
+    public static async Task<bool> WaitUntilAsync(Func<bool> condition)
     {
-        for (var attempt = 0; attempt < 40 && !condition(); attempt++)
-            await Task.Delay(50);
+        var limit = Stopwatch.StartNew();
+        while (!condition())
+        {
+            if (limit.Elapsed >= WaitLimit)
+                return condition();
+            await NextFrameAsync();
+        }
+        return true;
     }
 
     public IEnumerable<T> Descendants<T>() where T : DependencyObject => Descendants<T>(Scheduler);

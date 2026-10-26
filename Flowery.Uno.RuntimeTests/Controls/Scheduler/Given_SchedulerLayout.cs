@@ -39,6 +39,13 @@ public class Given_SchedulerLayout
             var scroll = Ancestors(frame).OfType<ScrollViewer>().First();
             var dateButton = scope.Descendants<Button>().Single(button => Equals(button.Tag, "Date"));
             scope.Scheduler.SelectedAppointment = scope.Appointment;
+            // Away from the start position, so a resize that jumped back to it would show.
+            if (scroll.ScrollableWidth > 0 || scroll.ScrollableHeight > 0)
+            {
+                var (x, y) = (Math.Round(scroll.ScrollableWidth / 2), Math.Round(scroll.ScrollableHeight / 2));
+                scroll.ChangeView(x, y, null, true);
+                Assert.IsTrue(await WaitUntilAsync(() => Math.Abs(scroll.HorizontalOffset - x) < 1 && Math.Abs(scroll.VerticalOffset - y) < 1), view.ToString());
+            }
             var before = renders;
             var detachments = 0;
             frame.Unloaded += (_, _) => detachments++;

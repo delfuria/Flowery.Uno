@@ -21,8 +21,8 @@ env:
   NET11_SDK: 11.0.100-rc.2.26504.105
 
 jobs:
-  # Decides whether the build jobs run: a pull request that only changes Markdown files or llms-static/ cannot affect a
-  # build. The build jobs are skipped then, and a skipped job counts as passed for the required checks; paths-ignore on
+  # Decides whether the build jobs run: a pull request that only changes Markdown files or llms-static/ cannot break a
+  # CI build. The build jobs are skipped then, and a skipped job counts as passed for the required checks; paths-ignore on
   # the trigger would leave those checks without a status. Pushes to main always build. The build jobs only skip on an
   # explicit code=false, so they still build when this job fails.
   changes:
@@ -85,8 +85,8 @@ jobs:
         name: Restore the NuGet package cache
         uses: actions/cache/restore@v6
         with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'NuGet.Config', '**/Directory.Packages.props', '**/Directory.Build.props', '**/Directory.Build.targets', '**/*.csproj') }}
+          path: &nuget-path ~/.nuget/packages
+          key: &nuget-key nuget-${{ runner.os }}-${{ hashFiles('global.json', 'NuGet.Config', '**/Directory.Packages.props', '**/Directory.Build.props', '**/Directory.Build.targets', '**/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-
 
       - name: Test Carousel GL resources and lifecycle
@@ -513,8 +513,8 @@ jobs:
         id: nuget-cache
         uses: actions/cache/restore@v6
         with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'NuGet.Config', '**/Directory.Packages.props', '**/Directory.Build.props', '**/Directory.Build.targets', '**/*.csproj') }}
+          path: *nuget-path
+          key: *nuget-key
       - name: Test audit output confidentiality
         shell: pwsh
         run: ./scripts/tests/audit-nuget.test.ps1
@@ -548,7 +548,7 @@ jobs:
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.nuget-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@v6
         with:
-          path: ~/.nuget/packages
+          path: *nuget-path
           key: ${{ steps.nuget-cache.outputs.cache-primary-key }}
 
   dependency-submission:

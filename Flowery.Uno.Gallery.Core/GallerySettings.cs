@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Flowery.Controls;
@@ -77,7 +77,7 @@ namespace Flowery.Uno.Gallery
             if (string.IsNullOrWhiteSpace(themeName))
                 return;
 
-            StateStorageProvider.Instance.SaveLines(ThemeKey, [themeName]);
+            StateStorageProvider.Instance.SaveLines(ThemeKey, new[] { themeName });
         }
 
         public static string? LoadLanguage()
@@ -92,7 +92,7 @@ namespace Flowery.Uno.Gallery
             if (string.IsNullOrWhiteSpace(cultureName))
                 return;
 
-            StateStorageProvider.Instance.SaveLines(LanguageKey, [cultureName]);
+            StateStorageProvider.Instance.SaveLines(LanguageKey, new[] { cultureName });
         }
 
         public static DaisySize? LoadGlobalSize()
@@ -110,7 +110,7 @@ namespace Flowery.Uno.Gallery
             if (!IsConcreteSize(size))
                 throw new ArgumentOutOfRangeException(nameof(size), size, "A global size must be a concrete size.");
 
-            StateStorageProvider.Instance.SaveLines(SizeKey, [size.ToString()]);
+            StateStorageProvider.Instance.SaveLines(SizeKey, new[] { size.ToString() });
         }
 
         private static bool IsConcreteSize(DaisySize size) =>
@@ -150,13 +150,13 @@ namespace Flowery.Uno.Gallery
         /// </summary>
         public static void SaveWindowBounds(WindowBounds bounds)
         {
-            StateStorageProvider.Instance.SaveLines(WindowKey,
-            [
+            StateStorageProvider.Instance.SaveLines(WindowKey, new[]
+            {
                 bounds.X.ToString(CultureInfo.InvariantCulture),
                 bounds.Y.ToString(CultureInfo.InvariantCulture),
                 bounds.Width.ToString(CultureInfo.InvariantCulture),
                 bounds.Height.ToString(CultureInfo.InvariantCulture)
-            ]);
+            });
         }
 
         public static CarouselSettings? LoadCarouselSettings()
@@ -189,8 +189,8 @@ namespace Flowery.Uno.Gallery
 
         public static void SaveCarouselSettings(CarouselSettings settings)
         {
-            SaveKeyValueLines(CarouselKey,
-            [
+            SaveKeyValueLines(CarouselKey, new KeyValuePair<string, string?>[]
+            {
                 new("Enabled", settings.Enabled ? "1" : "0"),
                 new("Mode", settings.ModeTag),
                 new("Transition", settings.TransitionTag),
@@ -204,7 +204,7 @@ namespace Flowery.Uno.Gallery
                 new("PixelateSize", settings.PixelateSize.ToString(CultureInfo.InvariantCulture)),
                 new("DissolveDensity", settings.DissolveDensity.ToString(CultureInfo.InvariantCulture)),
                 new("FlipAngle", settings.FlipAngle.ToString(CultureInfo.InvariantCulture))
-            ]);
+            });
         }
 
         public static CarouselTextFillSettings? LoadCarouselTextFillSettings()
@@ -229,8 +229,8 @@ namespace Flowery.Uno.Gallery
 
         public static void SaveCarouselTextFillSettings(CarouselTextFillSettings settings)
         {
-            SaveKeyValueLines(CarouselTextFillKey,
-            [
+            SaveKeyValueLines(CarouselTextFillKey, new KeyValuePair<string, string?>[]
+            {
                 new("Enabled", settings.Enabled ? "1" : "0"),
                 new("Animate", settings.Animate ? "1" : "0"),
                 new("AutoReverse", settings.AutoReverse ? "1" : "0"),
@@ -241,7 +241,7 @@ namespace Flowery.Uno.Gallery
                 new("Rotation", settings.Rotation.ToString(CultureInfo.InvariantCulture)),
                 new("OffsetX", settings.OffsetX.ToString(CultureInfo.InvariantCulture)),
                 new("OffsetY", settings.OffsetY.ToString(CultureInfo.InvariantCulture))
-            ]);
+            });
         }
 
         public static CarouselGlSettings? LoadCarouselGlSettings()
@@ -274,8 +274,8 @@ namespace Flowery.Uno.Gallery
 
         public static void SaveCarouselGlSettings(CarouselGlSettings settings)
         {
-            SaveKeyValueLines(CarouselGlKey,
-            [
+            SaveKeyValueLines(CarouselGlKey, new KeyValuePair<string, string?>[]
+            {
                 new("Enabled", settings.Enabled ? "1" : "0"),
                 new("Mode", settings.ModeTag),
                 new("Transition", settings.TransitionTag),
@@ -289,7 +289,7 @@ namespace Flowery.Uno.Gallery
                 new("PixelateSize", settings.PixelateSize.ToString(CultureInfo.InvariantCulture)),
                 new("DissolveDensity", settings.DissolveDensity.ToString(CultureInfo.InvariantCulture)),
                 new("FlipAngle", settings.FlipAngle.ToString(CultureInfo.InvariantCulture))
-            ]);
+            });
         }
 
         private static Dictionary<string, string> LoadKeyValueLines(string key)

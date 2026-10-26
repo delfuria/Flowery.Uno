@@ -1,4 +1,4 @@
-using Windows.System;
+﻿using Windows.System;
 
 namespace Flowery.Controls
 {
@@ -858,11 +858,11 @@ namespace Flowery.Controls
             if (_track == null || _handle == null)
                 return [];
 
-            return
-            [
+            return new[]
+            {
                 new DaisyNeumorphicSurface(_track, DaisyNeumorphicMode.Inset),
                 new DaisyNeumorphicSurface(_handle, DaisyNeumorphicMode.Raised)
-            ];
+            };
         }
 
         #endregion

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -641,7 +641,7 @@ namespace Flowery.Controls.Weather
 
                     if (forecast != null)
                     {
-                        Forecast = [.. forecast];
+                        Forecast = forecast.ToList();
                     }
 
                     if (metrics != null)

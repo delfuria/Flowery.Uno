@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -121,7 +121,7 @@ namespace Flowery.Controls.Weather.Services
                 }
             }
 
-            return [.. forecasts.Values.Take(days)];
+            return forecasts.Values.Take(days).ToList();
         }
 
         public async Task<WeatherMetrics> GetMetricsAsync(string location, CancellationToken cancellationToken = default)

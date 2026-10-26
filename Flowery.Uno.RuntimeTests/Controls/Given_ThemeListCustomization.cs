@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -46,7 +46,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
             var dropdown = await LoadDropdownAsync();
             try
             {
-                DaisyThemeManager.PreferredThemes = ["Nord", "Dim"];
+                DaisyThemeManager.PreferredThemes = new[] { "Nord", "Dim" };
 
                 CollectionAssert.AreEqual(new[] { "Dim", "Nord" },
                     DaisyThemeManager.AvailableThemes.Take(2).Select(t => t.Name).ToArray());
@@ -144,7 +144,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
         {
             Assert.ThrowsExactly<ArgumentException>(() => DaisyThemeManager.AddTheme("NoSuchTheme", "x", false));
             Assert.ThrowsExactly<ArgumentException>(() => DaisyThemeManager.AddTheme("Dark", " ", false));
-            Assert.ThrowsExactly<ArgumentException>(() => DaisyThemeManager.ExcludedThemes = ["Dark", " "]);
+            Assert.ThrowsExactly<ArgumentException>(() => DaisyThemeManager.ExcludedThemes = new[] { "Dark", " " });
             Assert.ThrowsExactly<ArgumentNullException>(() => DaisyThemeManager.PreferredThemes = null!);
             Assert.IsFalse(DaisyThemeManager.RemoveThemeOverride("Dark"));
         }

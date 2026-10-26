@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -62,8 +62,8 @@ namespace Flowery.Uno.Gallery.Examples
             if (FullWeatherCard != null)
             {
                 FullWeatherCard.TemperatureUnit = "F";
-                FullWeatherCard.Forecast =
-                [
+                FullWeatherCard.Forecast = new ForecastDay[]
+                {
                     new() { Date = new DateTime(2025, 7, 16), Condition = WeatherCondition.Sunny, HighTemperature = 102, LowTemperature = 78 },
                     new() { Date = new DateTime(2025, 7, 17), Condition = WeatherCondition.Sunny, HighTemperature = 99, LowTemperature = 75 },
                     new() { Date = new DateTime(2025, 7, 18), Condition = WeatherCondition.PartlyCloudy, HighTemperature = 95, LowTemperature = 72 },
@@ -71,21 +71,21 @@ namespace Flowery.Uno.Gallery.Examples
                     new() { Date = new DateTime(2025, 7, 20), Condition = WeatherCondition.PartlyCloudy, HighTemperature = 92, LowTemperature = 70 },
                     new() { Date = new DateTime(2025, 7, 21), Condition = WeatherCondition.Sunny, HighTemperature = 98, LowTemperature = 74 },
                     new() { Date = new DateTime(2025, 7, 22), Condition = WeatherCondition.Sunny, HighTemperature = 100, LowTemperature = 76 }
-                ];
+                };
             }
 
             // Compact weather card: No metrics (ShowMetrics=False), 5-day forecast
             // Demonstrates warmer/sunny weather theme - AutoFitItems scales items to fit
             if (CompactWeatherCard != null)
             {
-                CompactWeatherCard.Forecast =
-                [
+                CompactWeatherCard.Forecast = new ForecastDay[]
+                {
                     new() { Date = new DateTime(2025, 7, 16), Condition = WeatherCondition.Sunny, HighTemperature = 24, LowTemperature = 18 },
                     new() { Date = new DateTime(2025, 7, 17), Condition = WeatherCondition.PartlyCloudy, HighTemperature = 23, LowTemperature = 17 },
                     new() { Date = new DateTime(2025, 7, 18), Condition = WeatherCondition.Cloudy, HighTemperature = 21, LowTemperature = 16 },
                     new() { Date = new DateTime(2025, 7, 19), Condition = WeatherCondition.PartlyCloudy, HighTemperature = 22, LowTemperature = 15 },
                     new() { Date = new DateTime(2025, 7, 20), Condition = WeatherCondition.Sunny, HighTemperature = 25, LowTemperature = 17 }
-                ];
+                };
             }
 
             // Standalone forecast strip: 6-day forecast showing various conditions
@@ -180,7 +180,7 @@ namespace Flowery.Uno.Gallery.Examples
                 LiveWeatherCard.Date = currentWeather.Date;
                 LiveWeatherCard.Sunrise = currentWeather.Sunrise;
                 LiveWeatherCard.Sunset = currentWeather.Sunset;
-                LiveWeatherCard.Forecast = [.. forecast];
+                LiveWeatherCard.Forecast = forecast.ToList();
                 LiveWeatherCard.UvIndex = metrics.UvIndex;
                 LiveWeatherCard.UvMax = metrics.UvMax;
                 LiveWeatherCard.WindSpeed = metrics.WindSpeed;

@@ -279,11 +279,30 @@ jobs:
             '--project', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj', '-c', 'Release', '-f', 'net10.0-desktop',
             '-p:TargetFrameworks=net10.0-desktop', '--no-build', '--', '--runtime-tests', $result)
           xvfb-run @runArgs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $exitCode = $LASTEXITCODE
+          # Name failed and inconclusive tests before stopping, so the log shows what breaks with .NET 11.
+          if (Test-Path -LiteralPath $result) {
+            [xml]$report = Get-Content -LiteralPath $result -Raw
+            foreach ($test in @($report.tests.test | Where-Object outcome -NE 'Passed')) {
+              Write-Host ('{0} {1}' -f $test.outcome, $test.name)
+              if ($test.message) { Write-Host $test.message }
+            }
+          }
+          if ($exitCode -ne 0) { exit $exitCode }
           [xml]$report = Get-Content -LiteralPath $result -Raw
-          @($report.tests.test | Where-Object outcome -NE 'Passed') | ForEach-Object { Write-Host ('{0}: {1}' -f $_.outcome, $_.name) }
           if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed with the .NET 11 SDK.' }
           if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
+          $requiredTests = @(
+            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
+            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
+            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
+            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect',
+            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
+          )
+          foreach ($name in $requiredTests) {
+            $test = @($report.tests.test | Where-Object name -EQ $name)
+            if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
+          }
           Write-Host ('.NET 11 SDK: {0} runtime tests passed' -f $report.tests.passed)
 
       - name: Upload .NET 11 runtime test results

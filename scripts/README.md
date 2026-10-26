@@ -294,6 +294,48 @@ pwsh ./scripts/run-android.ps1 -DeviceName "emulator-5554" -Rebuild
 
 ---
 
+### run-linux-desktop.ps1
+
+Runs the Desktop (Skia) Gallery on a Linux desktop (XFCE) in Docker, shown in the browser through noVNC. It publishes the Gallery self-contained for `linux-x64` to `bin/linux-desktop` (only the `net10.0-desktop` target, so the runtime identifier does not reach the Android and WebAssembly targets), builds the image `flowery-linux-desktop` from `docker/linux-desktop` when it is missing (about 1 GB, no .NET SDK inside; Flowery.NET builds the same image, so an existing one is reused), and starts the container `flowery-uno-desktop` with the published app mounted read-only. Requires Docker Desktop with Linux containers.
+
+```powershell
+# Publish, start the desktop and open http://localhost:6081 in the browser
+pwsh ./scripts/run-linux-desktop.ps1
+
+# Reuse the published app and use a smaller desktop
+pwsh ./scripts/run-linux-desktop.ps1 -SkipPublish -Geometry 1280x800
+
+# Build the image again after a change in docker/linux-desktop
+pwsh ./scripts/run-linux-desktop.ps1 -RebuildImage
+```
+
+| Parameter | Type | Default | Description |
+| --------- | ---- | ------- | ----------- |
+| `-Configuration` | string | `Release` | Build configuration to publish |
+| `-SkipPublish` | switch | false | Reuse the app in `bin/linux-desktop` |
+| `-RebuildImage` | switch | false | Build the image again |
+| `-Geometry` | string | `1600x1000` | Size of the desktop |
+| `-Port` | int | `6081` | Local port of noVNC |
+| `-VncPort` | int | `5902` | Local port of VNC (no password) |
+| `-NoBrowser` | switch | false | Do not open the browser |
+
+The ports listen on `127.0.0.1` only and differ from Flowery.NET's (6080, 5901), so both desktops can run at once. The Gallery's output is in `/tmp/app.log`. Checks from outside the container:
+
+```powershell
+# Screenshot as PNG
+docker exec flowery-uno-desktop sh -c 'xwd -root -silent | xwdtopnm | pnmtopng' > shot.png
+
+# Mouse and keyboard input with xdotool: the sidebar search, then its Scheduler result
+docker exec flowery-uno-desktop xdotool mousemove 110 82 click 1 type Scheduler
+
+# Stop the desktop
+docker rm -f flowery-uno-desktop
+```
+
+On pull requests that touch the library or the Gallery, the `Linux Desktop` workflow (`.github/workflows/linux-desktop.yml`) builds the same image on the runner, starts the Gallery, opens the Scheduler page and fails when the Gallery stops or logs an exception. Its artifact holds the screenshots and the app log.
+
+---
+
 ## build_nuget.ps1
 
 Builds the NuGet package for `Flowery.Uno`.

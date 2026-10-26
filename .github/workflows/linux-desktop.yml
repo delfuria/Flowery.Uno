@@ -1,0 +1,110 @@
+name: Linux Desktop
+
+# Runs the Desktop (Skia) Gallery on the XFCE desktop of docker/linux-desktop, the image that
+# scripts/run-linux-desktop.ps1 uses locally, and checks that it starts, opens a page and keeps
+# running without exceptions. Screenshots and the app log are uploaded as an artifact. The image
+# is built on the runner and pushed nowhere.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/linux-desktop.yml
+      - docker/linux-desktop/**
+      - Flowery.Uno/**
+      - Flowery.Uno.Kanban/**
+      - Flowery.Uno.Gallery/**
+      - Flowery.Uno.Gallery.Core/**
+      - Directory.Build.props
+      - Directory.Packages.props
+      - global.json
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gallery-on-xfce:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      # Only the desktop target: a runtime identifier would otherwise reach the Android and WebAssembly targets as well.
+      - name: Publish the Gallery for linux-x64
+        run: |
+          dotnet publish Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj \
+            -c Release -f net10.0-desktop -p:TargetFrameworks=net10.0-desktop \
+            -r linux-x64 --self-contained true \
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
+            -o bin/linux-desktop
+
+      - name: Build the desktop image
+        run: docker build -t flowery-linux-desktop docker/linux-desktop
+
+      - name: Start the desktop with the Gallery
+        run: |
+          docker run -d --name flowery-uno-desktop \
+            -e APP_PATH=/opt/app/Flowery.Uno.Gallery \
+            -v "$PWD/bin/linux-desktop:/opt/app:ro" --shm-size=512m \
+            flowery-linux-desktop
+          # The Gallery window appears once the desktop and the app have started.
+          for attempt in $(seq 1 60); do
+            if docker exec flowery-uno-desktop xdotool search --name 'Flowery.Uno Gallery' >/dev/null 2>&1; then
+              echo "Gallery window after ${attempt} s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::The Gallery window did not appear within 60 s"
+          exit 1
+
+      - name: Open the Scheduler page and check the Gallery
+        run: |
+          mkdir -p artifacts
+          shot() { docker exec flowery-uno-desktop sh -c 'xwd -root -silent | xwdtopnm 2>/dev/null | pnmtopng' > "artifacts/$1.png"; }
+          docker exec flowery-uno-desktop sh -c '
+            W=$(xdotool search --name "Flowery.Uno Gallery" | head -1)
+            xdotool windowactivate "$W" windowmove "$W" 0 30 windowsize "$W" 1600 960'
+          sleep 3
+          shot home
+          # The sidebar search finds the Scheduler, the only result under Custom Controls below the Home section.
+          docker exec flowery-uno-desktop sh -c '
+            xdotool mousemove 110 82 click 1 sleep 0.5 type --delay 40 Scheduler
+            sleep 1
+            xdotool mousemove 50 482 click 1'
+          sleep 3
+          shot scheduler
+          if ! docker exec flowery-uno-desktop pgrep -f /opt/app/Flowery.Uno.Gallery >/dev/null; then
+            echo "::error::The Gallery is no longer running"
+            exit 1
+          fi
+          if docker exec flowery-uno-desktop grep -E 'Unhandled exception|Exception:' /tmp/app.log; then
+            echo "::error::The Gallery logged an exception"
+            exit 1
+          fi
+
+      - name: Collect the logs
+        if: always()
+        run: |
+          mkdir -p artifacts
+          docker exec flowery-uno-desktop cat /tmp/app.log > artifacts/app.log 2>&1 || true
+          docker logs flowery-uno-desktop > artifacts/desktop.log 2>&1 || true
+
+      - name: Upload screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-desktop-gallery
+          path: artifacts/
+          retention-days: 14

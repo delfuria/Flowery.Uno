@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Flowery.Theming;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
@@ -553,15 +553,26 @@ namespace Flowery.Controls
             if (!point.Properties.IsLeftButtonPressed)
                 return;
 
+            BeginResize(point.Position);
+            _resizeGrip.CapturePointer(e.Pointer);
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// Starts resizing from a point of the resize surface, as a press on the resize grip does.
+        /// </summary>
+        /// <param name="startPoint">The point of the press.</param>
+        internal void BeginResize(Point startPoint)
+        {
             _isResizing = true;
-            _resizeStartPoint = point.Position;
+            _resizeStartPoint = startPoint;
             _resizeStartWidth = GetEffectiveDialogWidth();
-            _resizeStartHeight = GetEffectiveDialogHeight();
+            // While the on-screen keyboard is shown, the dialog may be shorter than its height: it fills the area at most.
+            var areaHeight = GetDialogAreaHeight();
+            _resizeStartHeight = areaHeight > 0 ? Math.Min(GetEffectiveDialogHeight(), areaHeight) : GetEffectiveDialogHeight();
             _resizeStartOffset = DialogOffset;
             _resizeStartLeft = GetResizeStartLeft(_resizeStartWidth, _resizeStartOffset.X);
             _resizeStartTop = GetResizeStartTop(_resizeStartHeight, _resizeStartOffset.Y);
-            _resizeGrip.CapturePointer(e.Pointer);
-            e.Handled = true;
         }
 
         private void OnResizeGripPointerMoved(object sender, PointerRoutedEventArgs e)
@@ -570,7 +581,16 @@ namespace Flowery.Controls
                 return;
 
             var resizeSurface = _resizeSurface ?? _resizeHost;
-            var point = e.GetCurrentPoint(resizeSurface).Position;
+            ResizeTo(e.GetCurrentPoint(resizeSurface).Position);
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// Resizes the dialog to a point of the resize surface, as dragging the resize grip there does.
+        /// </summary>
+        /// <param name="point">The point the grip is dragged to.</param>
+        internal void ResizeTo(Point point)
+        {
             var deltaX = point.X - _resizeStartPoint.X;
             var deltaY = point.Y - _resizeStartPoint.Y;
 
@@ -590,7 +610,7 @@ namespace Flowery.Controls
             _isAutoHeight = false;
             SetDialogSize(clampedWidth, clampedHeight);
             UpdateDialogOffsetForResize(clampedWidth, clampedHeight);
-            e.Handled = true;
+            ClampDialogOffset();
         }
 
         private void OnResizeGripPointerReleased(object sender, PointerRoutedEventArgs e)
@@ -661,7 +681,7 @@ namespace Flowery.Controls
 
         private double GetMaxResizeHeight()
         {
-            var hostHeight = ActualHeight;
+            var hostHeight = GetDialogAreaHeight();
             if (hostHeight <= 0)
                 return MaxDialogHeight;
 
@@ -675,6 +695,15 @@ namespace Flowery.Controls
             return _isResizing ? Math.Max(AbsoluteMinHeight, max) : Math.Min(MaxDialogHeight, max);
         }
 
+        /// <summary>
+        /// The height in which the dialog is centered: the modal without the part that the on-screen keyboard and the
+        /// status bar take while the keyboard is shown. Positions in the resize code are relative to its top.
+        /// </summary>
+        private double GetDialogAreaHeight()
+        {
+            return ActualHeight - DialogAreaInsets.Top - DialogAreaInsets.Bottom;
+        }
+
         private double GetResizeStartLeft(double dialogWidth, double offsetX)
         {
             var hostWidth = ActualWidth;
@@ -686,7 +715,7 @@ namespace Flowery.Controls
 
         private double GetResizeStartTop(double dialogHeight, double offsetY)
         {
-            var hostHeight = ActualHeight;
+            var hostHeight = GetDialogAreaHeight();
             if (hostHeight <= 0)
                 return offsetY;
 
@@ -715,6 +744,9 @@ namespace Flowery.Controls
         protected override void OnLoaded()
         {
             base.OnLoaded();
+            // OnUnloaded removes the handler, so a dialog that is loaded again needs it back.
+            RemoveHandler(KeyDownEvent, new KeyEventHandler(OnDialogKeyDown));
+            AddHandler(KeyDownEvent, new KeyEventHandler(OnDialogKeyDown), handledEventsToo: true);
             ApplyTheming();
             UpdateResizeGripState();
             UpdateTabNavigationState();

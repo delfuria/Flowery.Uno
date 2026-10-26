@@ -1,0 +1,156 @@
+name: Linux Desktop
+
+# Starts the Desktop (Skia) Gallery on the XFCE desktop of docker/linux-desktop with
+# scripts/run-linux-desktop.ps1, as locally, opens the Scheduler page and checks that the Gallery
+# keeps running without a crash log or an exception in its output. Screenshots and the logs are
+# uploaded as an artifact. The image is built on the runner and pushed nowhere.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/linux-desktop.yml
+      - docker/linux-desktop/**
+      - scripts/run-linux-desktop.ps1
+      - Flowery.Uno/**
+      - Flowery.Uno.Kanban/**
+      - Flowery.Uno.Gallery/**
+      - Flowery.Uno.Gallery.Core/**
+      - Flowery.Uno.RuntimeTests/**
+      - '*.props'
+      - Directory.*
+      - GlobalUsings.cs
+      - NuGet.Config
+      - global.json
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # The Gallery keeps its state and its crash log here (LocalApplicationData of the user flowery).
+  STATE_DIR: /home/flowery/.local/share/Flowery.Uno.Gallery
+
+jobs:
+  gallery-on-xfce:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Flowery.NET builds the same image under the same tag, and both scripts reuse or replace it, so its build
+      # context has to match the one in its default branch.
+      - uses: actions/checkout@v7
+        with:
+          repository: tobitege/Flowery.NET
+          path: flowery-net
+          sparse-checkout: docker/linux-desktop
+          persist-credentials: false
+
+      - name: Compare docker/linux-desktop with Flowery.NET
+        run: |
+          if ! diff -r --strip-trailing-cr docker/linux-desktop flowery-net/docker/linux-desktop; then
+            echo "::error::docker/linux-desktop differs from Flowery.NET's; change both together"
+            exit 1
+          fi
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      # The script that is run locally: it publishes the Gallery for the architecture of the Docker host, builds the
+      # image (missing on the runner) and starts the desktop with the Gallery.
+      - name: Start the desktop with scripts/run-linux-desktop.ps1
+        shell: pwsh
+        run: ./scripts/run-linux-desktop.ps1 -NoBrowser -Culture en-US
+
+      - name: Wait for the Gallery window
+        run: |
+          for attempt in $(seq 1 60); do
+            if docker exec flowery-uno-desktop xdotool search --name 'Flowery.Uno Gallery' >/dev/null 2>&1; then
+              echo "Gallery window after ${attempt} s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::The Gallery window did not appear within 60 s"
+          exit 1
+
+      - name: Open the Scheduler page and check the Gallery
+        run: |
+          mkdir -p artifacts
+          shot() { docker exec flowery-uno-desktop sh -c 'xwd -root -silent | xwdtopnm 2>/dev/null | pnmtopng' > "artifacts/$1.png"; }
+          # The Gallery selects the page named in sidebar.state at its start and then writes the file again from its own
+          # state, which drops the probe line. So the file reads exactly last:scheduler once the sidebar has restored the
+          # Scheduler and asked for its page; the checks below and the screenshot cover the page itself. The first start
+          # only has to show the window: it has not drawn yet, and the second start draws the home page before the
+          # Scheduler. The folder is created in case the Gallery has not written to it yet. The pattern is anchored, as
+          # the command line of this shell contains the path as well.
+          docker exec flowery-uno-desktop sh -c '
+            pkill -KILL -f "^/opt/app/Flowery.Uno.Gallery"
+            for attempt in $(seq 1 20); do
+              pgrep -f "^/opt/app/Flowery.Uno.Gallery" >/dev/null || break
+              sleep 0.5
+            done
+            if pgrep -f "^/opt/app/Flowery.Uno.Gallery" >/dev/null; then
+              echo "::error::The Gallery did not stop"
+              exit 1
+            fi
+            mkdir -p "$1"
+            printf "last:scheduler\ncollapsed:ci-probe\n" > "$1/sidebar.state"' sh "$STATE_DIR"
+          docker exec -d flowery-uno-desktop sh -c 'exec /opt/app/Flowery.Uno.Gallery >/tmp/app.log 2>&1'
+          opened=
+          for attempt in $(seq 1 60); do
+            sleep 1
+            if [ "$(docker exec flowery-uno-desktop cat "$STATE_DIR/sidebar.state")" = "last:scheduler" ]; then
+              echo "Scheduler page after ${attempt} s"
+              opened=yes
+              break
+            fi
+          done
+          sleep 3
+          shot scheduler
+          if [ -z "$opened" ]; then
+            echo "::error::The sidebar did not restore the Scheduler page"
+            exit 1
+          fi
+          if ! docker exec flowery-uno-desktop pgrep -f "^/opt/app/Flowery.Uno.Gallery" >/dev/null; then
+            echo "::error::The Gallery is no longer running"
+            exit 1
+          fi
+          # The Gallery handles UI exceptions and writes them to its crash log instead of stopping.
+          if docker exec flowery-uno-desktop test -s "$STATE_DIR/crash.log"; then
+            docker exec flowery-uno-desktop cat "$STATE_DIR/crash.log"
+            echo "::error::The Gallery wrote a crash log"
+            exit 1
+          fi
+          if docker exec flowery-uno-desktop grep -E 'Unhandled exception|Exception:' /tmp/app.log; then
+            echo "::error::The Gallery printed an exception"
+            exit 1
+          fi
+
+      - name: Collect the logs
+        if: always()
+        run: |
+          mkdir -p artifacts
+          docker exec flowery-uno-desktop cat /tmp/app.log > artifacts/app.log 2>&1 || true
+          # Only an existing crash log, so that an empty artifact does not look like one.
+          if docker exec flowery-uno-desktop test -f "$STATE_DIR/crash.log"; then
+            docker exec flowery-uno-desktop cat "$STATE_DIR/crash.log" > artifacts/crash.log || true
+          fi
+          docker exec flowery-uno-desktop cat "$STATE_DIR/sidebar.state" > artifacts/sidebar.state 2>&1 || true
+          docker logs flowery-uno-desktop > artifacts/desktop.log 2>&1 || true
+
+      - name: Upload screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-desktop-gallery
+          path: artifacts/
+          retention-days: 14

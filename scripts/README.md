@@ -294,6 +294,57 @@ pwsh ./scripts/run-android.ps1 -DeviceName "emulator-5554" -Rebuild
 
 ---
 
+### run-linux-desktop.ps1
+
+Runs the Desktop (Skia) Gallery on a Linux desktop (XFCE) in Docker, shown in the browser through noVNC. Requires Docker Desktop with Linux containers.
+
+- Publish: the Gallery is published self-contained to `bin/linux-desktop` for the architecture of the Docker host (`linux-x64` or `linux-arm64`), in the layout of the Linux packages. Only the `net10.0-desktop` target is published, so the runtime identifier does not reach the Android and WebAssembly targets.
+- Image: `flowery-linux-desktop` from `docker/linux-desktop`, about 1 GB, with no .NET SDK. The script builds it when it is missing or older than 7 days, without the Docker build cache and from the current base image and packages, so Debian's security updates are at most a week old. It then removes the image from before. When a rebuild only for the age fails, for example offline, it keeps the old image. `-RebuildImage` builds at once, for example for a CVE.
+- Shared with Flowery.NET: `docker/linux-desktop` is the same there and builds the image under the same tag, so either repository reuses or replaces it for both. The workflow below fails when the two differ.
+- Container: `flowery-uno-desktop`, with the published app mounted read-only.
+
+```powershell
+# Publish, start the desktop and open http://localhost:6081 in the browser
+pwsh ./scripts/run-linux-desktop.ps1
+
+# Reuse the published app, use a smaller desktop and run it in German
+pwsh ./scripts/run-linux-desktop.ps1 -SkipPublish -Geometry 1280x800 -Culture de-DE
+
+# Build the image again now, after a change in docker/linux-desktop or for a CVE
+pwsh ./scripts/run-linux-desktop.ps1 -RebuildImage
+```
+
+| Parameter | Type | Default | Description |
+| --------- | ---- | ------- | ----------- |
+| `-Configuration` | string | `Release` | Build configuration to publish |
+| `-SkipPublish` | switch | false | Reuse the app in `bin/linux-desktop` |
+| `-RebuildImage` | switch | false | Build the image again now, without the build cache and from the current packages |
+| `-Geometry` | string | `1600x1000` | Size of the desktop |
+| `-Culture` | string | culture of the system | Culture of the app, passed as `LANG`; English without one. The desktop stays English, as the image has no locales |
+| `-Port` | int | `6081` | Local port of noVNC |
+| `-VncPort` | int | `5902` | Local port of VNC (no password) |
+| `-NoBrowser` | switch | false | Do not open the browser |
+
+The ports listen on `127.0.0.1` only and differ from Flowery.NET's (6080, 5901), so both desktops can run at once. The Gallery's output is in `/tmp/app.log`; it writes handled exceptions to `~/.local/share/Flowery.Uno.Gallery/crash.log` and the chosen page to `sidebar.state` in the same folder. Checks from outside the container:
+
+```powershell
+# Screenshot as PNG
+docker exec flowery-uno-desktop sh -c 'xwd -root -silent | xwdtopnm | pnmtopng' > shot.png
+
+# Mouse and keyboard input with xdotool: type into the sidebar search (at the default geometry, with the window at 0,30)
+docker exec flowery-uno-desktop xdotool mousemove 110 82 click 1 type Scheduler
+
+# The page the Gallery shows
+docker exec flowery-uno-desktop cat /home/flowery/.local/share/Flowery.Uno.Gallery/sidebar.state
+
+# Stop the desktop
+docker rm -f flowery-uno-desktop
+```
+
+On pull requests that touch the library or the Gallery, the `Linux Desktop` workflow (`.github/workflows/linux-desktop.yml`) compares `docker/linux-desktop` with Flowery.NET's and runs this script on the runner, which builds the image there. It then starts the Gallery again with `last:scheduler` and a probe line in `sidebar.state`. The sidebar restores the Scheduler, asks for its page and writes the file again without the probe line. The workflow fails when that does not happen, the Gallery stops, it writes a crash log, or its output shows an exception. Its artifact holds the screenshots and the logs.
+
+---
+
 ## build_nuget.ps1
 
 Builds the NuGet package for `Flowery.Uno`.

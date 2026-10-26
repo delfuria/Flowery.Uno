@@ -252,13 +252,13 @@ namespace Flowery.Uno.RuntimeTests.Controls
             // dialog cannot grow under the keyboard.
             var (dialog, header, footer) = await OpenEditorDialogAsync(isResizable: true);
             var modalBounds = GetWindowBounds(dialog);
-            // The dialog gets nearly the height of the window, and the keyboard leaves a part a little shorter than the
-            // dialog, which therefore fills it, as on a phone. That part has to leave room above the dialog's minimum
-            // height, or the resize does nothing and proves nothing.
+            // The dialog gets nearly the height of the window, at most MaxDialogHeight, and the keyboard leaves a part a
+            // little shorter than the dialog, which therefore fills it, as on a phone. That part has to leave room above
+            // the dialog's minimum height, or the resize does nothing and proves nothing.
             var dialogHeight = Math.Min(modalBounds.Height - 40, FloweryDialogBase.MaxDialogHeight);
             var areaHeight = dialogHeight - 20;
             if (areaHeight < FloweryDialogBase.AbsoluteMinHeight + 100)
-                Assert.Inconclusive($"The test window is too small to resize the dialog above the keyboard: window {modalBounds}, part above the keyboard {areaHeight}.");
+                Assert.Inconclusive($"The test window is too small to resize the dialog above the keyboard: window {modalBounds}, part above the keyboard {areaHeight}, needs at least {FloweryDialogBase.AbsoluteMinHeight + 100}.");
             dialog.SetHeight(dialogHeight);
             await RuntimeTestHelpers.CompleteLayoutAsync(dialog);
             var keyboardTop = modalBounds.Top + areaHeight;

@@ -23,6 +23,7 @@ public sealed partial class SchedulerExamples : ScrollableExamplePage, ICollapsi
     private readonly string _helpKey;
     // Below this width the page keeps narrow side margins, so a phone gives the scheduler the room.
     private const double CompactWidth = 600;
+    private double _pageWidth;
 
     public GalleryLocalization Localization { get; } = GalleryLocalization.Instance;
 
@@ -97,8 +98,14 @@ public sealed partial class SchedulerExamples : ScrollableExamplePage, ICollapsi
     }
 
     // Android drops a margin written inside its layout pass, which raises SizeChanged; write it after the pass.
-    private void OnPageSizeChanged(object sender, SizeChangedEventArgs e) =>
-        DispatcherQueue.TryEnqueue(() => PageGrid.Margin = e.NewSize.Width < CompactWidth ? new Thickness(8, 0, 8, 8) : new Thickness(24, 0, 24, 16));
+    private void OnPageSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        _pageWidth = e.NewSize.Width;
+        DispatcherQueue.TryEnqueue(ApplyPageMargin);
+    }
+
+    private void ApplyPageMargin() =>
+        PageGrid.Margin = _pageWidth < CompactWidth ? new Thickness(8, 0, 8, 8) : new Thickness(24, 0, 24, 16);
 
     private void ApplyEditorShadow()
     {

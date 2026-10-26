@@ -1,17 +1,16 @@
 ﻿#if WINDOWS || (__SKIA__ && !__WASM__)
 using System.Threading.Tasks;
 using Flowery.Controls;
-using Flowery.Theming;
+using Flowery.Controls.Scheduler.Models;
 using Flowery.Uno.Gallery.Examples;
 using Flowery.Uno.Gallery.Localization;
-using Flowery.Uno.RuntimeTests;
-using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+using static Flowery.Uno.Gallery.Tests.GalleryTestHost;
 
 namespace Flowery.Uno.Gallery.Tests;
 
@@ -21,7 +20,7 @@ public class Given_SchedulerPage
 {
     [TestMethod]
     public Task When_AnAppointmentIsCreated_TheEditorLiesOverTheScheduler() =>
-        WithPageAsync(new SchedulerExamples { Width = 1000, Height = 720 }, static async page =>
+        WithPageAsync(static () => new SchedulerExamples { Width = 1000, Height = 720 }, static async page =>
         {
             var scheduler = (DaisyScheduler)page.FindName("DemoScheduler");
             var editor = (Border)page.FindName("EditorPanel");
@@ -40,7 +39,7 @@ public class Given_SchedulerPage
 
     [TestMethod]
     public Task When_TheSchedulerIsPressed_AnUnchangedEditorCloses() =>
-        WithPageAsync(new SchedulerExamples { Width = 1000, Height = 720 }, static async page =>
+        WithPageAsync(static () => new SchedulerExamples { Width = 1000, Height = 720 }, static async page =>
         {
             var editor = (Border)page.FindName("EditorPanel");
             var subject = (DaisyInput)page.FindName("SubjectInput");
@@ -60,17 +59,28 @@ public class Given_SchedulerPage
             subject.Text = string.Empty;
             page.DismissEditorIfUnchanged();
             Assert.AreEqual(Visibility.Collapsed, editor.Visibility);
+
+            // Another date format writes the dates anew but changes no value, so the editor still closes.
+            await OpenNewAsync(page);
+            var scheduler = (DaisyScheduler)page.FindName("DemoScheduler");
+            var start = ((DaisyInput)page.FindName("StartInput")).Text;
+            scheduler.DateTimeFormat = scheduler.DateTimeFormat == SchedulerDateTimeFormat.European
+                ? SchedulerDateTimeFormat.US : SchedulerDateTimeFormat.European;
+            await SettleAsync(page);
+            Assert.AreNotEqual(start, ((DaisyInput)page.FindName("StartInput")).Text, "The date is written anew");
+            page.DismissEditorIfUnchanged();
+            Assert.AreEqual(Visibility.Collapsed, editor.Visibility);
         });
 
     [TestMethod]
     public async Task When_ThePageExplainsTouch_ItShowsTheTouchHelp()
     {
-        await WithPageAsync(new SchedulerExamples(touchHelp: true) { Width = 1000, Height = 720 }, static page =>
+        await WithPageAsync(static () => new SchedulerExamples(touchHelp: true) { Width = 1000, Height = 720 }, static page =>
         {
             Assert.AreEqual(GalleryLocalization.GetString("Scheduler_TouchHelp"), ((TextBlock)page.FindName("StatusText")).Text);
             return Task.CompletedTask;
         });
-        await WithPageAsync(new SchedulerExamples(touchHelp: false) { Width = 1000, Height = 720 }, static page =>
+        await WithPageAsync(static () => new SchedulerExamples(touchHelp: false) { Width = 1000, Height = 720 }, static page =>
         {
             Assert.AreEqual(GalleryLocalization.GetString("Scheduler_Help"), ((TextBlock)page.FindName("StatusText")).Text);
             return Task.CompletedTask;
@@ -79,7 +89,7 @@ public class Given_SchedulerPage
 
     [TestMethod]
     public Task When_ThePageIsPhoneWide_TheSchedulerTakesMostOfItsWidth() =>
-        WithPageAsync(new SchedulerExamples { Width = 400, Height = 720 }, static async page =>
+        WithPageAsync(static () => new SchedulerExamples { Width = 400, Height = 720 }, static async page =>
         {
             var scheduler = (DaisyScheduler)page.FindName("DemoScheduler");
             Assert.IsTrue(await WaitUntilAsync(page, () => Math.Abs(scheduler.ActualWidth - (400 - 16)) < 1), $"{scheduler.ActualWidth} at 400");
@@ -90,7 +100,7 @@ public class Given_SchedulerPage
 
     [TestMethod]
     public Task When_APageHasACollapsibleIntro_TheTitleBarFoldsIt() =>
-        WithPageAsync(new MainView(collapsesIntros: true) { Width = 680, Height = 500 }, static async view =>
+        WithPageAsync(static () => new MainView(collapsesIntros: true) { Width = 680, Height = 500 }, static async view =>
         {
             var header = (UIElement)((Border)view.FindName("HeaderBorder")).Child;
             var bar = (Border)view.FindName("CategoryTitleBar");
@@ -102,6 +112,10 @@ public class Given_SchedulerPage
             Assert.AreEqual(Visibility.Collapsed, intro.Visibility);
             Assert.AreEqual(Visibility.Visible, menu.Visibility);
             Assert.AreEqual(bar.Padding.Top, bar.Padding.Bottom);
+            // A new global size keeps the bar compact.
+            FlowerySizeManager.ApplySize(DaisySize.Large);
+            await SettleAsync(view);
+            Assert.AreEqual(new Thickness(28, 6, 28, 6), bar.Padding);
 
             view.ToggleCategoryIntro(bar);
             Assert.AreEqual(Visibility.Visible, intro.Visibility);
@@ -142,57 +156,14 @@ public class Given_SchedulerPage
     private static Windows.Foundation.Rect Bounds(FrameworkElement element, FrameworkElement root) =>
         element.TransformToVisual(root).TransformBounds(new Windows.Foundation.Rect(0, 0, element.ActualWidth, element.ActualHeight));
 
-    // The Gallery pages and MainView change global size, theme and neumorphic settings; the next tests get them back.
-    private static async Task WithPageAsync<T>(T page, Func<T, Task> test) where T : FrameworkElement
-    {
-        var host = RuntimeTestContext.HostPanel ?? throw new InvalidOperationException("Runtime test host is not initialized.");
-        var previousSize = FlowerySizeManager.CurrentSize;
-        var previousGlobal = FlowerySizeManager.UseGlobalSizeByDefault;
-        var previousAuto = FlowerySizeManager.EnableGlobalAutoSize;
-        var previousTheme = DaisyThemeManager.CurrentThemeName;
-        var previousIntensity = DaisyBaseContentControl.GlobalNeumorphicIntensity;
-        page.HorizontalAlignment = HorizontalAlignment.Left;
-        page.VerticalAlignment = VerticalAlignment.Top;
-        host.Children.Clear();
-        host.Children.Add(page);
-        try
+    private static Task WithPageAsync<T>(Func<T> create, Func<T, Task> test) where T : FrameworkElement =>
+        RunAsync(() =>
         {
-            await SettleAsync(page);
-            await test(page);
-        }
-        finally
-        {
-            host.Children.Remove(page);
-            FlowerySizeManager.UseGlobalSizeByDefault = previousGlobal;
-            FlowerySizeManager.EnableGlobalAutoSize = previousAuto;
-            FlowerySizeManager.ApplySize(previousSize);
-            if (previousTheme != null)
-                DaisyThemeManager.ApplyTheme(previousTheme);
-            DaisyBaseContentControl.GlobalNeumorphicIntensity = previousIntensity;
-        }
-    }
-
-    // CI runners can hold back low-priority dispatcher work for more than five seconds.
-    private static readonly TimeSpan SettleTimeout = TimeSpan.FromSeconds(30);
-
-    private static async Task SettleAsync(FrameworkElement element)
-    {
-        if (!element.IsLoaded)
-        {
-            var loaded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            RoutedEventHandler onLoaded = (_, _) => loaded.TrySetResult();
-            element.Loaded += onLoaded;
-            try { await loaded.Task.WaitAsync(SettleTimeout); }
-            finally { element.Loaded -= onLoaded; }
-        }
-        for (var pass = 0; pass < 2; pass++)
-        {
-            var queued = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            Assert.IsTrue(element.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () => queued.SetResult()));
-            await queued.Task.WaitAsync(SettleTimeout);
-        }
-        element.UpdateLayout();
-    }
+            var page = create();
+            page.HorizontalAlignment = HorizontalAlignment.Left;
+            page.VerticalAlignment = VerticalAlignment.Top;
+            return page;
+        }, test);
 
     // A test checks a result, not its speed: waits for at most two seconds.
     private static async Task<bool> WaitUntilAsync(FrameworkElement element, Func<bool> condition)
@@ -207,15 +178,5 @@ public class Given_SchedulerPage
         return condition();
     }
 
-    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
-    {
-        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
-        {
-            var child = VisualTreeHelper.GetChild(root, index);
-            yield return child;
-            foreach (var descendant in Descendants(child))
-                yield return descendant;
-        }
-    }
 }
 #endif

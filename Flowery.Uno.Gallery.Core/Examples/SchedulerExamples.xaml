@@ -38,7 +38,7 @@
                     <daisy:DaisyButton Content="{Binding [Scheduler_Reset]}" Variant="Ghost" Click="OnReset" />
                 </daisy:WrapPanel>
             </StackPanel>
-            <Grid x:Name="SchedulerArea" Grid.Row="1">
+            <Grid Grid.Row="1">
                 <daisy:DaisyScheduler x:Name="DemoScheduler" CurrentView="Month" />
                 <!-- The editor lies over the right side of the scheduler while an appointment is created or edited. -->
                 <Border x:Name="EditorPanel" Visibility="Collapsed" Width="280" HorizontalAlignment="Right"

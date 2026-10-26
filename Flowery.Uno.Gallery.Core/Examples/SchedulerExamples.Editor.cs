@@ -74,10 +74,22 @@ public partial class SchedulerExamples
 
     private void OnSchedulerPressed(object sender, PointerRoutedEventArgs e) => DismissEditorIfUnchanged();
 
+    // The scheduler handles Escape itself, so this listens to handled keys too; an Escape the editor used, such as one
+    // that closed an open select, is no dismiss.
     private void OnPageKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (e.Key == Windows.System.VirtualKey.Escape)
+        if (e.Key == Windows.System.VirtualKey.Escape && !(e.Handled && IsInEditor(e.OriginalSource as DependencyObject)))
             DismissEditorIfUnchanged();
+    }
+
+    private bool IsInEditor(DependencyObject? element)
+    {
+        for (; element != null; element = VisualTreeHelper.GetParent(element))
+        {
+            if (ReferenceEquals(element, EditorPanel))
+                return true;
+        }
+        return false;
     }
 
     private void RefreshEditorChoices()

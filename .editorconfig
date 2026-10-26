@@ -32,9 +32,10 @@ dotnet_diagnostic.UNO0001.severity = none
 dotnet_diagnostic.IDE0028.severity = none
 
 # IDE0300-IDE0305: Use collection expression
-# Only where the type stays the same: a collection expression that fills a read-only interface (for example IReadOnlyList<T>,
-# IReadOnlyCollection<T> or IEnumerable<T>) has no defined concrete type, which CsWinRT1032 reports for trimming and AOT on Windows. Such places
-# pass an array or a list instead, and the suggestions must not turn them back.
+# Only where the type stays the same: a collection expression that fills a read-only interface (for example
+# IReadOnlyList<T>, IReadOnlyCollection<T> or IEnumerable<T>) has no defined concrete type, which CsWinRT1032 reports
+# for trimming and AOT on Windows. Such places pass an array or a list instead, and the suggestions must not turn them
+# back.
 dotnet_style_prefer_collection_expression = when_types_exactly_match
 
 # XAML files

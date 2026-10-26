@@ -16,8 +16,16 @@ public partial class SchedulerExamples
         public override string ToString() => Label;
     }
 
+    // The editor fields as values, so a culture change that reformats a date does not count as an edit.
+    private sealed record EditorFields(string Subject, DateTime? Start, TimeSpan? StartTime, DateTime? End, TimeSpan? EndTime,
+        int SpanMode, string Description, bool? AllDay, int Resource, Color? Color);
+
     private CultureInfo _editorCulture = CultureInfo.InvariantCulture;
     private IReadOnlyList<AppointmentModel> _conflicts = Array.Empty<AppointmentModel>();
+    private EditorFields? _openedFields;
+    // WinUI routes no press to the page before the scheduler: a press that opened the editor reaches the dismiss handler
+    // afterwards, so it is skipped until the dispatcher runs again.
+    private bool _isOpeningEditor;
 
     private void OpenEditor(AppointmentModel appointment, bool isNew)
     {
@@ -39,17 +47,52 @@ public partial class SchedulerExamples
         EditorError.Text = string.Empty;
         _conflicts = Array.Empty<AppointmentModel>();
         RefreshEditorChoices();
-        PlaceEditor();
+        // The editor needs the height more than the description and the options.
+        if (FoldsIntro)
+            IsIntroVisible = false;
         EditorPanel.Visibility = Visibility.Visible;
+        _openedFields = ReadEditorFields();
+        _isOpeningEditor = true;
+        if (DispatcherQueue?.TryEnqueue(EndOpeningEditor) != true)
+            _isOpeningEditor = false;
     }
 
-    // Beside the scheduler, the editor would leave it a narrow strip on a phone; there it covers the scheduler instead.
-    private void PlaceEditor()
+    private void EndOpeningEditor() => _isOpeningEditor = false;
+
+    private EditorFields ReadEditorFields() => new(SubjectInput.Text ?? string.Empty, ParseEditorDate(StartInput.Text),
+        (StartTimeInput.SelectedItem as TimeChoice)?.Time, ParseEditorDate(EndInput.Text), (EndTimeInput.SelectedItem as TimeChoice)?.Time,
+        SpanModeInput.SelectedIndex, DescriptionInput.Text ?? string.Empty, AllDayInput.IsChecked, ResourceInput.SelectedIndex,
+        (ColorInput.SelectedItem as ColorChoice)?.Color);
+
+    private DateTime? ParseEditorDate(string? text) =>
+        DateTime.TryParseExact(text, "d", _editorCulture, DateTimeStyles.None, out var date) ? date : null;
+
+    /// <summary>Light dismiss, which a press on the scheduler and Escape run: closes the editor while its fields are as they
+    /// were opened. With changes it stays open until Save or Cancel.</summary>
+    public void DismissEditorIfUnchanged()
     {
-        var cover = SchedulerArea.ActualWidth < 720;
-        Grid.SetColumn(EditorPanel, cover ? 0 : 1);
-        Grid.SetColumnSpan(EditorPanel, cover ? 2 : 1);
-        EditorPanel.Width = cover ? double.NaN : 280;
+        if (EditorPanel.Visibility == Visibility.Visible && !_isOpeningEditor && ReadEditorFields() == _openedFields)
+            EditorPanel.Visibility = Visibility.Collapsed;
+    }
+
+    private void OnSchedulerPressed(object sender, PointerRoutedEventArgs e) => DismissEditorIfUnchanged();
+
+    // The scheduler handles Escape itself, so this listens to handled keys too; an Escape the editor used, such as one
+    // that closed an open select, is no dismiss.
+    private void OnPageKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Escape && !(e.Handled && IsInEditor(e.OriginalSource as DependencyObject)))
+            DismissEditorIfUnchanged();
+    }
+
+    private bool IsInEditor(DependencyObject? element)
+    {
+        for (; element != null; element = VisualTreeHelper.GetParent(element))
+        {
+            if (ReferenceEquals(element, EditorPanel))
+                return true;
+        }
+        return false;
     }
 
     private void RefreshEditorChoices()

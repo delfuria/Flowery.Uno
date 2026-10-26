@@ -1,15 +1,14 @@
 ﻿#if WINDOWS || (__SKIA__ && !__WASM__)
 using System.Threading.Tasks;
 using Flowery.Controls;
-using Flowery.Theming;
 using Flowery.Uno.Gallery.Examples;
 using Flowery.Uno.RuntimeTests;
-using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+using static Flowery.Uno.Gallery.Tests.GalleryTestHost;
 
 namespace Flowery.Uno.Gallery.Tests;
 
@@ -122,86 +121,13 @@ public class Given_GallerySidebarSizing
             Assert.AreEqual(DaisyResourceLookup.GetDefaultHeight(DaisySize.Small), hamburger.Height);
         });
 
-    private static async Task WithGalleryAsync(Func<MainView, Task> test)
-    {
-        var host = RuntimeTestContext.HostPanel ?? throw new InvalidOperationException("Runtime test host is not initialized.");
-        var previousSize = FlowerySizeManager.CurrentSize;
-        var previousGlobal = FlowerySizeManager.UseGlobalSizeByDefault;
-        var previousAuto = FlowerySizeManager.EnableGlobalAutoSize;
-        var previousTheme = DaisyThemeManager.CurrentThemeName;
-        var previousIntensity = DaisyBaseContentControl.GlobalNeumorphicIntensity;
-        MainView? view = null;
-        try
+    private static Task WithGalleryAsync(Func<MainView, Task> test) =>
+        RunAsync(static () =>
         {
-            host.Children.Clear();
             FlowerySizeManager.UseGlobalSizeByDefault = true;
             FlowerySizeManager.EnableGlobalAutoSize = true;
             FlowerySizeManager.ApplySize(DaisySize.ExtraSmall);
-            view = new MainView { Width = 680, Height = 500, HorizontalAlignment = HorizontalAlignment.Left };
-            host.Children.Add(view);
-            await SettleAsync(view);
-            await test(view);
-        }
-        finally
-        {
-            try
-            {
-                if (view != null)
-                    host.Children.Remove(view);
-                await SettleAsync(host);
-            }
-            finally
-            {
-                FlowerySizeManager.UseGlobalSizeByDefault = previousGlobal;
-                FlowerySizeManager.EnableGlobalAutoSize = previousAuto;
-                FlowerySizeManager.ApplySize(previousSize);
-                if (previousTheme != null)
-                    DaisyThemeManager.ApplyTheme(previousTheme);
-                DaisyBaseContentControl.GlobalNeumorphicIntensity = previousIntensity;
-            }
-        }
-    }
-
-    // CI runners can hold back low-priority dispatcher work for more than five seconds.
-    private static readonly TimeSpan SettleTimeout = TimeSpan.FromSeconds(30);
-
-    private static async Task SettleAsync(FrameworkElement element)
-    {
-        if (!element.IsLoaded)
-        {
-            var loaded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            RoutedEventHandler onLoaded = (_, _) => loaded.TrySetResult();
-            element.Loaded += onLoaded;
-            try { await loaded.Task.WaitAsync(SettleTimeout); }
-            finally { element.Loaded -= onLoaded; }
-        }
-        // MainView restores initial navigation through two low-priority dispatcher hops.
-        for (var pass = 0; pass < 2; pass++)
-        {
-            var queued = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            Assert.IsTrue(element.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () => queued.SetResult()));
-            await queued.Task.WaitAsync(SettleTimeout);
-        }
-        var rendered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        EventHandler<object> onRendering = (_, _) => rendered.TrySetResult();
-        CompositionTarget.Rendering += onRendering;
-        try
-        {
-            element.UpdateLayout();
-            await rendered.Task.WaitAsync(SettleTimeout);
-        }
-        finally { CompositionTarget.Rendering -= onRendering; }
-    }
-
-    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
-    {
-        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
-        {
-            var child = VisualTreeHelper.GetChild(root, index);
-            yield return child;
-            foreach (var descendant in Descendants(child))
-                yield return descendant;
-        }
-    }
+            return new MainView { Width = 680, Height = 500, HorizontalAlignment = HorizontalAlignment.Left };
+        }, test);
 }
 #endif

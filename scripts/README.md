@@ -296,7 +296,7 @@ pwsh ./scripts/run-android.ps1 -DeviceName "emulator-5554" -Rebuild
 
 ### run-linux-desktop.ps1
 
-Runs the Desktop (Skia) Gallery on a Linux desktop (XFCE) in Docker, shown in the browser through noVNC. It publishes the Gallery self-contained to `bin/linux-desktop` for the architecture of the Docker host (`linux-x64` or `linux-arm64`), in the layout of the Linux packages and only for the `net10.0-desktop` target, so the runtime identifier does not reach the Android and WebAssembly targets. It builds the image `flowery-linux-desktop` from `docker/linux-desktop` when it is missing (about 1 GB, no .NET SDK inside; Flowery.NET builds an image with the same packages and tag, so an existing one is reused, and `-RebuildImage` replaces it for both), and starts the container `flowery-uno-desktop` with the published app mounted read-only. Requires Docker Desktop with Linux containers.
+Runs the Desktop (Skia) Gallery on a Linux desktop (XFCE) in Docker, shown in the browser through noVNC. It publishes the Gallery self-contained to `bin/linux-desktop` for the architecture of the Docker host (`linux-x64` or `linux-arm64`), in the layout of the Linux packages and only for the `net10.0-desktop` target, so the runtime identifier does not reach the Android and WebAssembly targets. It builds the image `flowery-linux-desktop` from `docker/linux-desktop` when it is missing or older than 7 days, then without the Docker build cache from the current base image and packages, so Debian's security updates are at most a week old (about 1 GB, no .NET SDK inside; Flowery.NET builds an image with the same packages and tag, so an existing one is reused, and `-RebuildImage` replaces it for both), and starts the container `flowery-uno-desktop` with the published app mounted read-only. Requires Docker Desktop with Linux containers.
 
 ```powershell
 # Publish, start the desktop and open http://localhost:6081 in the browser
@@ -305,7 +305,7 @@ pwsh ./scripts/run-linux-desktop.ps1
 # Reuse the published app, use a smaller desktop and run it in German
 pwsh ./scripts/run-linux-desktop.ps1 -SkipPublish -Geometry 1280x800 -Culture de-DE
 
-# Build the image again after a change in docker/linux-desktop
+# Build the image again now, after a change in docker/linux-desktop or for a CVE
 pwsh ./scripts/run-linux-desktop.ps1 -RebuildImage
 ```
 
@@ -313,7 +313,7 @@ pwsh ./scripts/run-linux-desktop.ps1 -RebuildImage
 | --------- | ---- | ------- | ----------- |
 | `-Configuration` | string | `Release` | Build configuration to publish |
 | `-SkipPublish` | switch | false | Reuse the app in `bin/linux-desktop` |
-| `-RebuildImage` | switch | false | Build the image again |
+| `-RebuildImage` | switch | false | Build the image again now, without the build cache and from the current packages |
 | `-Geometry` | string | `1600x1000` | Size of the desktop |
 | `-Culture` | string | culture of Windows | Culture of the desktop and the app, passed as `LANG`; English without one |
 | `-Port` | int | `6081` | Local port of noVNC |

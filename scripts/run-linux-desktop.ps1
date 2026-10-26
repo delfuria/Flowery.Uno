@@ -5,7 +5,8 @@
 .DESCRIPTION
     Publishes the Desktop (Skia) Gallery self-contained for Linux to bin/linux-desktop, for the architecture of the
     Docker host (linux-x64 or linux-arm64), builds the image flowery-linux-desktop from docker/linux-desktop when it is
-    missing (Flowery.NET builds an image with the same packages and tag, so an existing one is reused), and (re)starts
+    missing or older than 7 days, then from the current base image and packages for Debian's security updates
+    (Flowery.NET builds an image with the same packages and tag, so an existing one is reused), and (re)starts
     the container flowery-uno-desktop with the published app mounted read-only. The desktop is served by noVNC on
     http://localhost:6081 and by VNC on localhost:5902, both on 127.0.0.1 only, so the Flowery.NET desktop on 6080 and
     5901 can run beside it. The Gallery starts on the desktop; its output is in /tmp/app.log, its crash log in
@@ -23,7 +24,8 @@
     Reuse the app in bin/linux-desktop.
 
 .PARAMETER RebuildImage
-    Build the image again, for example after a change in docker/linux-desktop. The tag is shared with Flowery.NET.
+    Build the image again now, without the Docker build cache and from the current base image and packages, for example
+    after a change in docker/linux-desktop or for a CVE. The tag is shared with Flowery.NET.
 
 .PARAMETER Geometry
     Size of the desktop (default: 1600x1000).
@@ -106,10 +108,26 @@ if (-not (Test-Path (Join-Path $appDir $appName))) {
     exit 1
 }
 
-docker image inspect $image *> $null
-if ($RebuildImage -or $LASTEXITCODE -ne 0) {
-    Write-Host "Building image: $image" -ForegroundColor Cyan
-    docker build -t $image (Join-Path $repoRoot "docker/linux-desktop")
+# Debian's security updates reach the image only when it is built anew, so an image older than a week is built again
+# from the current base image and packages; -RebuildImage does that at once, for example for a CVE.
+$maxImageAgeDays = 7
+$imageCreated = docker image inspect -f '{{.Created}}' $image 2>$null
+$buildReason = if ($LASTEXITCODE -ne 0) {
+    "missing"
+}
+elseif ($RebuildImage) {
+    "requested"
+}
+else {
+    # Created is UTC with nanoseconds, which DateTime does not parse; the seconds are enough.
+    $created = [DateTime]::ParseExact($imageCreated.Substring(0, 19), "yyyy-MM-ddTHH:mm:ss",
+        [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]"AssumeUniversal, AdjustToUniversal")
+    $ageDays = ([DateTime]::UtcNow - $created).TotalDays
+    if ($ageDays -gt $maxImageAgeDays) { "built $([int]$ageDays) days ago" }
+}
+if ($buildReason) {
+    Write-Host "Building image: $image ($buildReason)" -ForegroundColor Cyan
+    docker build --pull --no-cache -t $image (Join-Path $repoRoot "docker/linux-desktop")
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }

@@ -2,7 +2,7 @@ name: Linux Desktop
 
 # Runs the Desktop (Skia) Gallery on the XFCE desktop of docker/linux-desktop, the image that
 # scripts/run-linux-desktop.ps1 uses locally, and checks that it starts, opens a page and keeps
-# running without exceptions. Screenshots and the app log are uploaded as an artifact. The image
+# running without a crash log. Screenshots and the logs are uploaded as an artifact. The image
 # is built on the runner and pushed nowhere.
 
 on:
@@ -17,8 +17,13 @@ on:
       - Flowery.Uno.Kanban/**
       - Flowery.Uno.Gallery/**
       - Flowery.Uno.Gallery.Core/**
+      - Flowery.Uno.RuntimeTests/**
+      - Flowery.Uno.GalleryAssets.props
+      - Flowery.Uno.PatternAssets.props
       - Directory.Build.props
+      - Directory.Build.targets
       - Directory.Packages.props
+      - NuGet.Config
       - global.json
 
 concurrency:
@@ -27,6 +32,10 @@ concurrency:
 
 permissions:
   contents: read
+
+env:
+  # The Gallery keeps its state and its crash log here (LocalApplicationData of the user flowery).
+  STATE_DIR: /home/flowery/.local/share/Flowery.Uno.Gallery
 
 jobs:
   gallery-on-xfce:
@@ -40,14 +49,14 @@ jobs:
         with:
           global-json-file: global.json
 
-      # Only the desktop target: a runtime identifier would otherwise reach the Android and WebAssembly targets as well.
+      # The layout of the Linux packages (scripts/gallery/packaging/linux/build-deb.sh); only the desktop target, as a
+      # runtime identifier would otherwise reach the Android and WebAssembly targets as well.
       - name: Publish the Gallery for linux-x64
         run: |
           dotnet publish Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj \
             -c Release -f net10.0-desktop -p:TargetFrameworks=net10.0-desktop \
-            -r linux-x64 --self-contained true \
-            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
-            -o bin/linux-desktop
+            -r linux-x64 --self-contained -p:UseMonoRuntime=false \
+            -p:DebugType=None -p:DebugSymbols=false -o bin/linux-desktop
 
       - name: Build the desktop image
         run: docker build -t flowery-linux-desktop docker/linux-desktop
@@ -78,19 +87,38 @@ jobs:
             xdotool windowactivate "$W" windowmove "$W" 0 30 windowsize "$W" 1600 960'
           sleep 3
           shot home
-          # The sidebar search finds the Scheduler, the only result under Custom Controls below the Home section.
-          docker exec flowery-uno-desktop sh -c '
-            xdotool mousemove 110 82 click 1 sleep 0.5 type --delay 40 Scheduler
+          # The sidebar search finds the Scheduler, the only result below the Home section; the Gallery records the
+          # chosen page in sidebar.state. A slow runner may filter the list after the first click, so the click
+          # repeats until that file names the Scheduler. Positions are on the screen, with the window at 0,30 as above.
+          docker exec flowery-uno-desktop xdotool mousemove 110 82 click 1 sleep 0.5 type --delay 40 Scheduler
+          opened=
+          for attempt in $(seq 1 10); do
             sleep 1
-            xdotool mousemove 50 482 click 1'
-          sleep 3
+            docker exec flowery-uno-desktop xdotool mousemove 50 482 click 1
+            sleep 1
+            if docker exec flowery-uno-desktop grep -qx 'last:scheduler' "$STATE_DIR/sidebar.state"; then
+              opened=yes
+              break
+            fi
+          done
           shot scheduler
+          if [ -z "$opened" ]; then
+            echo "::error::The Scheduler page did not open"
+            exit 1
+          fi
+          sleep 2
           if ! docker exec flowery-uno-desktop pgrep -f /opt/app/Flowery.Uno.Gallery >/dev/null; then
             echo "::error::The Gallery is no longer running"
             exit 1
           fi
+          # The Gallery handles UI exceptions and writes them to its crash log instead of stopping.
+          if docker exec flowery-uno-desktop test -s "$STATE_DIR/crash.log"; then
+            docker exec flowery-uno-desktop cat "$STATE_DIR/crash.log"
+            echo "::error::The Gallery wrote a crash log"
+            exit 1
+          fi
           if docker exec flowery-uno-desktop grep -E 'Unhandled exception|Exception:' /tmp/app.log; then
-            echo "::error::The Gallery logged an exception"
+            echo "::error::The Gallery printed an exception"
             exit 1
           fi
 
@@ -99,6 +127,8 @@ jobs:
         run: |
           mkdir -p artifacts
           docker exec flowery-uno-desktop cat /tmp/app.log > artifacts/app.log 2>&1 || true
+          docker exec flowery-uno-desktop cat "$STATE_DIR/crash.log" > artifacts/crash.log 2>&1 || true
+          docker exec flowery-uno-desktop cat "$STATE_DIR/sidebar.state" > artifacts/sidebar.state 2>&1 || true
           docker logs flowery-uno-desktop > artifacts/desktop.log 2>&1 || true
 
       - name: Upload screenshots and logs

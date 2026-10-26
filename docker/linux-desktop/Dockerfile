@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1.7
 
 # A Linux desktop (XFCE) for running the Flowery.Uno Gallery (the Skia desktop head, on X11) and other desktop apps,
-# viewed in a browser through noVNC. The same image as in Flowery.NET's docker/linux-desktop, so one local image serves
-# both repositories.
+# viewed in a browser through noVNC. It installs the same packages as Flowery.NET's docker/linux-desktop and keeps its
+# tag, so one local image serves both repositories; scripts/run-linux-desktop.ps1 sets APP_PATH and LANG itself.
 #
-# The image holds no .NET SDK or app: publish the app self-contained for linux-x64 and mount it at /opt/app
-# (scripts/run-linux-desktop.ps1 does both and sets APP_PATH). Build it with:
+# The image holds no .NET SDK or app: publish the app self-contained for Linux and mount it at /opt/app
+# (scripts/run-linux-desktop.ps1 does both). Build it with:
 #   docker build -t flowery-linux-desktop docker/linux-desktop
 FROM debian:bookworm-slim
 
@@ -38,7 +38,9 @@ RUN sed -i 's/\r$//' /usr/local/bin/start-desktop.sh && chmod +x /usr/local/bin/
 
 USER flowery
 WORKDIR /home/flowery
+# English unless the run passes another culture as LANG (scripts/run-linux-desktop.ps1 passes the one of Windows).
 ENV DISPLAY=:1 \
+    LANG=en_US.UTF-8 \
     APP_PATH=/opt/app/Flowery.Uno.Gallery
 
 # 6080: noVNC in a browser; 5901: VNC for a native viewer.

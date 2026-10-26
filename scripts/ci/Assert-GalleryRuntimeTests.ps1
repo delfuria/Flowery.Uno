@@ -6,7 +6,8 @@
     Lists the tests that did not pass, with their messages, so the log shows the cause, and then fails when the run
     exited with an error, when a test failed, when no test ran, or when one of the required regression tests did not
     pass. Inconclusive tests other than the required ones are listed but do not fail the check. Every Gallery job of
-    .github/workflows/ci.yml calls this script after its run, so the list of required tests lives in one place.
+    .github/workflows/ci.yml that runs the runtime tests calls this script after its run, so the list of required tests
+    lives in one place. scripts/tests/Assert-GalleryRuntimeTests.test.ps1 checks it.
 
 .PARAMETER Result
     Path of the result file that the Gallery wrote with --runtime-tests.

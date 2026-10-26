@@ -47,6 +47,10 @@ jobs:
       - name: Test Carousel GL resources and lifecycle
         run: node --test scripts/tests/carousel-gl.test.cjs
 
+      - name: Test the check of the Gallery runtime test results
+        shell: pwsh
+        run: ./scripts/tests/Assert-GalleryRuntimeTests.test.ps1
+
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
@@ -203,8 +207,8 @@ jobs:
           if-no-files-found: warn
 
   # Early testing of the .NET 11 SDK: it builds the existing net10.0 desktop targets and runs the Skia runtime tests,
-  # as Flowery.WinUI's CI does with its own heads. The repository stays on .NET 10 (global.json); only this job selects
-  # the .NET 11 SDK. It is not a required check, so a failure shows what breaks without blocking a merge.
+  # as Flowery.WinUI's CI does with its own heads. The repository stays on .NET 10 (global.json); only the .NET 11 jobs
+  # select the .NET 11 SDK. It is not a required check, so a failure shows what breaks without blocking a merge.
   build-gallery-net11:
     runs-on: ubuntu-24.04
     timeout-minutes: 30

@@ -32,7 +32,7 @@
     Size of the desktop (default: 1600x1000).
 
 .PARAMETER Culture
-    Culture of the app, such as de-DE, passed as LANG (default: the culture of Windows; English without one). The
+    Culture of the app, such as de-DE, passed as LANG (default: the culture of the system; English without one). The
     desktop stays English, as the image has no locales.
 
 .PARAMETER Port
@@ -150,7 +150,8 @@ if ($LASTEXITCODE -eq 0) {
     docker rm -f $container | Out-Null
 }
 
-# A new build leaves the image from before untagged (about 1 GB); it stays while a container of Flowery.NET uses it.
+# A new build leaves the image from before untagged (about 1 GB). A container of Flowery.NET that still uses it keeps it;
+# then it stays until docker image prune.
 if ($oldImageId) {
     docker image rm $oldImageId *> $null
 }

@@ -94,8 +94,18 @@ public sealed partial class SchedulerExamples : ScrollableExamplePage, ICollapsi
     public bool IsIntroVisible
     {
         get => IntroPanel.Visibility == Visibility.Visible;
-        set => IntroPanel.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+        set
+        {
+            if (IsIntroVisible == value)
+                return;
+            IntroPanel.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+            IntroVisibilityChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
+
+    public bool FoldsIntro { get; set; }
+
+    public event EventHandler? IntroVisibilityChanged;
 
     // Android drops a margin written inside its layout pass, which raises SizeChanged; write it after the pass.
     private void OnPageSizeChanged(object sender, SizeChangedEventArgs e)

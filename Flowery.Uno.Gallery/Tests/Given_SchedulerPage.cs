@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using static Flowery.Uno.Gallery.Tests.GalleryTestHost;
@@ -73,6 +74,14 @@ public class Given_SchedulerPage
         });
 
     [TestMethod]
+    public Task When_NoTitleBarFoldsTheIntro_TheEditorLeavesItOpen() =>
+        WithPageAsync(static () => new SchedulerExamples { Width = 1000, Height = 720 }, static async page =>
+        {
+            await OpenNewAsync(page);
+            Assert.AreEqual(Visibility.Visible, ((FrameworkElement)page.FindName("IntroPanel")).Visibility);
+        });
+
+    [TestMethod]
     public async Task When_ThePageExplainsTouch_ItShowsTheTouchHelp()
     {
         await WithPageAsync(static () => new SchedulerExamples(touchHelp: true) { Width = 1000, Height = 720 }, static page =>
@@ -124,6 +133,13 @@ public class Given_SchedulerPage
             Assert.AreEqual(Visibility.Visible, intro.Visibility);
             view.ToggleCategoryIntro(bar);
             Assert.AreEqual(Visibility.Collapsed, intro.Visibility);
+
+            // The editor folds a shown intro to get the height, and the arrow of the bar follows.
+            view.ToggleCategoryIntro(bar);
+            Assert.AreEqual(180d, ((RotateTransform)((UIElement)view.FindName("CategoryIntroToggle")).RenderTransform).Angle);
+            await OpenNewAsync((SchedulerExamples)VisiblePage(view));
+            Assert.AreEqual(Visibility.Collapsed, intro.Visibility);
+            Assert.AreEqual(0d, ((RotateTransform)((UIElement)view.FindName("CategoryIntroToggle")).RenderTransform).Angle);
 
             // A page without an intro shows the header again; a new scheduler page starts with its intro folded.
             await NavigateAsync(view, "Sidebar_Actions");

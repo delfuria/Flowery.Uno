@@ -50,10 +50,17 @@
                                        Foreground="{ThemeResource DaisyBaseContentBrush}"
                                        daisy:FlowerySizeManager.ResponsiveFont="SectionHeader" />
                             <daisy:DaisyInput x:Name="SubjectInput" Label="{Binding [Scheduler_Subject]}" />
-                            <daisy:DaisyInput x:Name="StartInput" Label="{Binding [Scheduler_Start]}" />
-                            <daisy:DaisySelect x:Name="StartTimeInput" AutomationProperties.Name="{Binding [Scheduler_StartTime]}" />
-                            <daisy:DaisyInput x:Name="EndInput" Label="{Binding [Scheduler_End]}" />
-                            <daisy:DaisySelect x:Name="EndTimeInput" AutomationProperties.Name="{Binding [Scheduler_EndTime]}" />
+                            <!-- Date and time share a row; the time sits level with the date field below its label. -->
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <daisy:DaisyInput x:Name="StartInput" Label="{Binding [Scheduler_Start]}" />
+                                <daisy:DaisySelect x:Name="StartTimeInput" Grid.Column="1" VerticalAlignment="Bottom"
+                                                   AutomationProperties.Name="{Binding [Scheduler_StartTime]}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <daisy:DaisyInput x:Name="EndInput" Label="{Binding [Scheduler_End]}" />
+                                <daisy:DaisySelect x:Name="EndTimeInput" Grid.Column="1" VerticalAlignment="Bottom"
+                                                   AutomationProperties.Name="{Binding [Scheduler_EndTime]}" />
+                            </Grid>
                             <daisy:DaisySelect x:Name="SpanModeInput" AutomationProperties.Name="{Binding [Scheduler_SpanMode]}" />
                             <TextBlock Text="{Binding [Scheduler_SpanHelp]}" TextWrapping="Wrap"
                                        Foreground="{ThemeResource DaisyBaseContentMutedBrush}"

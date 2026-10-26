@@ -635,9 +635,25 @@ namespace Flowery.Uno.Gallery
             var intro = _collapsesIntros ? newContent as ICollapsibleIntroExample : null;
             if (contentChanged && intro != null)
                 intro.IsIntroVisible = false;
-            _collapsibleIntro = intro;
+            if (!ReferenceEquals(intro, _collapsibleIntro))
+            {
+                if (_collapsibleIntro != null)
+                {
+                    _collapsibleIntro.FoldsIntro = false;
+                    _collapsibleIntro.IntroVisibilityChanged -= OnIntroVisibilityChanged;
+                }
+                if (intro != null)
+                {
+                    intro.FoldsIntro = true;
+                    intro.IntroVisibilityChanged += OnIntroVisibilityChanged;
+                }
+                _collapsibleIntro = intro;
+            }
             UpdateCollapsibleIntro();
         }
+
+        // The page folds its intro itself, such as for its editor; the arrow of the title bar follows.
+        private void OnIntroVisibilityChanged(object? sender, EventArgs e) => UpdateCollapsibleIntro();
 
         private static bool IsPhonePlatform => OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
 
@@ -681,7 +697,6 @@ namespace Flowery.Uno.Gallery
             if (_collapsibleIntro is not { } intro || IsInsideButton(source))
                 return;
             intro.IsIntroVisible = !intro.IsIntroVisible;
-            UpdateCollapsibleIntro();
         }
 
         private static bool IsInsideButton(DependencyObject? element)

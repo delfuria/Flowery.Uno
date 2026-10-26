@@ -4,6 +4,7 @@
 $ErrorActionPreference = 'Stop'
 
 $assertScript = Join-Path $PSScriptRoot '../ci/Assert-GalleryRuntimeTests.ps1'
+# Mirrors $requiredTests in scripts/ci/Assert-GalleryRuntimeTests.ps1; update both.
 $requiredTests = @(
     'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
     'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
@@ -12,7 +13,8 @@ $requiredTests = @(
     'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
 )
 
-# Writes a result file in the format of RuntimeTestRunner: required tests with the given outcome, plus other tests.
+# Writes a result file with the attributes of RuntimeTestRunner's format (without its messages): required tests with the
+# given outcome, plus other tests.
 function New-Result {
     param([string]$Path, [string]$RequiredOutcome = 'Passed', [string[]]$Skip = @(), [hashtable]$Others = @{ 'Other.Test' = 'Passed' })
 

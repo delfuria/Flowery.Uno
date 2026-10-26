@@ -21,10 +21,8 @@ websockify --web /usr/share/novnc 6080 localhost:5901 >/tmp/novnc.log 2>&1 &
 if [ -x "$APP_PATH" ]; then
     # Give the desktop a moment, then start the app; its output goes to a log for checks.
     (sleep 3 && "$APP_PATH" >/tmp/app.log 2>&1) &
-else
-    echo "No app at $APP_PATH: the desktop runs without it." >&2
 fi
 
-echo "Desktop ready: noVNC on container port 6080, VNC on 5901"
-# Keep the container running; the VNC log shows what happens on the desktop.
+echo "Desktop ready: http://localhost:6080/vnc.html?autoconnect=true&resize=scale"
+# Keep the container alive as long as the VNC server runs.
 exec tail -F "$HOME/.vnc/"*.log

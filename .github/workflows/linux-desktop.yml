@@ -1,9 +1,9 @@
 name: Linux Desktop
 
-# Runs the Desktop (Skia) Gallery on the XFCE desktop of docker/linux-desktop, the image that
-# scripts/run-linux-desktop.ps1 uses locally, and checks that it starts, opens a page and keeps
-# running without a crash log. Screenshots and the logs are uploaded as an artifact. The image
-# is built on the runner and pushed nowhere.
+# Starts the Desktop (Skia) Gallery on the XFCE desktop of docker/linux-desktop with
+# scripts/run-linux-desktop.ps1, as locally, opens the Scheduler page and checks that the Gallery
+# keeps running without a crash log or an exception in its output. Screenshots and the logs are
+# uploaded as an artifact. The image is built on the runner and pushed nowhere.
 
 on:
   workflow_dispatch:
@@ -13,6 +13,7 @@ on:
     paths:
       - .github/workflows/linux-desktop.yml
       - docker/linux-desktop/**
+      - scripts/run-linux-desktop.ps1
       - Flowery.Uno/**
       - Flowery.Uno.Kanban/**
       - Flowery.Uno.Gallery/**
@@ -49,25 +50,14 @@ jobs:
         with:
           global-json-file: global.json
 
-      # The layout of the Linux packages (scripts/gallery/packaging/linux/build-deb.sh); only the desktop target, as a
-      # runtime identifier would otherwise reach the Android and WebAssembly targets as well.
-      - name: Publish the Gallery for linux-x64
-        run: |
-          dotnet publish Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj \
-            -c Release -f net10.0-desktop -p:TargetFrameworks=net10.0-desktop \
-            -r linux-x64 --self-contained -p:UseMonoRuntime=false \
-            -p:DebugType=None -p:DebugSymbols=false -o bin/linux-desktop
+      # The script that is run locally: it publishes the Gallery for the architecture of the Docker host, builds the
+      # image (missing on the runner) and starts the desktop with the Gallery.
+      - name: Start the desktop with scripts/run-linux-desktop.ps1
+        shell: pwsh
+        run: ./scripts/run-linux-desktop.ps1 -NoBrowser -Culture en-US
 
-      - name: Build the desktop image
-        run: docker build -t flowery-linux-desktop docker/linux-desktop
-
-      - name: Start the desktop with the Gallery
+      - name: Wait for the Gallery window
         run: |
-          docker run -d --name flowery-uno-desktop \
-            -e APP_PATH=/opt/app/Flowery.Uno.Gallery \
-            -v "$PWD/bin/linux-desktop:/opt/app:ro" --shm-size=512m \
-            flowery-linux-desktop
-          # The Gallery window appears once the desktop and the app have started.
           for attempt in $(seq 1 60); do
             if docker exec flowery-uno-desktop xdotool search --name 'Flowery.Uno Gallery' >/dev/null 2>&1; then
               echo "Gallery window after ${attempt} s"
@@ -82,31 +72,30 @@ jobs:
         run: |
           mkdir -p artifacts
           shot() { docker exec flowery-uno-desktop sh -c 'xwd -root -silent | xwdtopnm 2>/dev/null | pnmtopng' > "artifacts/$1.png"; }
-          docker exec flowery-uno-desktop sh -c '
-            W=$(xdotool search --name "Flowery.Uno Gallery" | head -1)
-            xdotool windowactivate "$W" windowmove "$W" 0 30 windowsize "$W" 1600 960'
-          sleep 3
           shot home
-          # The sidebar search finds the Scheduler, the only result below the Home section; the Gallery records the
-          # chosen page in sidebar.state. A slow runner may filter the list after the first click, so the click
-          # repeats until that file names the Scheduler. Positions are on the screen, with the window at 0,30 as above.
-          docker exec flowery-uno-desktop xdotool mousemove 110 82 click 1 sleep 0.5 type --delay 40 Scheduler
+          # The Gallery opens the page named in sidebar.state at its start and then writes the file again from its own
+          # state, which drops the probe line. So the file reads exactly last:scheduler only once the page was opened.
+          # The pattern is anchored, as the command line of this shell contains the path as well.
+          docker exec flowery-uno-desktop sh -c '
+            pkill -f "^/opt/app/Flowery.Uno.Gallery"
+            while pgrep -f "^/opt/app/Flowery.Uno.Gallery" >/dev/null; do sleep 0.5; done
+            printf "last:scheduler\ncollapsed:ci-probe\n" > "$1/sidebar.state"' sh "$STATE_DIR"
+          docker exec -d flowery-uno-desktop sh -c 'exec /opt/app/Flowery.Uno.Gallery >/tmp/app.log 2>&1'
           opened=
-          for attempt in $(seq 1 10); do
+          for attempt in $(seq 1 60); do
             sleep 1
-            docker exec flowery-uno-desktop xdotool mousemove 50 482 click 1
-            sleep 1
-            if docker exec flowery-uno-desktop grep -qx 'last:scheduler' "$STATE_DIR/sidebar.state"; then
+            if [ "$(docker exec flowery-uno-desktop cat "$STATE_DIR/sidebar.state")" = "last:scheduler" ]; then
+              echo "Scheduler page after ${attempt} s"
               opened=yes
               break
             fi
           done
+          sleep 3
           shot scheduler
           if [ -z "$opened" ]; then
             echo "::error::The Scheduler page did not open"
             exit 1
           fi
-          sleep 2
           if ! docker exec flowery-uno-desktop pgrep -f /opt/app/Flowery.Uno.Gallery >/dev/null; then
             echo "::error::The Gallery is no longer running"
             exit 1

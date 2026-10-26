@@ -5,8 +5,9 @@
 .DESCRIPTION
     Publishes the Desktop (Skia) Gallery self-contained for Linux to bin/linux-desktop, for the architecture of the
     Docker host (linux-x64 or linux-arm64), builds the image flowery-linux-desktop from docker/linux-desktop when it is
-    missing or older than 7 days, then from the current base image and packages for Debian's security updates
-    (Flowery.NET builds an image with the same packages and tag, so an existing one is reused), and (re)starts
+    missing or older than 7 days, then from the current base image and packages for Debian's security updates, and
+    removes the image from before (docker/linux-desktop is the same as in Flowery.NET, which builds the image under the
+    same tag, so an existing one is reused). When a rebuild only for the age fails, it keeps the old image. It (re)starts
     the container flowery-uno-desktop with the published app mounted read-only. The desktop is served by noVNC on
     http://localhost:6081 and by VNC on localhost:5902, both on 127.0.0.1 only, so the Flowery.NET desktop on 6080 and
     5901 can run beside it. The Gallery starts on the desktop; its output is in /tmp/app.log, its crash log in
@@ -31,7 +32,8 @@
     Size of the desktop (default: 1600x1000).
 
 .PARAMETER Culture
-    Culture of the desktop and the app, such as de-DE (default: the culture of Windows; English without one).
+    Culture of the app, such as de-DE, passed as LANG (default: the culture of Windows; English without one). The
+    desktop stays English, as the image has no locales.
 
 .PARAMETER Port
     Local port of noVNC (default: 6081).
@@ -111,8 +113,9 @@ if (-not (Test-Path (Join-Path $appDir $appName))) {
 # Debian's security updates reach the image only when it is built anew, so an image older than a week is built again
 # from the current base image and packages; -RebuildImage does that at once, for example for a CVE.
 $maxImageAgeDays = 7
-$imageCreated = docker image inspect -f '{{.Created}}' $image 2>$null
-$buildReason = if ($LASTEXITCODE -ne 0) {
+$oldImage = docker image inspect -f '{{.Id}} {{.Created}}' $image 2>$null
+$oldImageId, $imageCreated = if ($LASTEXITCODE -eq 0) { $oldImage -split ' ', 2 } else { $null, $null }
+$buildReason = if (-not $oldImageId) {
     "missing"
 }
 elseif ($RebuildImage) {
@@ -129,14 +132,27 @@ if ($buildReason) {
     Write-Host "Building image: $image ($buildReason)" -ForegroundColor Cyan
     docker build --pull --no-cache -t $image (Join-Path $repoRoot "docker/linux-desktop")
     if ($LASTEXITCODE -ne 0) {
-        exit $LASTEXITCODE
+        if ($buildReason -in "missing", "requested") {
+            exit $LASTEXITCODE
+        }
+        # Offline or at a Docker Hub rate limit the image from before still runs; the next start tries again.
+        Write-Host "WARNING: the image could not be built again; using the one from before." -ForegroundColor Yellow
+        $oldImageId = $null
     }
+}
+else {
+    $oldImageId = $null
 }
 
 # Only this script's own container is replaced.
 docker container inspect $container *> $null
 if ($LASTEXITCODE -eq 0) {
     docker rm -f $container | Out-Null
+}
+
+# A new build leaves the image from before untagged (about 1 GB); it stays while a container of Flowery.NET uses it.
+if ($oldImageId) {
+    docker image rm $oldImageId *> $null
 }
 
 # .NET on Linux reads its culture from LANG, such as de_DE.UTF-8.

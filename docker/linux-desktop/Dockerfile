@@ -1,20 +1,17 @@
 # syntax=docker/dockerfile:1.7
 
-# A Linux desktop (XFCE) for running the Flowery.Uno Gallery (the Skia desktop head, on X11) and other desktop apps,
-# viewed in a browser through noVNC. It installs the same packages as Flowery.NET's docker/linux-desktop and keeps its
-# tag, so one local image serves both repositories; scripts/run-linux-desktop.ps1 sets APP_PATH and LANG itself.
+# A Linux desktop (XFCE) for running the Flowery.NET Gallery and other Avalonia apps, viewed in a browser through noVNC.
 #
-# The image holds no .NET SDK or app: publish the app self-contained for Linux and mount it at /opt/app
+# The image holds no .NET SDK or app: publish the app self-contained for linux-x64 and mount it at /opt/app
 # (scripts/run-linux-desktop.ps1 does both). Build it with:
 #   docker build -t flowery-linux-desktop docker/linux-desktop
 FROM debian:bookworm-slim
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-# XFCE as the desktop, TigerVNC as its X server, noVNC to show it in a browser. The app needs X11 with its input and
-# cursor extensions, fontconfig with fonts (an emoji font too, the Gallery shows emoji), and ICU for globalization; Mesa
-# gives OpenGL without a GPU. xwd with netpbm takes PNG screenshots and xdotool drives input, for checks from outside the
-# container.
+# XFCE as the desktop, TigerVNC as its X server, noVNC to show it in a browser. Avalonia needs X11 with its input and
+# cursor extensions, fontconfig with fonts (an emoji font too, the Gallery shows emoji), and ICU for globalization; Mesa gives OpenGL without a GPU. xwd with netpbm
+# takes PNG screenshots and xdotool drives input, for checks from outside the container.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         xfce4 xfce4-terminal dbus-x11 \
@@ -41,7 +38,7 @@ WORKDIR /home/flowery
 # English unless the run passes another culture as LANG (scripts/run-linux-desktop.ps1 passes the one of Windows).
 ENV DISPLAY=:1 \
     LANG=en_US.UTF-8 \
-    APP_PATH=/opt/app/Flowery.Uno.Gallery
+    APP_PATH=/opt/app/Flowery.NET.Gallery.Desktop
 
 # 6080: noVNC in a browser; 5901: VNC for a native viewer.
 EXPOSE 6080 5901

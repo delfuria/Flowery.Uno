@@ -296,7 +296,7 @@ pwsh ./scripts/run-android.ps1 -DeviceName "emulator-5554" -Rebuild
 
 ### run-linux-desktop.ps1
 
-Runs the Desktop (Skia) Gallery on a Linux desktop (XFCE) in Docker, shown in the browser through noVNC. It publishes the Gallery self-contained to `bin/linux-desktop` for the architecture of the Docker host (`linux-x64` or `linux-arm64`), in the layout of the Linux packages and only for the `net10.0-desktop` target, so the runtime identifier does not reach the Android and WebAssembly targets. It builds the image `flowery-linux-desktop` from `docker/linux-desktop` when it is missing or older than 7 days, then without the Docker build cache from the current base image and packages, so Debian's security updates are at most a week old (about 1 GB, no .NET SDK inside; Flowery.NET builds an image with the same packages and tag, so an existing one is reused, and `-RebuildImage` replaces it for both), and starts the container `flowery-uno-desktop` with the published app mounted read-only. Requires Docker Desktop with Linux containers.
+Runs the Desktop (Skia) Gallery on a Linux desktop (XFCE) in Docker, shown in the browser through noVNC. It publishes the Gallery self-contained to `bin/linux-desktop` for the architecture of the Docker host (`linux-x64` or `linux-arm64`), in the layout of the Linux packages and only for the `net10.0-desktop` target, so the runtime identifier does not reach the Android and WebAssembly targets. It builds the image `flowery-linux-desktop` from `docker/linux-desktop` when it is missing or older than 7 days, then without the Docker build cache from the current base image and packages, so Debian's security updates are at most a week old, and removes the image from before; when a rebuild only for the age fails, for example offline, it keeps the old one (about 1 GB, no .NET SDK inside; `Dockerfile` and `start-desktop.sh` are the same as in Flowery.NET, which builds the image under the same tag, so an existing one is reused, and `-RebuildImage` replaces it for both), and starts the container `flowery-uno-desktop` with the published app mounted read-only. Requires Docker Desktop with Linux containers.
 
 ```powershell
 # Publish, start the desktop and open http://localhost:6081 in the browser
@@ -315,7 +315,7 @@ pwsh ./scripts/run-linux-desktop.ps1 -RebuildImage
 | `-SkipPublish` | switch | false | Reuse the app in `bin/linux-desktop` |
 | `-RebuildImage` | switch | false | Build the image again now, without the build cache and from the current packages |
 | `-Geometry` | string | `1600x1000` | Size of the desktop |
-| `-Culture` | string | culture of Windows | Culture of the desktop and the app, passed as `LANG`; English without one |
+| `-Culture` | string | culture of Windows | Culture of the app, passed as `LANG`; English without one. The desktop stays English, as the image has no locales |
 | `-Port` | int | `6081` | Local port of noVNC |
 | `-VncPort` | int | `5902` | Local port of VNC (no password) |
 | `-NoBrowser` | switch | false | Do not open the browser |
@@ -336,7 +336,7 @@ docker exec flowery-uno-desktop cat /home/flowery/.local/share/Flowery.Uno.Galle
 docker rm -f flowery-uno-desktop
 ```
 
-On pull requests that touch the library or the Gallery, the `Linux Desktop` workflow (`.github/workflows/linux-desktop.yml`) builds the same image on the runner, starts the Gallery, opens the Scheduler page through the sidebar search until `sidebar.state` names it, and fails when the page does not open, the Gallery stops, or it writes a crash log. Its artifact holds the screenshots and the logs.
+On pull requests that touch the library or the Gallery, the `Linux Desktop` workflow (`.github/workflows/linux-desktop.yml`) runs this script on the runner, which builds the image there. It then starts the Gallery again with `last:scheduler` and a probe line in `sidebar.state`; the Gallery opens that page and writes the file again without the probe line. The workflow fails when the page does not open, the Gallery stops, it writes a crash log, or its output shows an exception. Its artifact holds the screenshots and the logs.
 
 ---
 

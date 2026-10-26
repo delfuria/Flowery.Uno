@@ -218,6 +218,8 @@ namespace Flowery.Controls
         /// <summary>
         /// Uno leaves the keyboard to Android unless the activity's soft input mode is adjustNothing. With adjustPan, or
         /// no mode at all, Android may move the whole window, and the modal must not pad for the keyboard a second time.
+        /// adjustResize counts as not panned: where the window really shrinks, the modal ends above the keyboard and
+        /// its insets come out as zero.
         /// </summary>
         private static bool IsPannedByAndroid()
         {

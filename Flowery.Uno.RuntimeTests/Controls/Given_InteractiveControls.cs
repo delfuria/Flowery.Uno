@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Flowery.Controls;
 using Microsoft.UI.Xaml;
@@ -251,14 +252,21 @@ namespace Flowery.Uno.RuntimeTests.Controls
             // dialog cannot grow under the keyboard.
             var (dialog, header, footer) = await OpenEditorDialogAsync(isResizable: true);
             var modalBounds = GetWindowBounds(dialog);
-            var keyboardTop = modalBounds.Top + modalBounds.Height / 2;
+            // The keyboard leaves a part a little shorter than the dialog, which therefore fills it, as on a phone. That
+            // part has to leave room above the dialog's minimum height, or the resize does nothing and proves nothing.
+            var areaHeight = Math.Min(modalBounds.Height * 3 / 4, dialog.DialogHeight - 20);
+            if (areaHeight < FloweryDialogBase.AbsoluteMinHeight + 100)
+                Assert.Inconclusive($"The test window is too small to resize the dialog above the keyboard: {modalBounds}");
+            var keyboardTop = modalBounds.Top + areaHeight;
             dialog.ApplyInputPaneOcclusion(new Rect(modalBounds.Left, keyboardTop, modalBounds.Width, modalBounds.Height), Rect.Empty);
             await RuntimeTestHelpers.CompleteLayoutAsync(dialog);
             var top = GetWindowBounds(header).Top;
+            var bottom = GetWindowBounds(footer).Bottom;
 
             dialog.BeginResize(new Point(0, 0));
             dialog.ResizeTo(new Point(0, -100));
             await RuntimeTestHelpers.CompleteLayoutAsync(dialog);
+            Assert.AreEqual(bottom - 100, GetWindowBounds(footer).Bottom, 1.0, "The dialog did not get shorter.");
             Assert.AreEqual(top, GetWindowBounds(header).Top, 1.0, "Making the dialog shorter moved its top edge.");
 
             dialog.ResizeTo(new Point(0, 2000));

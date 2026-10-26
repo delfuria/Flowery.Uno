@@ -237,6 +237,82 @@ jobs:
           path: ${{ runner.temp }}/flowery-runtime-linux.xml
           if-no-files-found: warn
 
+  # Early testing of the .NET 11 SDK: it builds the existing net10.0 desktop targets and runs the Skia runtime tests,
+  # as Flowery.WinUI's CI does with its own heads. The repository stays on .NET 10 (global.json); only this job selects
+  # the .NET 11 SDK. It is not a required check, so a failure shows what breaks without blocking a merge.
+  build-gallery-net11:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      NET11_SDK: 11.0.100-rc.2.26504.105
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.NET11_SDK }}
+
+      # global.json pins the .NET 10 SDK and rules out prereleases; here it names the .NET 11 SDK and keeps Uno.Sdk.
+      - name: Select the .NET 11 SDK
+        run: |
+          jq --arg version "$NET11_SDK" '.sdk.version = $version | .sdk.allowPrerelease = true' global.json > global.json.tmp
+          mv global.json.tmp global.json
+          dotnet --version
+
+      - name: Install X11 runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth dbus-x11 libfontconfig1 libgl1 libegl1 libx11-dev libxi-dev libxrandr2 fonts-dejavu-core
+
+      # Only the desktop target, so the Android and WebAssembly targets need no .NET 11 workloads.
+      - name: Build Gallery Linux Desktop with the .NET 11 SDK
+        run: dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-desktop -p:TargetFrameworks=net10.0-desktop
+
+      - name: Test Gallery rendering with the .NET 11 SDK
+        timeout-minutes: 10
+        shell: pwsh
+        env:
+          LIBGL_ALWAYS_SOFTWARE: 'true'
+        run: |
+          $result = Join-Path $env:RUNNER_TEMP 'flowery-runtime-net11.xml'
+          $runArgs = @('-a', '--server-args=-screen 0 1280x1024x24', 'dbus-run-session', '--', 'dotnet', 'run',
+            '--project', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj', '-c', 'Release', '-f', 'net10.0-desktop',
+            '-p:TargetFrameworks=net10.0-desktop', '--no-build', '--', '--runtime-tests', $result)
+          xvfb-run @runArgs
+          $exitCode = $LASTEXITCODE
+          # Name failed and inconclusive tests before stopping, so the log shows what breaks with .NET 11.
+          if (Test-Path -LiteralPath $result) {
+            [xml]$report = Get-Content -LiteralPath $result -Raw
+            foreach ($test in @($report.tests.test | Where-Object outcome -NE 'Passed')) {
+              Write-Host ('{0} {1}' -f $test.outcome, $test.name)
+              if ($test.message) { Write-Host $test.message }
+            }
+          }
+          if ($exitCode -ne 0) { exit $exitCode }
+          [xml]$report = Get-Content -LiteralPath $result -Raw
+          if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed with the .NET 11 SDK.' }
+          if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
+          $requiredTests = @(
+            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
+            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
+            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
+            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect',
+            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
+          )
+          foreach ($name in $requiredTests) {
+            $test = @($report.tests.test | Where-Object name -EQ $name)
+            if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
+          }
+          Write-Host ('.NET 11 SDK: {0} runtime tests passed' -f $report.tests.passed)
+
+      - name: Upload .NET 11 runtime test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gallery-runtime-net11
+          path: ${{ runner.temp }}/flowery-runtime-net11.xml
+          if-no-files-found: warn
+
   build-gallery-macos:
     runs-on: macos-15
     timeout-minutes: 30

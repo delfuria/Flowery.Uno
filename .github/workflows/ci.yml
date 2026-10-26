@@ -21,6 +21,37 @@ env:
   NET11_SDK: 11.0.100-rc.2.26504.105
 
 jobs:
+  # Decides whether the build jobs run: a pull request that only changes Markdown files, docs/ or llms-static/ cannot
+  # affect a build. The build jobs are skipped then, and a skipped job counts as passed for the required checks;
+  # paths-ignore on the trigger would leave those checks without a status. Pushes to main always build.
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      code: ${{ steps.files.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Find changes that need a build
+        id: files
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only "origin/$BASE_REF...HEAD")
+          printf 'Changed files:\n%s\n' "$changed"
+          if printf '%s\n' "$changed" | grep -qvE '(\.md$|^docs/|^llms-static/)'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Only documentation changed; the build jobs are skipped."
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
   docs:
     runs-on: ubuntu-24.04
     steps:
@@ -40,9 +71,18 @@ jobs:
           test -s docs/style.css
 
   build-library:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+
+      # NuGet packages from the last run on main; there are no lock files, so the key hashes the package and project files.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - name: Test Carousel GL resources and lifecycle
         run: node --test scripts/tests/carousel-gl.test.cjs
@@ -63,9 +103,18 @@ jobs:
         run: dotnet build Flowery.Uno/Flowery.Uno.csproj -c Release -p:CheckEolWorkloads=false
 
   build-gallery:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: windows-2025-vs2026
     steps:
       - uses: actions/checkout@v7
+
+      # NuGet packages from the last run on main; there are no lock files, so the key hashes the package and project files.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -76,13 +125,6 @@ jobs:
 
       - name: Install Android workload
         run: dotnet workload install android
-
-      - name: Build Gallery WASM with Skia 4
-        shell: pwsh
-        run: |
-          $buildArgs = @('build', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj', '-c', 'Release', '-f', 'net10.0-browserwasm')
-          dotnet @buildArgs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Restore (Windows only)
         run: |
@@ -120,11 +162,46 @@ jobs:
           path: ${{ runner.temp }}/flowery-runtime-*.xml
           if-no-files-found: warn
 
-  test-gallery-drawer:
+  # The WebAssembly Gallery in Release, beside build-gallery instead of before its Windows build.
+  build-gallery-wasm:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+
+      # NuGet packages from the last run on main; there are no lock files, so the key hashes the package and project files.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Install required workloads
+        run: dotnet workload install android wasm-tools
+
+      - name: Build Gallery WASM with Skia 4
+        run: dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-browserwasm
+
+  test-gallery-drawer:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      # NuGet packages from the last run on main; there are no lock files, so the key hashes the package and project files.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -165,10 +242,19 @@ jobs:
           if-no-files-found: warn
 
   build-gallery-linux:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+
+      # NuGet packages from the last run on main; there are no lock files, so the key hashes the package and project files.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -210,10 +296,19 @@ jobs:
   # as Flowery.WinUI's CI does with its own heads. The repository stays on .NET 10 (global.json); only the .NET 11 jobs
   # select the .NET 11 SDK. It is not a required check, so a failure shows what breaks without blocking a merge.
   build-gallery-net11:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+
+      # NuGet packages from the last run on main; there are no lock files, so the key hashes the package and project files.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -258,10 +353,19 @@ jobs:
 
   # The Windows head with the .NET 11 SDK, as build-gallery builds it, with its runtime tests; not a required check.
   build-gallery-windows-net11:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: windows-2025-vs2026
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
+
+      # NuGet packages from the last run on main; there are no lock files, so the key hashes the package and project files.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -310,10 +414,19 @@ jobs:
   # WebAssembly and Android with the .NET 11 SDK and its workloads, still for the net10.0 targets; not a required
   # check. Both steps run even when the first fails, so the log shows the state of each head.
   build-gallery-wasm-android-net11:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
+
+      # NuGet packages from the last run on main; there are no lock files, so the key hashes the package and project files.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -347,10 +460,19 @@ jobs:
             -p:InstallAndroidDependencies=true -p:AcceptAndroidSDKLicenses=true
 
   build-gallery-macos:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: macos-15
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+
+      # NuGet packages from the last run on main; there are no lock files, so the key hashes the package and project files.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -382,10 +504,19 @@ jobs:
           if-no-files-found: warn
 
   build-gallery-android:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+
+      # NuGet packages from the last run on main; there are no lock files, so the key hashes the package and project files.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -406,14 +537,22 @@ jobs:
             -p:InstallAndroidDependencies=true -p:AcceptAndroidSDKLicenses=true
 
   nuget-audit:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [windows-2025-vs2026, macos-15]
-        configuration: [Debug, Release]
     steps:
       - uses: actions/checkout@v7
+
+      # NuGet packages from the last run on main; there are no lock files, so the key hashes the package and project files.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
       - name: Test audit output confidentiality
         shell: pwsh
         run: ./scripts/tests/audit-nuget.test.ps1
@@ -427,9 +566,14 @@ jobs:
           if ($IsMacOS) { $workloads += 'ios' }
           dotnet @workloads
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      # Debug adds Uno.WinUI.DevServer to the Gallery, so both configurations are audited, one after the other.
       - name: Audit all projects including transitive packages
         shell: pwsh
-        run: ./scripts/audit-nuget.ps1 -Configuration ${{ matrix.configuration }}
+        run: |
+          foreach ($configuration in 'Debug', 'Release') {
+            ./scripts/audit-nuget.ps1 -Configuration $configuration
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
   dependency-submission:
     # GitHub only updates the repository graph from its default branch.

@@ -68,7 +68,7 @@ namespace Flowery.Uno.Gallery
         private bool _isWaitingForPaneClosure;
 #endif
 
-        public MainView() : this(IsPhonePlatform)
+        public MainView() : this(IsMobilePlatform)
         {
         }
 
@@ -99,7 +99,7 @@ namespace Flowery.Uno.Gallery
 
             SidebarPaneBorder?.RegisterPropertyChangedCallback(Border.PaddingProperty, OnSidebarPanePaddingChanged);
 
-            _isMobilePlatform = IsPhonePlatform;
+            _isMobilePlatform = IsMobilePlatform;
 
             // Kept alive by its Loaded/Unloaded subscriptions on this view
             if (_isMobilePlatform && SidebarPaneBorder != null && HeaderBorder != null && MainContentHost != null)
@@ -655,14 +655,19 @@ namespace Flowery.Uno.Gallery
         // The page folds its intro itself, such as for its editor; the arrow of the title bar follows.
         private void OnIntroVisibilityChanged(object? sender, EventArgs e) => UpdateCollapsibleIntro();
 
-        private static bool IsPhonePlatform => OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
+        // Phones and tablets.
+        private static bool IsMobilePlatform => OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
 
         private void UpdateCollapsibleIntro()
         {
             var intro = _collapsibleIntro;
-            // A header that collapsed on scroll in landscape would leave the title bar small; this page keeps it at full size.
+            // A header that collapsed on scroll in landscape would leave the title bar small; this page keeps it at the size
+            // of the app.
             if (intro != null && _isHeaderCollapsed)
+            {
                 SetHeaderCollapsed(false);
+                ApplySizeToGalleryElements(FlowerySizeManager.CurrentSize);
+            }
             if (HeaderBorder?.Child is UIElement header)
             {
                 // The border stays, so the safe-area padding keeps the title bar below the status bar.

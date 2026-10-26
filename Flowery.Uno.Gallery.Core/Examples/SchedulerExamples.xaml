@@ -50,15 +50,16 @@
                                        Foreground="{ThemeResource DaisyBaseContentBrush}"
                                        daisy:FlowerySizeManager.ResponsiveFont="SectionHeader" />
                             <daisy:DaisyInput x:Name="SubjectInput" Label="{Binding [Scheduler_Subject]}" />
-                            <!-- Date and time share a row; the time sits level with the date field below its label. -->
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <!-- Date and time share a row; the time sits level with the date field below its label. Both rows
+                                 share the time column, so the date fields line up whatever time is chosen. -->
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="12">
                                 <daisy:DaisyInput x:Name="StartInput" Label="{Binding [Scheduler_Start]}" />
                                 <daisy:DaisySelect x:Name="StartTimeInput" Grid.Column="1" VerticalAlignment="Bottom"
+                                                   HorizontalAlignment="Stretch"
                                                    AutomationProperties.Name="{Binding [Scheduler_StartTime]}" />
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                <daisy:DaisyInput x:Name="EndInput" Label="{Binding [Scheduler_End]}" />
-                                <daisy:DaisySelect x:Name="EndTimeInput" Grid.Column="1" VerticalAlignment="Bottom"
+                                <daisy:DaisyInput x:Name="EndInput" Grid.Row="1" Label="{Binding [Scheduler_End]}" />
+                                <daisy:DaisySelect x:Name="EndTimeInput" Grid.Row="1" Grid.Column="1" VerticalAlignment="Bottom"
+                                                   HorizontalAlignment="Stretch"
                                                    AutomationProperties.Name="{Binding [Scheduler_EndTime]}" />
                             </Grid>
                             <daisy:DaisySelect x:Name="SpanModeInput" AutomationProperties.Name="{Binding [Scheduler_SpanMode]}" />

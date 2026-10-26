@@ -74,6 +74,21 @@ public class Given_SchedulerPage
         });
 
     [TestMethod]
+    public Task When_TheEditorOpens_DateAndTimeShareARow_AndTheDatesLineUp() =>
+        WithPageAsync(static () => new SchedulerExamples { Width = 1000, Height = 720 }, static async page =>
+        {
+            await OpenNewAsync(page);
+            foreach (var (date, time) in new[] { ("StartInput", "StartTimeInput"), ("EndInput", "EndTimeInput") })
+            {
+                var dateBounds = Bounds((FrameworkElement)page.FindName(date), page);
+                var timeBounds = Bounds((FrameworkElement)page.FindName(time), page);
+                Assert.IsTrue(timeBounds.Left >= dateBounds.Right, $"{time} at {timeBounds} beside {dateBounds}");
+                Assert.AreEqual(dateBounds.Bottom, timeBounds.Bottom, 1, $"{time} level with the date field");
+            }
+            Assert.AreEqual(((FrameworkElement)page.FindName("StartInput")).ActualWidth, ((FrameworkElement)page.FindName("EndInput")).ActualWidth, 0.5);
+        });
+
+    [TestMethod]
     public Task When_NoTitleBarFoldsTheIntro_TheEditorLeavesItOpen() =>
         WithPageAsync(static () => new SchedulerExamples { Width = 1000, Height = 720 }, static async page =>
         {
@@ -193,6 +208,5 @@ public class Given_SchedulerPage
         }
         return condition();
     }
-
 }
 #endif

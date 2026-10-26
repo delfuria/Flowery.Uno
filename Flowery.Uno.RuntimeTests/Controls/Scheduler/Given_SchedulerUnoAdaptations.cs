@@ -221,6 +221,22 @@ public class Given_SchedulerUnoAdaptations
     }
 
     [TestMethod]
+    public async Task When_AViewLoads_ItScrollsToTheStartOfTheWorkingDay()
+    {
+        // Day and Week start at 7:00, Timeline at 7:00 and Planner at the start of the work day, instead of midnight.
+        foreach (var view in new[] { SchedulerView.Day, SchedulerView.Week, SchedulerView.Planner, SchedulerView.Timeline })
+        {
+            using var scope = await CreateAsync(view);
+            var body = scope.Descendants<ScrollViewer>().Single();
+            var offset = view is SchedulerView.Day or SchedulerView.Week ? body.VerticalOffset : body.HorizontalOffset;
+            if (view is SchedulerView.Day or SchedulerView.Week)
+                Assert.AreEqual(7 * 60 * 0.8, offset, 1, view.ToString());
+            else
+                Assert.IsTrue(offset > 0, $"{view} at {offset}");
+        }
+    }
+
+    [TestMethod]
     public async Task When_AnAppointmentIsSelected_ItsFrameAndContentDoNotMove()
     {
         // Flowery.NET widens the frame border on selection; the overlay ring takes no layout space.

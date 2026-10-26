@@ -16,6 +16,10 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # The .NET 11 SDK of the early-testing jobs, as in Flowery.WinUI's CI; every other job and the release use global.json.
+  NET11_SDK: 11.0.100-rc.2.26504.105
+
 jobs:
   docs:
     runs-on: ubuntu-24.04
@@ -243,8 +247,6 @@ jobs:
   build-gallery-net11:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    env:
-      NET11_SDK: 11.0.100-rc.2.26504.105
     steps:
       - uses: actions/checkout@v7
 
@@ -312,6 +314,116 @@ jobs:
           name: gallery-runtime-net11
           path: ${{ runner.temp }}/flowery-runtime-net11.xml
           if-no-files-found: warn
+
+  # The Windows head with the .NET 11 SDK, as build-gallery builds it, with its runtime tests; not a required check.
+  build-gallery-windows-net11:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.NET11_SDK }}
+
+      # global.json pins the .NET 10 SDK and rules out prereleases; here it names the .NET 11 SDK and keeps Uno.Sdk.
+      - name: Select the .NET 11 SDK
+        shell: pwsh
+        run: |
+          $globalJson = Get-Content -LiteralPath global.json -Raw | ConvertFrom-Json
+          $globalJson.sdk.version = $env:NET11_SDK
+          $globalJson.sdk.allowPrerelease = $true
+          $globalJson | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath global.json -Encoding utf8
+          dotnet --version
+
+      - name: Restore (Windows only)
+        run: |
+          dotnet restore Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj `
+            -p:Configuration=Release `
+            -p:TargetFramework=net10.0-windows10.0.19041 `
+            -p:TargetFrameworks=net10.0-windows10.0.19041
+
+      - name: Build Gallery Windows Desktop with the .NET 11 SDK
+        run: |
+          dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj `
+            -c Release `
+            -f net10.0-windows10.0.19041 `
+            --no-restore
+
+      - name: Test Gallery rendering on Windows with the .NET 11 SDK
+        timeout-minutes: 10
+        shell: pwsh
+        run: |
+          $result = Join-Path $env:RUNNER_TEMP 'flowery-runtime-windows-net11.xml'
+          dotnet run --project Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-windows10.0.19041 --no-build -- --runtime-tests $result
+          $exitCode = $LASTEXITCODE
+          # Name failed and inconclusive tests before stopping, so the log shows what breaks with .NET 11.
+          if (Test-Path -LiteralPath $result) {
+            [xml]$report = Get-Content -LiteralPath $result -Raw
+            foreach ($test in @($report.tests.test | Where-Object outcome -NE 'Passed')) {
+              Write-Host ('{0} {1}' -f $test.outcome, $test.name)
+              if ($test.message) { Write-Host $test.message }
+            }
+          }
+          if ($exitCode -ne 0) { exit $exitCode }
+          [xml]$report = Get-Content -LiteralPath $result -Raw
+          if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed with the .NET 11 SDK.' }
+          if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
+          $requiredTests = @(
+            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
+            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
+            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
+            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect',
+            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
+          )
+          foreach ($name in $requiredTests) {
+            $test = @($report.tests.test | Where-Object name -EQ $name)
+            if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
+          }
+          Write-Host ('Windows with the .NET 11 SDK: {0} runtime tests passed' -f $report.tests.passed)
+
+      - name: Upload Windows .NET 11 runtime test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gallery-runtime-windows-net11
+          path: ${{ runner.temp }}/flowery-runtime-windows-net11.xml
+          if-no-files-found: warn
+
+  # WebAssembly and Android with the .NET 11 SDK and its workloads, still for the net10.0 targets; not a required
+  # check. Both steps run even when the first fails, so the log shows the state of each head.
+  build-gallery-wasm-android-net11:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.NET11_SDK }}
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # global.json pins the .NET 10 SDK and rules out prereleases; here it names the .NET 11 SDK and keeps Uno.Sdk.
+      - name: Select the .NET 11 SDK
+        run: |
+          jq --arg version "$NET11_SDK" '.sdk.version = $version | .sdk.allowPrerelease = true' global.json > global.json.tmp
+          mv global.json.tmp global.json
+          dotnet --version
+
+      - name: Install the .NET 11 workloads
+        run: dotnet workload install android wasm-tools
+
+      - name: Build Gallery WASM with the .NET 11 SDK
+        run: dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-browserwasm
+
+      - name: Build Gallery Android with the .NET 11 SDK
+        if: ${{ !cancelled() }}
+        run: |
+          dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-android36.0             -p:InstallAndroidDependencies=true -p:AcceptAndroidSDKLicenses=true
 
   build-gallery-macos:
     runs-on: macos-15

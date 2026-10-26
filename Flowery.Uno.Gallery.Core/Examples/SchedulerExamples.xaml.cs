@@ -4,7 +4,7 @@ using Flowery.Uno.Gallery.Localization;
 
 namespace Flowery.Uno.Gallery.Examples;
 
-public sealed partial class SchedulerExamples : ScrollableExamplePage
+public sealed partial class SchedulerExamples : ScrollableExamplePage, ICollapsibleIntroExample
 {
     private readonly List<AppointmentModel> _appointments = new();
     private readonly ResourceModel[] _resources =
@@ -20,11 +20,20 @@ public sealed partial class SchedulerExamples : ScrollableExamplePage
     private AppointmentModel? _editing;
     private bool _isNew;
     private int _editingResourceIndex;
+    private readonly string _helpKey;
+    // Below this width the page keeps narrow side margins, so a phone gives the scheduler the room.
+    private const double CompactWidth = 600;
 
     public GalleryLocalization Localization { get; } = GalleryLocalization.Instance;
 
-    public SchedulerExamples()
+    public SchedulerExamples() : this(IsTouchPlatform)
     {
+    }
+
+    /// <param name="touchHelp">Explain the touch gestures below the scheduler instead of mouse and keyboard, as on phones.</param>
+    public SchedulerExamples(bool touchHelp)
+    {
+        _helpKey = touchHelp ? "TouchHelp" : "Help";
         InitializeComponent();
         if (IsTouchPlatform)
         {
@@ -68,13 +77,43 @@ public sealed partial class SchedulerExamples : ScrollableExamplePage
             DaisyScheduler.AppointmentColorsProperty
         })
             DemoScheduler.RegisterPropertyChangedCallback(property, OnSchedulerPropertyChanged);
+        // Light dismiss. The scheduler handles its own presses, so this also listens to handled ones.
+        DemoScheduler.AddHandler(PointerPressedEvent, new PointerEventHandler(OnSchedulerPressed), true);
+        AddHandler(KeyDownEvent, new KeyEventHandler(OnPageKeyDown), true);
+        ApplyEditorShadow();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+        SizeChanged += OnPageSizeChanged;
         SeedAppointments();
         OnSelectionChanged(this, DemoScheduler.SelectedAppointments);
     }
 
     protected override ScrollViewer? ScrollViewer => MainScrollViewer;
+
+    public bool IsIntroVisible
+    {
+        get => IntroPanel.Visibility == Visibility.Visible;
+        set => IntroPanel.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // Android drops a margin written inside its layout pass, which raises SizeChanged; write it after the pass.
+    private void OnPageSizeChanged(object sender, SizeChangedEventArgs e) =>
+        DispatcherQueue.TryEnqueue(() => PageGrid.Margin = e.NewSize.Width < CompactWidth ? new Thickness(8, 0, 8, 8) : new Thickness(24, 0, 24, 16));
+
+    private void ApplyEditorShadow()
+    {
+        try
+        {
+            var shadow = new ThemeShadow();
+            shadow.Receivers.Add(DemoScheduler);
+            EditorPanel.Shadow = shadow;
+            EditorPanel.Translation = new System.Numerics.Vector3(0, 0, 24);
+        }
+        catch (InvalidOperationException)
+        {
+            // A head without theme shadows shows the editor with its border only.
+        }
+    }
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
@@ -315,7 +354,7 @@ public sealed partial class SchedulerExamples : ScrollableExamplePage
 
     private void OnSelectionChanged(object? sender, IReadOnlyList<AppointmentModel> selected)
     {
-        StatusText.Text = selected.Count == 0 ? Text(IsTouchPlatform ? "TouchHelp" : "Help") : string.Join(", ", selected.Select(static appointment => appointment.Subject));
+        StatusText.Text = selected.Count == 0 ? Text(_helpKey) : string.Join(", ", selected.Select(static appointment => appointment.Subject));
     }
 
     private void OnCreate(object? sender, AppointmentCreateArgs e)

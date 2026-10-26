@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -13,6 +13,8 @@ using Flowery.Uno.Gallery.Examples;
 using Flowery.Uno.Gallery.Localization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 #if __WASM__
 using Microsoft.UI.Xaml.Media.Animation;
@@ -41,6 +43,9 @@ namespace Flowery.Uno.Gallery
         private readonly StringBuilder _diagnosticsLog = new();
         private bool _isHeaderCollapsed;
         private bool _isLandscape;
+        private readonly bool _collapsesIntros;
+        private ICollapsibleIntroExample? _collapsibleIntro;
+        private Thickness _categoryTitleBarPadding = new(24, 4, 24, 20);
         private bool _isHeaderNarrow;
         private bool _isInlinePaneCollapsedByUser;
         private bool? _isCollapsedLayout;
@@ -63,8 +68,16 @@ namespace Flowery.Uno.Gallery
         private bool _isWaitingForPaneClosure;
 #endif
 
-        public MainView()
+        public MainView() : this(OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
         {
+        }
+
+        /// <param name="collapsesIntros">Hide the header and let the category title bar fold the intro of a page that has one
+        /// (<see cref="ICollapsibleIntroExample"/>), as on phones.</param>
+        public MainView(bool collapsesIntros)
+        {
+            _collapsesIntros = collapsesIntros;
+
             // Ensure Gallery localization is initialized before the sidebar resolves strings.
             _ = GalleryLocalization.Instance;
             FloweryLocalization.RefreshBindings();
@@ -617,6 +630,63 @@ namespace Flowery.Uno.Gallery
                 DispatcherQueue.TryEnqueue(() => AttachScrollHandler(newContent));
             }
 
+            // A page with a collapsible intro gives the height to its demo: the header hides, and the category title bar
+            // folds the intro, which starts folded on a new page.
+            var intro = _collapsesIntros ? newContent as ICollapsibleIntroExample : null;
+            if (contentChanged && intro != null)
+                intro.IsIntroVisible = false;
+            _collapsibleIntro = intro;
+            UpdateCollapsibleIntro();
+        }
+
+        private void UpdateCollapsibleIntro()
+        {
+            var intro = _collapsibleIntro;
+            if (HeaderBorder?.Child is UIElement header)
+            {
+                // The border stays, so the safe-area padding keeps the title bar below the status bar.
+                header.Visibility = intro == null ? Visibility.Visible : Visibility.Collapsed;
+                HeaderBorder.MinHeight = intro != null && _isMobilePlatform ? 1 : 0;
+            }
+            if (CategoryMenuButton != null)
+                CategoryMenuButton.Visibility = intro != null ? Visibility.Visible : Visibility.Collapsed;
+            if (CategoryIntroToggle != null)
+            {
+                CategoryIntroToggle.Visibility = intro != null ? Visibility.Visible : Visibility.Collapsed;
+                CategoryIntroToggle.RenderTransform = new RotateTransform { Angle = intro?.IsIntroVisible == true ? 180 : 0 };
+            }
+            SetCategoryTitleBarPadding(_categoryTitleBarPadding);
+        }
+
+        // While the bar folds an intro it is a compact toggle, with the same small space above and below the title.
+        private void SetCategoryTitleBarPadding(Thickness padding)
+        {
+            _categoryTitleBarPadding = padding;
+            if (CategoryTitleBar != null)
+                CategoryTitleBar.Padding = _collapsibleIntro == null ? padding : new Thickness(padding.Left, 6, padding.Right, 6);
+        }
+
+        private void CategoryTitleBar_Tapped(object sender, TappedRoutedEventArgs e) =>
+            ToggleCategoryIntro(e.OriginalSource as DependencyObject);
+
+        /// <summary>A tap on the category title bar at <paramref name="source"/>: folds or shows the intro of the page.
+        /// A tap on the menu button opens the sidebar only.</summary>
+        public void ToggleCategoryIntro(DependencyObject? source)
+        {
+            if (_collapsibleIntro is not { } intro || IsInsideButton(source))
+                return;
+            intro.IsIntroVisible = !intro.IsIntroVisible;
+            UpdateCollapsibleIntro();
+        }
+
+        private static bool IsInsideButton(DependencyObject? element)
+        {
+            for (; element != null; element = VisualTreeHelper.GetParent(element))
+            {
+                if (element is ButtonBase)
+                    return true;
+            }
+            return false;
         }
 
         private FrameworkElement GetOrCreateCategoryContent(string tabHeader)
@@ -711,7 +781,8 @@ namespace Flowery.Uno.Gallery
             if (_suppressScrollEvents)
                 return;
 
-            if (!_isLandscape)
+            // The header stays hidden while a page folds its intro.
+            if (!_isLandscape || _collapsibleIntro != null)
                 return;
 
             if (sender is not ScrollViewer scrollViewer)
@@ -768,8 +839,7 @@ namespace Flowery.Uno.Gallery
                     HeaderOrbLeft.Visibility = Visibility.Collapsed;
                 if (HeaderAccentBar != null)
                     HeaderAccentBar.Height = 2;
-                if (CategoryTitleBar != null)
-                    CategoryTitleBar.Padding = new Thickness(16, 2, 16, 6);
+                SetCategoryTitleBarPadding(new Thickness(16, 2, 16, 6));
                 if (CategoryTitle != null)
                     CategoryTitle.FontSize = 16;
                 if (CategoryChevrons != null)
@@ -787,8 +857,7 @@ namespace Flowery.Uno.Gallery
                     HeaderOrbLeft.Visibility = Visibility.Visible;
                 if (HeaderAccentBar != null)
                     HeaderAccentBar.Height = 3;
-                if (CategoryTitleBar != null)
-                    CategoryTitleBar.Padding = new Thickness(24, 4, 24, 20);
+                SetCategoryTitleBarPadding(new Thickness(24, 4, 24, 20));
                 if (CategoryTitle != null)
                     CategoryTitle.FontSize = 22;
                 if (CategoryChevrons != null)
@@ -933,7 +1002,7 @@ namespace Flowery.Uno.Gallery
                     DaisySize.ExtraLarge => new Thickness(32, 8, 32, 28),
                     _ => new Thickness(24, 4, 24, 20)
                 };
-                CategoryTitleBar.Padding = padding;
+                SetCategoryTitleBarPadding(padding);
             }
 
             if (CategoryChevrons != null)

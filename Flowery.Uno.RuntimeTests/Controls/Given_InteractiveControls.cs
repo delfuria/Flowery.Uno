@@ -136,34 +136,112 @@ namespace Flowery.Uno.RuntimeTests.Controls
         }
 
         [TestMethod]
-        public async Task When_Keyboard_Shrinks_Tall_Modal_It_Stays_Below_Status_Bar()
+        public async Task When_Keyboard_Shrinks_Dialog_Its_Buttons_Stay_Between_Status_Bar_And_Keyboard()
         {
-            // A dialog taller than the part above the keyboard is limited to it; on Android it must not move up under
-            // the status bar, which lies outside the visible bounds of the window.
-            var content = new Border { Height = 2000 };
-            var modal = new DaisyModal { Content = content };
-            RuntimeTestHelpers.AttachToHost(modal);
-            modal.IsOpen = true;
-            await RuntimeTestHelpers.CompleteLayoutAsync(modal, content);
+            // A dialog like the Kanban editors, with its own height, a scrolling body and buttons below it, is taller
+            // than the part above the keyboard. It is limited to that part, so its header stays below the status bar
+            // (outside the visible bounds of the window on Android) and its buttons stay above the keyboard.
+            var header = new TextBlock { Text = "Header" };
+            var footer = new Button { Content = "Save" };
+            var layout = new Grid
+            {
+                RowDefinitions =
+                {
+                    new RowDefinition { Height = GridLength.Auto },
+                    new RowDefinition { Height = new GridLength(1, GridUnitType.Star) },
+                    new RowDefinition { Height = GridLength.Auto }
+                }
+            };
+            var body = new ScrollViewer { Content = new Border { Height = 1200 } };
+            Grid.SetRow(body, 1);
+            Grid.SetRow(footer, 2);
+            layout.Children.Add(header);
+            layout.Children.Add(body);
+            layout.Children.Add(footer);
+            var dialog = new FloweryDialogBase { Content = layout };
+            RuntimeTestHelpers.AttachToHost(dialog);
+            await RuntimeTestHelpers.EnsureLoadedAsync(dialog);
+            dialog.ApplySmartSizing(dialog.XamlRoot);
+            dialog.IsOpen = true;
+            await RuntimeTestHelpers.CompleteLayoutAsync(dialog, footer);
 
-            var modalBounds = GetWindowBounds(modal);
+            var modalBounds = GetWindowBounds(dialog);
             // Taller than the dialog's margin and padding together, so a dialog that ignores it starts above it.
             const double statusBarHeight = 80;
             var statusBarBottom = modalBounds.Top + statusBarHeight;
             var keyboardTop = modalBounds.Top + modalBounds.Height / 2;
             var visibleBounds = new Rect(modalBounds.Left, statusBarBottom, modalBounds.Width, modalBounds.Height - statusBarHeight);
+            Assert.IsTrue(GetWindowBounds(footer).Bottom > keyboardTop, $"The buttons must start below the keyboard edge: {GetWindowBounds(footer)}, {keyboardTop}");
 
-            modal.ApplyInputPaneOcclusion(new Rect(modalBounds.Left, keyboardTop, modalBounds.Width, modalBounds.Height), visibleBounds);
+            dialog.ApplyInputPaneOcclusion(new Rect(modalBounds.Left, keyboardTop, modalBounds.Width, modalBounds.Height), visibleBounds);
+            await RuntimeTestHelpers.CompleteLayoutAsync(dialog);
+
+            var headerBounds = GetWindowBounds(header);
+            var footerBounds = GetWindowBounds(footer);
+            Assert.IsTrue(headerBounds.Top >= statusBarBottom, $"The dialog reaches under the status bar: {headerBounds}, {statusBarBottom}");
+            Assert.IsTrue(footerBounds.Bottom <= keyboardTop, $"The buttons stay under the keyboard: {footerBounds}, {keyboardTop}");
+        }
+
+        [TestMethod]
+        public async Task When_Keyboard_Shows_Dragged_Modal_Comes_Back_Above_It()
+        {
+            // A dialog dragged down to the bottom of the window would stay under the keyboard.
+            var input = new TextBox();
+            var modal = new OffsetModal { Content = input };
+            RuntimeTestHelpers.AttachToHost(modal);
+            modal.IsOpen = true;
+            await RuntimeTestHelpers.CompleteLayoutAsync(modal, input);
+
+            var modalBounds = GetWindowBounds(modal);
+            modal.Offset = new Point(0, modalBounds.Height / 2 - GetWindowBounds(input).Height);
+            await RuntimeTestHelpers.CompleteLayoutAsync(modal);
+            var keyboardTop = modalBounds.Top + modalBounds.Height / 2;
+            Assert.IsTrue(GetWindowBounds(input).Bottom > keyboardTop, $"The field must start below the keyboard edge: {GetWindowBounds(input)}, {keyboardTop}");
+
+            modal.ApplyInputPaneOcclusion(new Rect(modalBounds.Left, keyboardTop, modalBounds.Width, modalBounds.Height), Rect.Empty);
             await RuntimeTestHelpers.CompleteLayoutAsync(modal);
 
-            var contentBounds = GetWindowBounds(content);
-            Assert.IsTrue(contentBounds.Top >= statusBarBottom, $"The dialog reaches under the status bar: {contentBounds}, {statusBarBottom}");
-            Assert.IsTrue(contentBounds.Top < keyboardTop, $"The dialog starts under the keyboard: {contentBounds}, {keyboardTop}");
+            var inputBounds = GetWindowBounds(input);
+            Assert.IsTrue(inputBounds.Bottom <= keyboardTop, $"The field stays under the keyboard: {inputBounds}, {keyboardTop}");
+        }
+
+        [TestMethod]
+        public async Task When_Modal_Unloads_With_Keyboard_Shown_It_Is_Centered_Again_When_Loaded()
+        {
+            // A modal taken out of the tree while the keyboard is open, for example with its page, must not keep the
+            // dialog squeezed above a keyboard it no longer hears about.
+            var input = new TextBox();
+            var modal = new DaisyModal { Content = input };
+            RuntimeTestHelpers.AttachToHost(modal);
+            modal.IsOpen = true;
+            await RuntimeTestHelpers.CompleteLayoutAsync(modal, input);
+            var centered = GetWindowBounds(input);
+            var modalBounds = GetWindowBounds(modal);
+            modal.ApplyInputPaneOcclusion(new Rect(modalBounds.Left, modalBounds.Top + 100, modalBounds.Width, modalBounds.Height), Rect.Empty);
+            await RuntimeTestHelpers.CompleteLayoutAsync(modal);
+            Assert.AreNotEqual(centered.Top, GetWindowBounds(input).Top, 1.0);
+
+            var placeholder = new Border();
+            RuntimeTestHelpers.AttachToHost(placeholder);
+            await RuntimeTestHelpers.CompleteLayoutAsync(placeholder);
+            RuntimeTestHelpers.AttachToHost(modal);
+            await RuntimeTestHelpers.CompleteLayoutAsync(modal, input);
+
+            Assert.AreEqual(centered.Top, GetWindowBounds(input).Top, 1.0);
         }
 
         private static Rect GetWindowBounds(FrameworkElement element)
         {
             return element.TransformToVisual(null).TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight));
+        }
+
+        private sealed partial class OffsetModal : DaisyModal
+        {
+            public Point Offset
+            {
+                get => DialogOffset;
+                set => DialogOffset = value;
+            }
         }
 
         [TestMethod]

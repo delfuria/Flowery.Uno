@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Flowery.Theming;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
@@ -556,7 +556,8 @@ namespace Flowery.Controls
             _isResizing = true;
             _resizeStartPoint = point.Position;
             _resizeStartWidth = GetEffectiveDialogWidth();
-            _resizeStartHeight = GetEffectiveDialogHeight();
+            // While the on-screen keyboard is shown, the dialog may be shorter than its height.
+            _resizeStartHeight = Math.Min(GetEffectiveDialogHeight(), Math.Max(AbsoluteMinHeight, GetDialogAreaHeight()));
             _resizeStartOffset = DialogOffset;
             _resizeStartLeft = GetResizeStartLeft(_resizeStartWidth, _resizeStartOffset.X);
             _resizeStartTop = GetResizeStartTop(_resizeStartHeight, _resizeStartOffset.Y);
@@ -590,6 +591,7 @@ namespace Flowery.Controls
             _isAutoHeight = false;
             SetDialogSize(clampedWidth, clampedHeight);
             UpdateDialogOffsetForResize(clampedWidth, clampedHeight);
+            ClampDialogOffset();
             e.Handled = true;
         }
 
@@ -661,7 +663,7 @@ namespace Flowery.Controls
 
         private double GetMaxResizeHeight()
         {
-            var hostHeight = ActualHeight;
+            var hostHeight = GetDialogAreaHeight();
             if (hostHeight <= 0)
                 return MaxDialogHeight;
 
@@ -675,6 +677,15 @@ namespace Flowery.Controls
             return _isResizing ? Math.Max(AbsoluteMinHeight, max) : Math.Min(MaxDialogHeight, max);
         }
 
+        /// <summary>
+        /// The height in which the dialog is centered: the modal without the part that the on-screen keyboard and the
+        /// status bar take while the keyboard is shown. Positions in the resize code are relative to its top.
+        /// </summary>
+        private double GetDialogAreaHeight()
+        {
+            return ActualHeight - DialogAreaInsets.Top - DialogAreaInsets.Bottom;
+        }
+
         private double GetResizeStartLeft(double dialogWidth, double offsetX)
         {
             var hostWidth = ActualWidth;
@@ -686,7 +697,7 @@ namespace Flowery.Controls
 
         private double GetResizeStartTop(double dialogHeight, double offsetY)
         {
-            var hostHeight = ActualHeight;
+            var hostHeight = GetDialogAreaHeight();
             if (hostHeight <= 0)
                 return offsetY;
 

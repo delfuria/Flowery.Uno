@@ -99,37 +99,13 @@ jobs:
         shell: pwsh
         run: |
           $frameworks = @('net10.0-windows10.0.19041', 'net10.0-desktop')
-          $requiredTests = @(
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
-            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
-          )
           foreach ($framework in $frameworks) {
             $result = Join-Path $env:RUNNER_TEMP ('flowery-runtime-{0}.xml' -f $framework)
             $runArgs = @('run', '--project', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj', '-c', 'Release', '-f', $framework)
             if ($framework -eq 'net10.0-windows10.0.19041') { $runArgs += '--no-build' }
             $runArgs += @('--', '--runtime-tests', $result)
             dotnet @runArgs
-            $exitCode = $LASTEXITCODE
-            # Name failed and inconclusive tests before stopping, so the log shows the cause.
-            if (Test-Path -LiteralPath $result) {
-              [xml]$report = Get-Content -LiteralPath $result -Raw
-              foreach ($test in @($report.tests.test | Where-Object outcome -NE 'Passed')) {
-                Write-Host ('{0}: {1} {2}' -f $framework, $test.outcome, $test.name)
-                if ($test.message) { Write-Host $test.message }
-              }
-            }
-            if ($exitCode -ne 0) { exit $exitCode }
-            [xml]$report = Get-Content -LiteralPath $result -Raw
-            if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed.' }
-            if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
-            foreach ($name in $requiredTests) {
-              $test = @($report.tests.test | Where-Object name -EQ $name)
-              if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
-            }
-            Write-Host ('{0}: {1} runtime tests passed' -f $framework, $report.tests.passed)
+            ./scripts/ci/Assert-GalleryRuntimeTests.ps1 -Result $result -Label $framework -ExitCode $LASTEXITCODE
           }
 
       - name: Upload Windows runtime test results
@@ -216,22 +192,7 @@ jobs:
             '--project', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj', '-c', 'Release', '-f', 'net10.0-desktop',
             '--no-build', '--', '--runtime-tests', $result)
           xvfb-run @runArgs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          [xml]$report = Get-Content -LiteralPath $result -Raw
-          if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed.' }
-          if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
-          $requiredTests = @(
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
-            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
-          )
-          foreach ($name in $requiredTests) {
-            $test = @($report.tests.test | Where-Object name -EQ $name)
-            if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
-          }
-          Write-Host ('Linux Desktop: {0} runtime tests passed' -f $report.tests.passed)
+          ./scripts/ci/Assert-GalleryRuntimeTests.ps1 -Result $result -Label 'Linux Desktop' -ExitCode $LASTEXITCODE
 
       - name: Upload Linux runtime test results
         if: always()
@@ -281,31 +242,7 @@ jobs:
             '--project', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj', '-c', 'Release', '-f', 'net10.0-desktop',
             '-p:TargetFrameworks=net10.0-desktop', '--no-build', '--', '--runtime-tests', $result)
           xvfb-run @runArgs
-          $exitCode = $LASTEXITCODE
-          # Name failed and inconclusive tests before stopping, so the log shows what breaks with .NET 11.
-          if (Test-Path -LiteralPath $result) {
-            [xml]$report = Get-Content -LiteralPath $result -Raw
-            foreach ($test in @($report.tests.test | Where-Object outcome -NE 'Passed')) {
-              Write-Host ('{0} {1}' -f $test.outcome, $test.name)
-              if ($test.message) { Write-Host $test.message }
-            }
-          }
-          if ($exitCode -ne 0) { exit $exitCode }
-          [xml]$report = Get-Content -LiteralPath $result -Raw
-          if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed with the .NET 11 SDK.' }
-          if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
-          $requiredTests = @(
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
-            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
-          )
-          foreach ($name in $requiredTests) {
-            $test = @($report.tests.test | Where-Object name -EQ $name)
-            if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
-          }
-          Write-Host ('.NET 11 SDK: {0} runtime tests passed' -f $report.tests.passed)
+          ./scripts/ci/Assert-GalleryRuntimeTests.ps1 -Result $result -Label 'Linux Desktop with the .NET 11 SDK' -ExitCode $LASTEXITCODE
 
       - name: Upload .NET 11 runtime test results
         if: always()
@@ -356,31 +293,7 @@ jobs:
         run: |
           $result = Join-Path $env:RUNNER_TEMP 'flowery-runtime-windows-net11.xml'
           dotnet run --project Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-windows10.0.19041 --no-build -- --runtime-tests $result
-          $exitCode = $LASTEXITCODE
-          # Name failed and inconclusive tests before stopping, so the log shows what breaks with .NET 11.
-          if (Test-Path -LiteralPath $result) {
-            [xml]$report = Get-Content -LiteralPath $result -Raw
-            foreach ($test in @($report.tests.test | Where-Object outcome -NE 'Passed')) {
-              Write-Host ('{0} {1}' -f $test.outcome, $test.name)
-              if ($test.message) { Write-Host $test.message }
-            }
-          }
-          if ($exitCode -ne 0) { exit $exitCode }
-          [xml]$report = Get-Content -LiteralPath $result -Raw
-          if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed with the .NET 11 SDK.' }
-          if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
-          $requiredTests = @(
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
-            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
-          )
-          foreach ($name in $requiredTests) {
-            $test = @($report.tests.test | Where-Object name -EQ $name)
-            if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
-          }
-          Write-Host ('Windows with the .NET 11 SDK: {0} runtime tests passed' -f $report.tests.passed)
+          ./scripts/ci/Assert-GalleryRuntimeTests.ps1 -Result $result -Label 'Windows with the .NET 11 SDK' -ExitCode $LASTEXITCODE
 
       - name: Upload Windows .NET 11 runtime test results
         if: always()
@@ -414,16 +327,20 @@ jobs:
           mv global.json.tmp global.json
           dotnet --version
 
+      # The workloads of the .NET 11 SDK for the net10.0 targets: wasm-tools-net10, as wasm-tools serves net11.0.
       - name: Install the .NET 11 workloads
-        run: dotnet workload install android wasm-tools
+        id: workloads
+        run: dotnet workload install android wasm-tools-net10
 
       - name: Build Gallery WASM with the .NET 11 SDK
         run: dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-browserwasm
 
+      # Also after a failed WebAssembly build, but not when the setup before it failed.
       - name: Build Gallery Android with the .NET 11 SDK
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.workloads.outcome == 'success' }}
         run: |
-          dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-android36.0             -p:InstallAndroidDependencies=true -p:AcceptAndroidSDKLicenses=true
+          dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-android36.0 \
+            -p:InstallAndroidDependencies=true -p:AcceptAndroidSDKLicenses=true
 
   build-gallery-macos:
     runs-on: macos-15
@@ -450,22 +367,7 @@ jobs:
           $runArgs = @('run', '--project', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj',
             '-c', 'Release', '-f', 'net10.0-desktop', '--no-build', '--', '--runtime-tests', $result)
           dotnet @runArgs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          [xml]$report = Get-Content -LiteralPath $result -Raw
-          if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed.' }
-          if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
-          $requiredTests = @(
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
-            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
-          )
-          foreach ($name in $requiredTests) {
-            $test = @($report.tests.test | Where-Object name -EQ $name)
-            if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
-          }
-          Write-Host ('macOS Desktop: {0} runtime tests passed' -f $report.tests.passed)
+          ./scripts/ci/Assert-GalleryRuntimeTests.ps1 -Result $result -Label 'macOS Desktop' -ExitCode $LASTEXITCODE
 
       - name: Upload macOS runtime test results
         if: always()

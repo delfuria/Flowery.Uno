@@ -107,19 +107,26 @@ namespace Flowery.Uno.RuntimeTests.Controls
             // The on-screen keyboard on Android covers the lower half of the window; the field at the bottom of the
             // dialog has to stay visible while the user types, and return once the keyboard is gone.
             var input = new TextBox();
+            var filler = new Border();
             var modal = new DaisyModal
             {
                 Content = new StackPanel
                 {
                     Spacing = 12,
-                    Children = { new Border { Height = 160 }, input }
+                    Children = { filler, input }
                 }
             };
             RuntimeTestHelpers.AttachToHost(modal);
             modal.IsOpen = true;
             await RuntimeTestHelpers.CompleteLayoutAsync(modal, input);
 
+            // The dialog fits into the upper half with room to spare, whatever the size of the test window: half the
+            // window, less the dialog's margins (16 each), its padding (24 each), the spacing, the field and some slack.
             var modalBounds = GetWindowBounds(modal);
+            filler.Height = modalBounds.Height / 2 - 32 - 48 - 12 - input.ActualHeight - 8;
+            if (filler.Height <= 0)
+                Assert.Inconclusive($"The test window is too small for a dialog above the keyboard: {modalBounds}");
+            await RuntimeTestHelpers.CompleteLayoutAsync(modal);
             var inputBefore = GetWindowBounds(input);
             var keyboardTop = modalBounds.Top + modalBounds.Height / 2;
             Assert.IsTrue(inputBefore.Bottom > keyboardTop, $"The field must start below the keyboard edge: {inputBefore}, {keyboardTop}");

@@ -19,11 +19,9 @@ on:
       - Flowery.Uno.Gallery/**
       - Flowery.Uno.Gallery.Core/**
       - Flowery.Uno.RuntimeTests/**
-      - Flowery.Uno.GalleryAssets.props
-      - Flowery.Uno.PatternAssets.props
-      - Directory.Build.props
-      - Directory.Build.targets
-      - Directory.Packages.props
+      - '*.props'
+      - Directory.*
+      - GlobalUsings.cs
       - NuGet.Config
       - global.json
 
@@ -88,14 +86,13 @@ jobs:
         run: |
           mkdir -p artifacts
           shot() { docker exec flowery-uno-desktop sh -c 'xwd -root -silent | xwdtopnm 2>/dev/null | pnmtopng' > "artifacts/$1.png"; }
-          shot home
           # The Gallery selects the page named in sidebar.state at its start and then writes the file again from its own
           # state, which drops the probe line. So the file reads exactly last:scheduler once the sidebar has restored the
-          # Scheduler and asked for its page; the checks below and the screenshot cover the page itself. The output of
-          # the first start is kept for the checks, and the folder is created in case the Gallery has not written to it
-          # yet. The pattern is anchored, as the command line of this shell contains the path as well.
+          # Scheduler and asked for its page; the checks below and the screenshot cover the page itself. The first start
+          # only has to show the window: it has not drawn yet, and the second start draws the home page before the
+          # Scheduler. The folder is created in case the Gallery has not written to it yet. The pattern is anchored, as
+          # the command line of this shell contains the path as well.
           docker exec flowery-uno-desktop sh -c '
-            cp /tmp/app.log /tmp/app-home.log
             pkill -KILL -f "^/opt/app/Flowery.Uno.Gallery"
             for attempt in $(seq 1 20); do
               pgrep -f "^/opt/app/Flowery.Uno.Gallery" >/dev/null || break
@@ -120,7 +117,7 @@ jobs:
           sleep 3
           shot scheduler
           if [ -z "$opened" ]; then
-            echo "::error::The Scheduler page did not open"
+            echo "::error::The sidebar did not restore the Scheduler page"
             exit 1
           fi
           if ! docker exec flowery-uno-desktop pgrep -f "^/opt/app/Flowery.Uno.Gallery" >/dev/null; then
@@ -133,7 +130,7 @@ jobs:
             echo "::error::The Gallery wrote a crash log"
             exit 1
           fi
-          if docker exec flowery-uno-desktop grep -E 'Unhandled exception|Exception:' /tmp/app-home.log /tmp/app.log; then
+          if docker exec flowery-uno-desktop grep -E 'Unhandled exception|Exception:' /tmp/app.log; then
             echo "::error::The Gallery printed an exception"
             exit 1
           fi
@@ -142,9 +139,11 @@ jobs:
         if: always()
         run: |
           mkdir -p artifacts
-          docker exec flowery-uno-desktop cat /tmp/app-home.log > artifacts/app-home.log 2>&1 || true
           docker exec flowery-uno-desktop cat /tmp/app.log > artifacts/app.log 2>&1 || true
-          docker exec flowery-uno-desktop cat "$STATE_DIR/crash.log" > artifacts/crash.log 2>&1 || true
+          # Only an existing crash log, so that an empty artifact does not look like one.
+          if docker exec flowery-uno-desktop test -f "$STATE_DIR/crash.log"; then
+            docker exec flowery-uno-desktop cat "$STATE_DIR/crash.log" > artifacts/crash.log || true
+          fi
           docker exec flowery-uno-desktop cat "$STATE_DIR/sidebar.state" > artifacts/sidebar.state 2>&1 || true
           docker logs flowery-uno-desktop > artifacts/desktop.log 2>&1 || true
 

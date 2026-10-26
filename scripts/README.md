@@ -341,7 +341,7 @@ docker exec flowery-uno-desktop cat /home/flowery/.local/share/Flowery.Uno.Galle
 docker rm -f flowery-uno-desktop
 ```
 
-On pull requests that touch the library or the Gallery, the `Linux Desktop` workflow (`.github/workflows/linux-desktop.yml`) compares `docker/linux-desktop` with Flowery.NET's and runs this script on the runner, which builds the image there. It then starts the Gallery again with `last:scheduler` and a probe line in `sidebar.state`. The sidebar restores the Scheduler, asks for its page and writes the file again without the probe line. The workflow fails when that does not happen, the Gallery stops, it writes a crash log, or the output of either start shows an exception. Its artifact holds the screenshots and the logs.
+On pull requests that touch the library or the Gallery, the `Linux Desktop` workflow (`.github/workflows/linux-desktop.yml`) compares `docker/linux-desktop` with Flowery.NET's and runs this script on the runner, which builds the image there. It then starts the Gallery again with `last:scheduler` and a probe line in `sidebar.state`. The sidebar restores the Scheduler, asks for its page and writes the file again without the probe line. The workflow fails when that does not happen, the Gallery stops, it writes a crash log, or its output shows an exception. Its artifact holds the screenshots and the logs.
 
 ---
 

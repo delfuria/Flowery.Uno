@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Flowery.Theming;
 using Windows.System;
 using Microsoft.UI;
@@ -29,6 +29,10 @@ namespace Flowery.Controls
         private Point _dragStartPosition;
         private Point _dragStartOffset;
         private bool _isSettingRoot;
+        private Thickness _inputPaneInsets;
+#if __ANDROID__
+        private Windows.UI.ViewManagement.InputPane? _inputPane;
+#endif
         public DaisyModal()
         {
             // Ensure control stretches to fill parent
@@ -143,6 +147,7 @@ namespace Flowery.Controls
             ApplyCornerRadius();
             UpdateDialogBounds();
             ApplyAll();
+            AttachInputPane();
         }
 
         protected override void OnUnloaded()
@@ -150,6 +155,77 @@ namespace Flowery.Controls
             base.OnUnloaded();
             KeyDown -= OnKeyDown;
             SizeChanged -= OnSizeChanged;
+            DetachInputPane();
+        }
+
+        // The Android Gallery runs with SoftInput.AdjustNothing, so the on-screen keyboard covers the window instead of
+        // shrinking it. The dialog has no scroll viewer that would pad for the keyboard, so the modal lays it out above
+        // the covered part itself.
+        private void AttachInputPane()
+        {
+#if __ANDROID__
+            if (_inputPane != null)
+                return;
+
+            _inputPane = Windows.UI.ViewManagement.InputPane.GetForCurrentView();
+            _inputPane.Showing += OnInputPaneShowing;
+            _inputPane.Hiding += OnInputPaneHiding;
+#endif
+        }
+
+        private void DetachInputPane()
+        {
+#if __ANDROID__
+            if (_inputPane == null)
+                return;
+
+            _inputPane.Showing -= OnInputPaneShowing;
+            _inputPane.Hiding -= OnInputPaneHiding;
+            _inputPane = null;
+#endif
+            ApplyInputPaneOcclusion(Rect.Empty, Rect.Empty);
+        }
+
+#if __ANDROID__
+        private void OnInputPaneShowing(Windows.UI.ViewManagement.InputPane sender, Windows.UI.ViewManagement.InputPaneVisibilityEventArgs args)
+        {
+            // The visible bounds leave out the status bar, which the modal covers with its backdrop.
+            var visibleBounds = Windows.UI.ViewManagement.ApplicationView.GetForCurrentView().VisibleBounds;
+            ApplyInputPaneOcclusion(args.OccludedRect, visibleBounds);
+        }
+
+        private void OnInputPaneHiding(Windows.UI.ViewManagement.InputPane sender, Windows.UI.ViewManagement.InputPaneVisibilityEventArgs args)
+        {
+            ApplyInputPaneOcclusion(Rect.Empty, Rect.Empty);
+        }
+#endif
+
+        /// <summary>
+        /// Keeps the dialog out of the part of the window that the on-screen keyboard covers: the backdrop stays, and the
+        /// dialog is centered and limited to the part between the top of the visible bounds and the keyboard.
+        /// </summary>
+        /// <param name="occludedRect">The covered part in window coordinates; empty while the keyboard is hidden.</param>
+        /// <param name="visibleBounds">The part of the window outside the system bars; empty when there are none.</param>
+        internal void ApplyInputPaneOcclusion(Rect occludedRect, Rect visibleBounds)
+        {
+            var insets = new Thickness();
+            if (!occludedRect.IsEmpty && occludedRect.Height > 0 && ActualHeight > 0 && XamlRoot != null)
+            {
+                var bounds = TransformToVisual(null).TransformBounds(new Rect(0, 0, ActualWidth, ActualHeight));
+                var bottom = Math.Clamp(bounds.Bottom - occludedRect.Top, 0, ActualHeight);
+                var top = bottom > 0 && !visibleBounds.IsEmpty
+                    ? Math.Clamp(visibleBounds.Top - bounds.Top, 0, ActualHeight - bottom)
+                    : 0;
+                insets = new Thickness(0, top, 0, bottom);
+            }
+
+            if (insets == _inputPaneInsets)
+                return;
+
+            _inputPaneInsets = insets;
+            _root.Padding = insets;
+            UpdateDialogBounds();
+            ClampDialogOffset();
         }
 
         protected override void OnThemeChanged(string themeName)
@@ -413,7 +489,7 @@ namespace Flowery.Controls
                 return;
 
             var width = ActualWidth;
-            var height = ActualHeight;
+            var height = ActualHeight - _inputPaneInsets.Top - _inputPaneInsets.Bottom;
             if (width <= 0 || height <= 0)
                 return;
 
@@ -501,10 +577,11 @@ namespace Flowery.Controls
             var margin = Math.Max(0, DialogBoundsMargin);
             minX = maxX = minY = maxY = 0;
 
+            // The dialog is centered in the part above the on-screen keyboard and may already be limited to it.
             var rootWidth = _root.ActualWidth;
-            var rootHeight = _root.ActualHeight;
+            var rootHeight = _root.ActualHeight - _inputPaneInsets.Top - _inputPaneInsets.Bottom;
             var hostWidth = _dialogHost.ActualWidth;
-            var hostHeight = _dialogHost.ActualHeight;
+            var hostHeight = Math.Min(_dialogHost.ActualHeight, _dialogHost.MaxHeight);
 
             if (rootWidth <= 0 || rootHeight <= 0 || hostWidth <= 0 || hostHeight <= 0)
                 return false;
@@ -515,6 +592,20 @@ namespace Flowery.Controls
             maxY = (rootHeight - 2 * margin - hostHeight) / 2;
 
             return true;
+        }
+
+        /// <summary>
+        /// Brings a dragged or resized dialog back into the bounds, for example when the keyboard has made them smaller.
+        /// </summary>
+        private void ClampDialogOffset()
+        {
+            if (!TryGetDragBounds(out var minX, out var maxX, out var minY, out var maxY))
+                return;
+
+            if (minX <= maxX)
+                _dialogTransform.X = Math.Clamp(_dialogTransform.X, minX, maxX);
+            if (minY <= maxY)
+                _dialogTransform.Y = Math.Clamp(_dialogTransform.Y, minY, maxY);
         }
 
     }

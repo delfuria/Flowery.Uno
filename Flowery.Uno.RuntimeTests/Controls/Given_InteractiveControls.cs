@@ -1,9 +1,10 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Flowery.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Windows.Foundation;
 
 namespace Flowery.Uno.RuntimeTests.Controls
 {
@@ -97,6 +98,72 @@ namespace Flowery.Uno.RuntimeTests.Controls
 
             modal.IsOpen = false;
             Assert.IsFalse(modal.IsHitTestVisible);
+        }
+
+        [TestMethod]
+        public async Task When_Keyboard_Covers_Modal_Input_Moves_Above_It()
+        {
+            // The on-screen keyboard on Android covers the lower half of the window; the field at the bottom of the
+            // dialog has to stay visible while the user types, and return once the keyboard is gone.
+            var input = new TextBox();
+            var modal = new DaisyModal
+            {
+                Content = new StackPanel
+                {
+                    Spacing = 12,
+                    Children = { new Border { Height = 160 }, input }
+                }
+            };
+            RuntimeTestHelpers.AttachToHost(modal);
+            modal.IsOpen = true;
+            await RuntimeTestHelpers.CompleteLayoutAsync(modal, input);
+
+            var modalBounds = GetWindowBounds(modal);
+            var inputBefore = GetWindowBounds(input);
+            var keyboardTop = modalBounds.Top + modalBounds.Height / 2;
+            Assert.IsTrue(inputBefore.Bottom > keyboardTop, $"The field must start below the keyboard edge: {inputBefore}, {keyboardTop}");
+
+            modal.ApplyInputPaneOcclusion(new Rect(modalBounds.Left, keyboardTop, modalBounds.Width, modalBounds.Height), Rect.Empty);
+            await RuntimeTestHelpers.CompleteLayoutAsync(modal);
+
+            var inputAbove = GetWindowBounds(input);
+            Assert.IsTrue(inputAbove.Bottom <= keyboardTop, $"The field stays under the keyboard: {inputAbove}, {keyboardTop}");
+
+            modal.ApplyInputPaneOcclusion(Rect.Empty, Rect.Empty);
+            await RuntimeTestHelpers.CompleteLayoutAsync(modal);
+
+            Assert.AreEqual(inputBefore.Top, GetWindowBounds(input).Top, 1.0);
+        }
+
+        [TestMethod]
+        public async Task When_Keyboard_Shrinks_Tall_Modal_It_Stays_Below_Status_Bar()
+        {
+            // A dialog taller than the part above the keyboard is limited to it; on Android it must not move up under
+            // the status bar, which lies outside the visible bounds of the window.
+            var content = new Border { Height = 2000 };
+            var modal = new DaisyModal { Content = content };
+            RuntimeTestHelpers.AttachToHost(modal);
+            modal.IsOpen = true;
+            await RuntimeTestHelpers.CompleteLayoutAsync(modal, content);
+
+            var modalBounds = GetWindowBounds(modal);
+            // Taller than the dialog's margin and padding together, so a dialog that ignores it starts above it.
+            const double statusBarHeight = 80;
+            var statusBarBottom = modalBounds.Top + statusBarHeight;
+            var keyboardTop = modalBounds.Top + modalBounds.Height / 2;
+            var visibleBounds = new Rect(modalBounds.Left, statusBarBottom, modalBounds.Width, modalBounds.Height - statusBarHeight);
+
+            modal.ApplyInputPaneOcclusion(new Rect(modalBounds.Left, keyboardTop, modalBounds.Width, modalBounds.Height), visibleBounds);
+            await RuntimeTestHelpers.CompleteLayoutAsync(modal);
+
+            var contentBounds = GetWindowBounds(content);
+            Assert.IsTrue(contentBounds.Top >= statusBarBottom, $"The dialog reaches under the status bar: {contentBounds}, {statusBarBottom}");
+            Assert.IsTrue(contentBounds.Top < keyboardTop, $"The dialog starts under the keyboard: {contentBounds}, {keyboardTop}");
+        }
+
+        private static Rect GetWindowBounds(FrameworkElement element)
+        {
+            return element.TransformToVisual(null).TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight));
         }
 
         [TestMethod]

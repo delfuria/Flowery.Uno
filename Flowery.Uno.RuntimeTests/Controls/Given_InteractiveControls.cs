@@ -141,29 +141,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
             // A dialog like the Kanban editors, with its own height, a scrolling body and buttons below it, is taller
             // than the part above the keyboard. It is limited to that part, so its header stays below the status bar
             // (outside the visible bounds of the window on Android) and its buttons stay above the keyboard.
-            var header = new TextBlock { Text = "Header" };
-            var footer = new Button { Content = "Save" };
-            var layout = new Grid
-            {
-                RowDefinitions =
-                {
-                    new RowDefinition { Height = GridLength.Auto },
-                    new RowDefinition { Height = new GridLength(1, GridUnitType.Star) },
-                    new RowDefinition { Height = GridLength.Auto }
-                }
-            };
-            var body = new ScrollViewer { Content = new Border { Height = 1200 } };
-            Grid.SetRow(body, 1);
-            Grid.SetRow(footer, 2);
-            layout.Children.Add(header);
-            layout.Children.Add(body);
-            layout.Children.Add(footer);
-            var dialog = new FloweryDialogBase { Content = layout };
-            RuntimeTestHelpers.AttachToHost(dialog);
-            await RuntimeTestHelpers.EnsureLoadedAsync(dialog);
-            dialog.ApplySmartSizing(dialog.XamlRoot);
-            dialog.IsOpen = true;
-            await RuntimeTestHelpers.CompleteLayoutAsync(dialog, footer);
+            var (dialog, header, footer) = await OpenEditorDialogAsync(isResizable: false);
 
             var modalBounds = GetWindowBounds(dialog);
             // Taller than the dialog's margin and padding together, so a dialog that ignores it starts above it.
@@ -228,6 +206,97 @@ namespace Flowery.Uno.RuntimeTests.Controls
             await RuntimeTestHelpers.CompleteLayoutAsync(modal, input);
 
             Assert.AreEqual(centered.Top, GetWindowBounds(input).Top, 1.0);
+        }
+
+        [TestMethod]
+        public async Task When_Reloaded_Modal_Gets_Smaller_With_Keyboard_Shown_It_Follows()
+        {
+            // A turned screen or a smaller window changes the size of the modal while the keyboard stays. A modal that
+            // was loaded a second time has to follow that too; it stopped listening to its size after an unload.
+            var input = new TextBox();
+            var modal = new DaisyModal { Content = input };
+            var frame = new Grid { Children = { modal } };
+            RuntimeTestHelpers.AttachToHost(frame);
+            modal.IsOpen = true;
+            await RuntimeTestHelpers.CompleteLayoutAsync(frame, modal, input);
+            var placeholder = new Border();
+            RuntimeTestHelpers.AttachToHost(placeholder);
+            await RuntimeTestHelpers.CompleteLayoutAsync(placeholder);
+            RuntimeTestHelpers.AttachToHost(frame);
+            await RuntimeTestHelpers.CompleteLayoutAsync(frame, modal, input);
+
+            var modalBounds = GetWindowBounds(modal);
+            frame.VerticalAlignment = VerticalAlignment.Top;
+            frame.Height = modalBounds.Height;
+            var keyboardTop = modalBounds.Top + modalBounds.Height / 2;
+            modal.ApplyInputPaneOcclusion(new Rect(modalBounds.Left, keyboardTop, modalBounds.Width, modalBounds.Height), Rect.Empty);
+            await RuntimeTestHelpers.CompleteLayoutAsync(frame);
+            Assert.IsTrue(GetWindowBounds(input).Bottom <= keyboardTop, $"The field must start above the keyboard: {GetWindowBounds(input)}, {keyboardTop}");
+
+            // The modal now ends above the keyboard, so the dialog is centered in all of it again. The modal works out
+            // its insets on the dispatcher after the layout pass that changed its size.
+            frame.Height = modalBounds.Height / 2 - 20;
+            await RuntimeTestHelpers.CompleteLayoutAsync(frame);
+            await RuntimeTestHelpers.CompleteLayoutAsync(frame);
+
+            var smaller = GetWindowBounds(modal);
+            var inputBounds = GetWindowBounds(input);
+            Assert.AreEqual(smaller.Top + smaller.Height / 2, inputBounds.Top + inputBounds.Height / 2, 1.0);
+        }
+
+        [TestMethod]
+        public async Task When_Keyboard_Shown_Resized_Dialog_Keeps_Its_Top_And_Stays_Above_It()
+        {
+            // Dragging the resize grip of a Kanban editor while the keyboard is open moves only the bottom edge, and the
+            // dialog cannot grow under the keyboard.
+            var (dialog, header, footer) = await OpenEditorDialogAsync(isResizable: true);
+            var modalBounds = GetWindowBounds(dialog);
+            var keyboardTop = modalBounds.Top + modalBounds.Height / 2;
+            dialog.ApplyInputPaneOcclusion(new Rect(modalBounds.Left, keyboardTop, modalBounds.Width, modalBounds.Height), Rect.Empty);
+            await RuntimeTestHelpers.CompleteLayoutAsync(dialog);
+            var top = GetWindowBounds(header).Top;
+
+            dialog.BeginResize(new Point(0, 0));
+            dialog.ResizeTo(new Point(0, -100));
+            await RuntimeTestHelpers.CompleteLayoutAsync(dialog);
+            Assert.AreEqual(top, GetWindowBounds(header).Top, 1.0, "Making the dialog shorter moved its top edge.");
+
+            dialog.ResizeTo(new Point(0, 2000));
+            await RuntimeTestHelpers.CompleteLayoutAsync(dialog);
+            var footerBounds = GetWindowBounds(footer);
+            Assert.AreEqual(top, GetWindowBounds(header).Top, 1.0, "Making the dialog taller moved its top edge.");
+            Assert.IsTrue(footerBounds.Bottom <= keyboardTop, $"The buttons grew under the keyboard: {footerBounds}, {keyboardTop}");
+        }
+
+        /// <summary>
+        /// Opens a dialog built like the Kanban editors: its own height, a header, a scrolling body and a button below.
+        /// </summary>
+        private static async Task<(FloweryDialogBase Dialog, FrameworkElement Header, FrameworkElement Footer)> OpenEditorDialogAsync(bool isResizable)
+        {
+            var header = new TextBlock { Text = "Header" };
+            var footer = new Button { Content = "Save" };
+            var layout = new Grid
+            {
+                RowDefinitions =
+                {
+                    new RowDefinition { Height = GridLength.Auto },
+                    new RowDefinition { Height = new GridLength(1, GridUnitType.Star) },
+                    new RowDefinition { Height = GridLength.Auto }
+                }
+            };
+            var body = new ScrollViewer { Content = new Border { Height = 1200 } };
+            Grid.SetRow(body, 1);
+            Grid.SetRow(footer, 2);
+            layout.Children.Add(header);
+            layout.Children.Add(body);
+            layout.Children.Add(footer);
+            var dialog = new FloweryDialogBase { Content = layout, IsDialogResizingEnabled = isResizable };
+            RuntimeTestHelpers.AttachToHost(dialog);
+            await RuntimeTestHelpers.EnsureLoadedAsync(dialog);
+            dialog.ApplySmartSizing(dialog.XamlRoot);
+            dialog.IsOpen = true;
+            await RuntimeTestHelpers.CompleteLayoutAsync(dialog, footer);
+            return (dialog, header, footer);
         }
 
         private static Rect GetWindowBounds(FrameworkElement element)

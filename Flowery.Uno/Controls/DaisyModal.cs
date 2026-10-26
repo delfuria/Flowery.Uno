@@ -168,9 +168,10 @@ namespace Flowery.Controls
             DetachInputPane();
         }
 
-        // With the soft input mode adjustNothing, Uno's default on Android, the on-screen keyboard covers the window
-        // instead of shrinking it. The dialog has no scroll viewer that would pad for the keyboard, so the modal lays it
-        // out above the covered part itself. With adjustResize the window ends above the keyboard and nothing is covered.
+        // With the soft input mode adjustNothing, the default of Uno's app template, the on-screen keyboard covers the
+        // window instead of shrinking it. The dialog has no scroll viewer that would pad for the keyboard, so the modal
+        // lays it out above the covered part itself. With adjustResize the window may end above the keyboard, and
+        // nothing is covered; with adjustPan Android moves the whole window itself.
         private void AttachInputPane()
         {
 #if __ANDROID__
@@ -182,7 +183,7 @@ namespace Flowery.Controls
             _inputPane.Hiding += OnInputPaneHiding;
 
             // A modal loaded while the keyboard is open, such as a dialog opened from a focused field.
-            if (_inputPane.OccludedRect.Height > 0)
+            if (_inputPane.OccludedRect.Height > 0 && !IsPannedByAndroid())
                 ApplyInputPaneOcclusion(_inputPane.OccludedRect, ApplicationView.GetForCurrentView().VisibleBounds);
 #endif
         }
@@ -205,12 +206,25 @@ namespace Flowery.Controls
         {
             // Raised again whenever the height of the keyboard changes. The visible bounds leave out the status bar,
             // which the modal covers with its backdrop.
-            ApplyInputPaneOcclusion(args.OccludedRect, ApplicationView.GetForCurrentView().VisibleBounds);
+            if (!IsPannedByAndroid())
+                ApplyInputPaneOcclusion(args.OccludedRect, ApplicationView.GetForCurrentView().VisibleBounds);
         }
 
         private void OnInputPaneHiding(InputPane sender, InputPaneVisibilityEventArgs args)
         {
             ApplyInputPaneOcclusion(Rect.Empty, Rect.Empty);
+        }
+
+        /// <summary>
+        /// Uno leaves the keyboard to Android unless the activity's soft input mode is adjustNothing. With adjustPan, or
+        /// no mode at all, Android may move the whole window, and the modal must not pad for the keyboard a second time.
+        /// </summary>
+        private static bool IsPannedByAndroid()
+        {
+            var window = (global::Uno.UI.ContextHelper.Current as global::Android.App.Activity)?.Window;
+            var mode = window?.Attributes?.SoftInputMode ?? global::Android.Views.SoftInput.AdjustNothing;
+            var adjust = mode & global::Android.Views.SoftInput.MaskAdjust;
+            return adjust != global::Android.Views.SoftInput.AdjustNothing && adjust != global::Android.Views.SoftInput.AdjustResize;
         }
 #endif
 
@@ -255,6 +269,7 @@ namespace Flowery.Controls
         private double GetBottomForInputPane(Rect windowBounds)
         {
 #if __ANDROID__
+            _ = windowBounds;
             // Uno measures the keyboard against the screen, so compare with the modal's place there, as its own scroll
             // presenters do; the window starts below the screen's top in split-screen or a freeform window.
             var location = new int[2];
@@ -628,8 +643,9 @@ namespace Flowery.Controls
             // The dialog is centered in the part above the on-screen keyboard and may already be limited to it.
             var rootWidth = _root.ActualWidth;
             var rootHeight = _root.ActualHeight - _inputPaneInsets.Top - _inputPaneInsets.Bottom;
-            var hostWidth = _dialogHost.ActualWidth;
-            var hostHeight = Math.Min(_dialogHost.ActualHeight, _dialogHost.MaxHeight);
+            // A size just set by a resize counts before the next layout has applied it.
+            var hostWidth = Math.Min(double.IsNaN(_dialogHost.Width) ? _dialogHost.ActualWidth : _dialogHost.Width, _dialogHost.MaxWidth);
+            var hostHeight = Math.Min(double.IsNaN(_dialogHost.Height) ? _dialogHost.ActualHeight : _dialogHost.Height, _dialogHost.MaxHeight);
 
             if (rootWidth <= 0 || rootHeight <= 0 || hostWidth <= 0 || hostHeight <= 0)
                 return false;

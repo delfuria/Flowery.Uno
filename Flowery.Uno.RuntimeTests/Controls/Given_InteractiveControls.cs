@@ -252,11 +252,15 @@ namespace Flowery.Uno.RuntimeTests.Controls
             // dialog cannot grow under the keyboard.
             var (dialog, header, footer) = await OpenEditorDialogAsync(isResizable: true);
             var modalBounds = GetWindowBounds(dialog);
-            // The keyboard leaves a part a little shorter than the dialog, which therefore fills it, as on a phone. That
-            // part has to leave room above the dialog's minimum height, or the resize does nothing and proves nothing.
-            var areaHeight = Math.Min(modalBounds.Height * 3 / 4, dialog.DialogHeight - 20);
+            // The dialog gets nearly the height of the window, and the keyboard leaves a part a little shorter than the
+            // dialog, which therefore fills it, as on a phone. That part has to leave room above the dialog's minimum
+            // height, or the resize does nothing and proves nothing.
+            var dialogHeight = Math.Min(modalBounds.Height - 40, FloweryDialogBase.MaxDialogHeight);
+            var areaHeight = dialogHeight - 20;
             if (areaHeight < FloweryDialogBase.AbsoluteMinHeight + 100)
-                Assert.Inconclusive($"The test window is too small to resize the dialog above the keyboard: {modalBounds}");
+                Assert.Inconclusive($"The test window is too small to resize the dialog above the keyboard: window {modalBounds}, part above the keyboard {areaHeight}.");
+            dialog.SetHeight(dialogHeight);
+            await RuntimeTestHelpers.CompleteLayoutAsync(dialog);
             var keyboardTop = modalBounds.Top + areaHeight;
             dialog.ApplyInputPaneOcclusion(new Rect(modalBounds.Left, keyboardTop, modalBounds.Width, modalBounds.Height), Rect.Empty);
             await RuntimeTestHelpers.CompleteLayoutAsync(dialog);
@@ -279,7 +283,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
         /// <summary>
         /// Opens a dialog built like the Kanban editors: its own height, a header, a scrolling body and a button below.
         /// </summary>
-        private static async Task<(FloweryDialogBase Dialog, FrameworkElement Header, FrameworkElement Footer)> OpenEditorDialogAsync(bool isResizable)
+        private static async Task<(EditorDialog Dialog, FrameworkElement Header, FrameworkElement Footer)> OpenEditorDialogAsync(bool isResizable)
         {
             var header = new TextBlock { Text = "Header" };
             var footer = new Button { Content = "Save" };
@@ -298,7 +302,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
             layout.Children.Add(header);
             layout.Children.Add(body);
             layout.Children.Add(footer);
-            var dialog = new FloweryDialogBase { Content = layout, IsDialogResizingEnabled = isResizable };
+            var dialog = new EditorDialog { Content = layout, IsDialogResizingEnabled = isResizable };
             RuntimeTestHelpers.AttachToHost(dialog);
             await RuntimeTestHelpers.EnsureLoadedAsync(dialog);
             dialog.ApplySmartSizing(dialog.XamlRoot);
@@ -310,6 +314,16 @@ namespace Flowery.Uno.RuntimeTests.Controls
         private static Rect GetWindowBounds(FrameworkElement element)
         {
             return element.TransformToVisual(null).TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight));
+        }
+
+        private sealed partial class EditorDialog : FloweryDialogBase
+        {
+            /// <summary>Gives the dialog a height of its own, as a resize does.</summary>
+            public void SetHeight(double height)
+            {
+                DialogHeight = height;
+                SetDialogSize(DialogWidth, height);
+            }
         }
 
         private sealed partial class OffsetModal : DaisyModal

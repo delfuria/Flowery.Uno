@@ -1,4 +1,4 @@
-using DispatcherQueueTimer = Microsoft.UI.Dispatching.DispatcherQueueTimer;
+﻿using DispatcherQueueTimer = Microsoft.UI.Dispatching.DispatcherQueueTimer;
 using Microsoft.UI.Input;
 using Windows.Foundation.Collections;
 using Windows.System;
@@ -80,15 +80,20 @@ namespace Flowery.Controls
             Unloaded += OnUnloaded;
             SizeChanged += OnSizeChanged;
             KeyDown += OnKeyDown;
-            LayoutUpdated += OnLayoutUpdated;
         }
 
+        // LayoutUpdated fires for every layout pass of the window, also for elements that left it, and holds the host.
+        // So the host listens only while it is loaded and has not found its items panel yet.
         private void OnLayoutUpdated(object? sender, object e)
         {
-            // If we don't have the panel yet, try to find it
             if (_itemsPanel == null)
             {
                 ApplyAll();
+            }
+
+            if (_itemsPanel != null)
+            {
+                LayoutUpdated -= OnLayoutUpdated;
             }
         }
 
@@ -132,6 +137,11 @@ namespace Flowery.Controls
             UpdateDropAllowDrop();
             AttachDropEventForwarders();
             ApplyAll();
+            if (_itemsPanel == null)
+            {
+                LayoutUpdated -= OnLayoutUpdated;
+                LayoutUpdated += OnLayoutUpdated;
+            }
             UpdateInteractionState();
             UpdateAutomationProperties();
             UpdateHoverTrackingState();
@@ -139,6 +149,7 @@ namespace Flowery.Controls
 
         private void OnUnloaded(object sender, RoutedEventArgs e)
         {
+            LayoutUpdated -= OnLayoutUpdated;
             _hoverUpdateTimer?.Stop();
             DetachHoverTracking();
             if (_itemsVectorSubscribed && Items is IObservableVector<object> observable)

@@ -214,22 +214,37 @@ namespace Flowery.Uno.RuntimeTests.Controls
         public async Task When_TheBoardResolvesAssigneeDetailsOrACardIsSelected_NoAutoSaveIsRequested()
         {
             var (kanban, task, store) = await LoadBoardAsync();
-            task.AssigneeId = "person-1";
-            task.Assignee = "Mina";
-            AutoSaveTimer(kanban).Stop();
-            store.SavedBoards.Clear();
-
-            // The adapter supplies the name the task has already, so only details that are not saved change.
-            kanban.AssigneeAdapter = new FlowKanbanAssigneeAdapter(new[]
+            var cardEdits = new List<string?>();
+            void OnCardEdited(object? sender, FlowTask edited) => cardEdits.Add(edited.Title);
+            try
             {
-                new FlowKanbanAssignee("person-1", "Mina", roles: new[] { "Designer" })
-            });
-            await kanban.RefreshAssigneesAsync();
-            CollectionAssert.AreEqual(new[] { "Designer" }, task.AssigneeRoles.ToArray());
-            task.IsSelected = true;
+                task.AssigneeId = "person-1";
+                task.Assignee = "Mina";
+                AutoSaveTimer(kanban).Stop();
+                store.SavedBoards.Clear();
+                kanban.CardEdited += OnCardEdited;
 
-            Assert.IsFalse(IsAutoSavePending(kanban), "View state that is not saved requested an auto-save.");
-            Assert.AreEqual(0, store.SavedBoards.Count);
+                // The adapter supplies the name the task has already, so only details that are not saved change.
+                var avatar = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage();
+                kanban.AssigneeAdapter = new FlowKanbanAssigneeAdapter(new[]
+                {
+                    new FlowKanbanAssignee("person-1", "Mina", avatar, new[] { "Designer" })
+                });
+                await kanban.RefreshAssigneesAsync();
+                Assert.AreSame(avatar, task.AssigneeAvatarSource);
+                CollectionAssert.AreEqual(new[] { "Designer" }, task.AssigneeRoles.ToArray());
+                Assert.AreEqual(0, cardEdits.Count, "Resolved assignee details raised CardEdited.");
+
+                task.IsSelected = true;
+
+                Assert.IsFalse(IsAutoSavePending(kanban), "View state that is not saved requested an auto-save.");
+                Assert.AreEqual(0, store.SavedBoards.Count);
+            }
+            finally
+            {
+                kanban.CardEdited -= OnCardEdited;
+                AutoSaveTimerOrNull(kanban)?.Stop();
+            }
         }
 
         private static async Task UnloadWithPendingAutoSaveAsync(bool onHomeView)

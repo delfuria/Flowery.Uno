@@ -1706,8 +1706,9 @@ namespace Flowery.Uno.Kanban.Controls
 #if HAS_UNO
         private static bool _isAppLifetimeHooked;
 
-        // Uno raises EnteredBackground when an Android activity stops and when an iOS app or a browser tab goes to the
-        // background, and Suspending when a browser page or a Skia desktop window on Windows closes.
+        // Uno raises EnteredBackground when an Android activity stops and when an iOS app goes to the background, and
+        // Suspending when the first window of a Skia desktop app on Windows closes. WebAssembly with the Skia renderer,
+        // Linux and macOS raise neither.
         private static void HookAppLifetime()
         {
             if (_isAppLifetimeHooked || Application.Current is not { } application)

@@ -145,8 +145,9 @@ namespace Flowery.Uno.Kanban.Controls
                 if (ReferenceEquals(_boardStore, value))
                     return;
 
-                // Only a loaded board has an edit of the user waiting. Before the board loads, a waiting save comes from
-                // setting it up, as in an object initializer that sets Board before BoardStore, and belongs into the new store.
+                // Only a loaded board has an edit of the user waiting; it saves that edit when it unloads. Otherwise a
+                // waiting save comes from setting the board up, as in an object initializer that sets Board before
+                // BoardStore, or from the host, and goes into the store set by then.
                 if (IsLoaded)
                     FlushAutoSave();
                 _boardStore = value;
@@ -1495,14 +1496,27 @@ namespace Flowery.Uno.Kanban.Controls
             if (board == null)
                 return;
 
-            var boardId = EnsureBoardId(board);
-            if (!BoardStore.TrySaveBoard(board, out var error))
+            // A save gives a board a valid ID, which is no edit to save again later, such as after the home view cleared
+            // the last board ID.
+            var suppressAutoSave = _suppressAutoSave;
+            _suppressAutoSave = true;
+            string boardId;
+            try
             {
-                if (error != null)
-                    throw error;
+                boardId = EnsureBoardId(board);
+                if (!BoardStore.TrySaveBoard(board, out var error))
+                {
+                    if (error != null)
+                        throw error;
 
-                throw new InvalidOperationException("Failed to save board.");
+                    throw new InvalidOperationException("Failed to save board.");
+                }
             }
+            finally
+            {
+                _suppressAutoSave = suppressAutoSave;
+            }
+
             if (updateLastBoardId)
             {
                 UpdateLastBoardId(boardId);
@@ -1637,28 +1651,21 @@ namespace Flowery.Uno.Kanban.Controls
             if (_autoSaveTimer is not { IsRunning: true } timer)
                 return;
 
+            timer.Stop();
+            if (replacedBoard == null)
+            {
+                ExecuteSave();
+                return;
+            }
+
+            // The replaced board is no longer open, so it does not become the last board.
             try
             {
-                if (replacedBoard == null)
-                {
-                    ExecuteSave();
-                }
-                else
-                {
-                    // The replaced board is no longer open, so it does not become the last board.
-                    SaveBoardStateCore(replacedBoard, updateLastBoardId: false);
-                }
+                SaveBoardStateCore(replacedBoard, updateLastBoardId: false);
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to save Kanban: {ex.Message}");
-            }
-            finally
-            {
-                // After the save: the save itself gives a board a valid ID and the current schema version, which requests
-                // another auto-save that would save the board again later, such as after the home view cleared the last
-                // board ID.
-                timer.Stop();
             }
         }
 
@@ -1700,7 +1707,7 @@ namespace Flowery.Uno.Kanban.Controls
         private static bool _isAppLifetimeHooked;
 
         // Uno raises EnteredBackground when an Android activity stops and when an iOS app or a browser tab goes to the
-        // background, and Suspending when a desktop window or a browser page closes.
+        // background, and Suspending when a browser page or a Skia desktop window on Windows closes.
         private static void HookAppLifetime()
         {
             if (_isAppLifetimeHooked || Application.Current is not { } application)
@@ -2188,7 +2195,11 @@ namespace Flowery.Uno.Kanban.Controls
 
         private void OnTaskPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (string.Equals(e.PropertyName, nameof(FlowTask.IsSearchMatch), StringComparison.Ordinal))
+            // The board sets these itself, from the search and the assignee adapter; they are not saved, so they are no
+            // edit.
+            if (string.Equals(e.PropertyName, nameof(FlowTask.IsSearchMatch), StringComparison.Ordinal)
+                || string.Equals(e.PropertyName, nameof(FlowTask.AssigneeAvatarSource), StringComparison.Ordinal)
+                || string.Equals(e.PropertyName, nameof(FlowTask.AssigneeRoles), StringComparison.Ordinal))
                 return;
 
             if (sender is FlowTask task)
@@ -2214,6 +2225,8 @@ namespace Flowery.Uno.Kanban.Controls
             if (string.Equals(e.PropertyName, nameof(FlowTask.IsSelected), StringComparison.Ordinal))
             {
                 UpdateSelectionMetrics();
+                // The selection is not saved.
+                return;
             }
 
             RequestAutoSave();

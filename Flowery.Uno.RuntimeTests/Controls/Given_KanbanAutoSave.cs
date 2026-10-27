@@ -186,6 +186,52 @@ namespace Flowery.Uno.RuntimeTests.Controls
             }
         }
 
+        [TestMethod]
+        public void When_BoardIsReplacedBeforeItLoads_AWaitingSaveIsNotFlushedIntoTheStore()
+        {
+            var task = new FlowTask { Title = "Task" };
+            var first = new FlowKanbanData { Columns = { new FlowKanbanColumnData { Title = "Todo", Tasks = { task } } } };
+            var store = new CountingBoardStore();
+            var kanban = new FlowKanban { BoardStore = store, Board = first };
+            try
+            {
+                // An edit before the board loads comes from setting it up, not from the user.
+                task.Title = "Edited";
+                Assert.IsTrue(IsAutoSavePending(kanban), "The edit did not start an auto-save.");
+
+                kanban.Board = new FlowKanbanData { Columns = { new FlowKanbanColumnData { Title = "Other" } } };
+
+                Assert.AreEqual(0, store.SavedBoards.Count, "The replaced board was saved at once.");
+                Assert.IsTrue(IsAutoSavePending(kanban), "The waiting save was dropped.");
+            }
+            finally
+            {
+                AutoSaveTimerOrNull(kanban)?.Stop();
+            }
+        }
+
+        [TestMethod]
+        public async Task When_TheBoardResolvesAssigneeDetailsOrACardIsSelected_NoAutoSaveIsRequested()
+        {
+            var (kanban, task, store) = await LoadBoardAsync();
+            task.AssigneeId = "person-1";
+            task.Assignee = "Mina";
+            AutoSaveTimer(kanban).Stop();
+            store.SavedBoards.Clear();
+
+            // The adapter supplies the name the task has already, so only details that are not saved change.
+            kanban.AssigneeAdapter = new FlowKanbanAssigneeAdapter(new[]
+            {
+                new FlowKanbanAssignee("person-1", "Mina", roles: new[] { "Designer" })
+            });
+            await kanban.RefreshAssigneesAsync();
+            CollectionAssert.AreEqual(new[] { "Designer" }, task.AssigneeRoles.ToArray());
+            task.IsSelected = true;
+
+            Assert.IsFalse(IsAutoSavePending(kanban), "View state that is not saved requested an auto-save.");
+            Assert.AreEqual(0, store.SavedBoards.Count);
+        }
+
         private static async Task UnloadWithPendingAutoSaveAsync(bool onHomeView)
         {
             var (kanban, task, store) = await LoadBoardAsync();

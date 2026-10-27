@@ -243,7 +243,8 @@ Persistence is handled via `StateStorageProvider` and stores data in the same ap
 
 - **Settings**: one entry `kanban.settings` (includes confirmations, auto-save, add card placement, welcome message, undo/redo, and status bar visibility).
 - **Board files**: one entry per board ID using `kanban.board.<id>`.
-- **Board store**: `IBoardStore` allows swapping JSON for DB/cloud without changing the control.
+- **Board store**: `IBoardStore` allows swapping JSON for DB/cloud without changing the control. Set `BoardStore` before the board loads.
+- **Auto-save**: with `AutoSaveAfterEdits`, an edit is saved 800 ms after the last change. A waiting save runs at once when the board unloads, when the app goes to the background or closes (`Application.EnteredBackground` and `Suspending`, which Uno raises on Android, iOS and WebAssembly and when a Skia desktop window closes on Windows), before a board loads, and when `Board` or `BoardStore` of a loaded board changes; deleting the open board drops it. State the board sets itself and does not save (search matches, the selection, resolved assignee avatars and roles, the archive column flags) is no edit. The Windows App SDK raises no such event when its window closes: call `TrySaveBoard` from `Window.Closed` there if the board may not unload.
 - **Atomic Save**: Uses temporary file and rename strategy for power-loss safety.
 - **Migration**: Automatic upgrade of older board files via `FlowKanbanMigration`.
 - **Load hardening**: input length/control characters are validated and invalid IDs are pruned on load.

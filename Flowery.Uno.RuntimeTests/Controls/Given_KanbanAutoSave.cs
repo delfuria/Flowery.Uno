@@ -66,13 +66,19 @@ namespace Flowery.Uno.RuntimeTests.Controls
             var (kanban, task, store) = await LoadBoardAsync();
             var edited = kanban.Board;
             var timer = EditWithPendingAutoSave(kanban, task, "Edited");
+            try
+            {
+                Assert.IsTrue(kanban.TryDeleteBoard(edited.Id, out var error), error?.Message);
 
-            Assert.IsTrue(kanban.TryDeleteBoard(edited.Id, out var error), error?.Message);
-
-            Assert.AreNotSame(edited, kanban.Board);
-            Assert.AreEqual(0, store.SavedBoards.Count);
-            Assert.IsFalse(timer.IsRunning);
-            Assert.IsFalse(store.ListBoards().Any(board => board.Id == edited.Id), "The deleted board was saved again.");
+                Assert.AreNotSame(edited, kanban.Board);
+                Assert.AreEqual(0, store.SavedBoards.Count);
+                Assert.IsFalse(timer.IsRunning);
+                Assert.IsFalse(store.ListBoards().Any(board => board.Id == edited.Id), "The deleted board was saved again.");
+            }
+            finally
+            {
+                timer.Stop();
+            }
         }
 
         [TestMethod]
@@ -80,12 +86,18 @@ namespace Flowery.Uno.RuntimeTests.Controls
         {
             var (kanban, task, _) = await LoadBoardAsync();
             var edited = kanban.Board;
-            EditWithPendingAutoSave(kanban, task, "Edited");
+            var timer = EditWithPendingAutoSave(kanban, task, "Edited");
+            try
+            {
+                Assert.IsTrue(kanban.TryLoadBoard(edited.Id, out var error), error?.Message);
 
-            Assert.IsTrue(kanban.TryLoadBoard(edited.Id, out var error), error?.Message);
-
-            Assert.AreNotSame(edited, kanban.Board);
-            Assert.AreEqual("Edited", FindTask(kanban, task.Id).Title);
+                Assert.AreNotSame(edited, kanban.Board);
+                Assert.AreEqual("Edited", FindTask(kanban, task.Id).Title);
+            }
+            finally
+            {
+                timer.Stop();
+            }
         }
 
         [TestMethod]
@@ -93,19 +105,85 @@ namespace Flowery.Uno.RuntimeTests.Controls
         {
             var (kanban, task, _) = await LoadBoardAsync();
             var edited = kanban.Board;
-            EditWithPendingAutoSave(kanban, task, "Edited");
-
-            // Home and back to the same board before the auto-save came; the board loads on a worker thread.
-            kanban.CurrentView = FlowKanbanView.Home;
-            kanban.OpenBoardCommand.Execute(kanban.Boards.Single(board => board.Id == edited.Id));
-            for (var attempt = 0; attempt < 50 && kanban.CurrentView != FlowKanbanView.Board; attempt++)
+            var timer = EditWithPendingAutoSave(kanban, task, "Edited");
+            try
             {
-                await Task.Delay(100);
-            }
+                // Home and back to the same board before the auto-save came; the board loads on a worker thread.
+                kanban.CurrentView = FlowKanbanView.Home;
+                kanban.OpenBoardCommand.Execute(kanban.Boards.Single(board => board.Id == edited.Id));
+                for (var attempt = 0; attempt < 50 && kanban.CurrentView != FlowKanbanView.Board; attempt++)
+                {
+                    await Task.Delay(100);
+                }
 
-            Assert.AreEqual(FlowKanbanView.Board, kanban.CurrentView, "The board did not open.");
-            Assert.AreNotSame(edited, kanban.Board);
-            Assert.AreEqual("Edited", FindTask(kanban, task.Id).Title);
+                Assert.AreEqual(FlowKanbanView.Board, kanban.CurrentView, "The board did not open.");
+                Assert.AreNotSame(edited, kanban.Board);
+                Assert.AreEqual("Edited", FindTask(kanban, task.Id).Title);
+            }
+            finally
+            {
+                timer.Stop();
+            }
+        }
+
+        [TestMethod]
+        public async Task When_BoardWithAnIdThatIsNoGuidUnloadsOnTheHomeView_NoSaveComesAfterTheLastBoardIsCleared()
+        {
+            var (kanban, task, store) = await LoadBoardAsync(boardId: "sprint-42");
+            var timer = EditWithPendingAutoSave(kanban, task, "Edited");
+            try
+            {
+                kanban.CurrentView = FlowKanbanView.Home;
+                await UnloadAsync(kanban);
+
+                // The save gives the board a valid ID, a change of the board that the save already holds. Before, it
+                // requested another save, which set the cleared last board ID again later.
+                Assert.AreNotEqual("sprint-42", kanban.Board.Id);
+                Assert.AreSame(kanban.Board, store.SavedBoards.Single());
+                Assert.IsFalse(timer.IsRunning, "The save requested another one.");
+                Assert.IsNull(kanban.LastBoardId);
+            }
+            finally
+            {
+                timer.Stop();
+            }
+        }
+
+        [TestMethod]
+        public void When_BoardAndThenItsStoreAreSetBeforeTheBoardLoads_NothingIsSavedIntoAnotherStore()
+        {
+            var task = new FlowTask { Title = "Task" };
+            var archive = new FlowKanbanColumnData { Title = "Archive" };
+            var board = new FlowKanbanData
+            {
+                Columns = { new FlowKanbanColumnData { Title = "Todo", Tasks = { task } }, archive },
+                ArchiveColumnId = archive.Id
+            };
+            var store = new CountingBoardStore();
+
+            // As in the object initializer of a host: the board, then the store it lives in. Showing the board marks its
+            // archive column, which is no edit.
+            var kanban = new FlowKanban { Board = board, BoardStore = store };
+            try
+            {
+                Assert.IsFalse(IsAutoSavePending(kanban), "Marking the archive column requested an auto-save.");
+
+                // A change made before the board loads is saved later, into the store set by then.
+                task.Title = "Edited";
+                Assert.IsTrue(IsAutoSavePending(kanban), "The edit did not start an auto-save.");
+                var otherStore = new CountingBoardStore();
+                kanban.BoardStore = otherStore;
+
+                Assert.AreEqual(0, store.SavedBoards.Count);
+                Assert.IsTrue(IsAutoSavePending(kanban), "The change of the store saved the board at once.");
+                Assert.IsFalse(
+                    StateStorageProvider.Instance.GetKeys("kanban.board.").Any(key => key.EndsWith(board.Id, StringComparison.Ordinal)),
+                    "The board was saved into the default store.");
+            }
+            finally
+            {
+                AutoSaveTimerOrNull(kanban)?.Stop();
+            }
         }
 
         private static async Task UnloadWithPendingAutoSaveAsync(bool onHomeView)
@@ -165,8 +243,9 @@ namespace Flowery.Uno.RuntimeTests.Controls
             }
         }
 
-        // A loaded board on its board view, saved in its store, with no save counted yet.
-        private static async Task<(FlowKanban Kanban, FlowTask Task, CountingBoardStore Store)> LoadBoardAsync()
+        // A loaded board on its board view, saved in its store, with no save counted yet. A board with its own ID is not
+        // saved first, as the store would give it a valid one.
+        private static async Task<(FlowKanban Kanban, FlowTask Task, CountingBoardStore Store)> LoadBoardAsync(string? boardId = null)
         {
             var task = new FlowTask { Title = "Task" };
             var board = new FlowKanbanData
@@ -175,7 +254,15 @@ namespace Flowery.Uno.RuntimeTests.Controls
                 Columns = { new FlowKanbanColumnData { Title = "Todo", Tasks = { task } } }
             };
             var store = new CountingBoardStore();
-            Assert.IsTrue(store.TrySaveBoard(board, out var error), error?.Message);
+            if (boardId == null)
+            {
+                Assert.IsTrue(store.TrySaveBoard(board, out var error), error?.Message);
+            }
+            else
+            {
+                board.Id = boardId;
+            }
+
             var kanban = new FlowKanban { Board = board, BoardStore = store };
             RuntimeTestHelpers.AttachToHost(kanban);
             await RuntimeTestHelpers.EnsureLoadedAsync(kanban);
@@ -202,12 +289,19 @@ namespace Flowery.Uno.RuntimeTests.Controls
 
         private static DispatcherQueueTimer AutoSaveTimer(FlowKanban kanban)
         {
-            var field = typeof(FlowKanban).GetField("_autoSaveTimer", BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.IsNotNull(field, "FlowKanban has no _autoSaveTimer field.");
-            var timer = field.GetValue(kanban) as DispatcherQueueTimer;
+            var timer = AutoSaveTimerOrNull(kanban);
             Assert.IsNotNull(timer, "The edit did not create the auto-save timer.");
             return timer;
         }
+
+        private static DispatcherQueueTimer? AutoSaveTimerOrNull(FlowKanban kanban)
+        {
+            var field = typeof(FlowKanban).GetField("_autoSaveTimer", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(field, "FlowKanban has no _autoSaveTimer field.");
+            return field.GetValue(kanban) as DispatcherQueueTimer;
+        }
+
+        private static bool IsAutoSavePending(FlowKanban kanban) => AutoSaveTimerOrNull(kanban)?.IsRunning == true;
 
         // WinUI raises Unloaded after the element left the tree, not while it is removed.
         private static async Task UnloadAsync(FlowKanban kanban)

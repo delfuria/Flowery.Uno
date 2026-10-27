@@ -1,12 +1,11 @@
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Flowery.Uno.Kanban.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Flowery.Uno.RuntimeTests.Controls.KanbanTestTree;
 
 namespace Flowery.Uno.RuntimeTests.Controls
 {
@@ -73,22 +72,6 @@ namespace Flowery.Uno.RuntimeTests.Controls
             return column;
         }
 
-        private static async Task<FlowKanbanColumn> LoadColumnAsync(FlowKanban kanban, Func<FlowKanbanColumn, bool> predicate)
-        {
-            RuntimeTestHelpers.AttachToHost(kanban);
-            await RuntimeTestHelpers.EnsureLoadedAsync(kanban);
-
-            // With no saved boards, OnKanbanLoaded switches to the Home view, which hides the columns.
-            kanban.CurrentView = FlowKanbanView.Board;
-
-            // Only columns whose template has been applied (layouts that are not visible never apply it).
-            var column = await WaitForAsync(() => FindDescendants<FlowKanbanColumn>(kanban)
-                .FirstOrDefault(control => predicate(control) && FindDescendants<Grid>(control).Any(grid => grid.Name == "PART_ColumnRoot")));
-            Assert.IsNotNull(column, "Column control was not realized.");
-            column.UpdateLayout();
-            return column;
-        }
-
         private static async Task<T?> WaitForAsync<T>(Func<T?> probe)
             where T : class
         {
@@ -109,25 +92,6 @@ namespace Flowery.Uno.RuntimeTests.Controls
             var match = FindDescendants<T>(root).FirstOrDefault(element => element.Name == name);
             Assert.IsNotNull(match, $"{name} not found.");
             return match;
-        }
-
-        private static IEnumerable<T> FindDescendants<T>(DependencyObject root)
-            where T : DependencyObject
-        {
-            var childCount = VisualTreeHelper.GetChildrenCount(root);
-            for (var i = 0; i < childCount; i++)
-            {
-                var child = VisualTreeHelper.GetChild(root, i);
-                if (child is T match)
-                {
-                    yield return match;
-                }
-
-                foreach (var descendant in FindDescendants<T>(child))
-                {
-                    yield return descendant;
-                }
-            }
         }
     }
 }

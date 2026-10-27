@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Flowery.Uno.Kanban.Controls;
 using Flowery.Enums;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Flowery.Uno.RuntimeTests.Controls.KanbanTestTree;
 
 namespace Flowery.Uno.RuntimeTests.Controls
 {
@@ -100,7 +101,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
         {
             var column = new FlowKanbanColumnData { Title = "Todo", Tasks = { new FlowTask { Title = "Task" } } };
             var kanban = new FlowKanban { Board = new FlowKanbanData { Columns = { column } } };
-            var columnControl = await LoadColumnAsync(kanban, column);
+            var columnControl = await LoadColumnAsync(kanban, control => ReferenceEquals(control.ColumnData, column));
             // The add cards subscribe to the board in their Loaded handlers.
             await RuntimeTestHelpers.CompleteLayoutAsync(kanban);
             var addCards = FindDescendants<FlowKanbanAddCard>(columnControl).ToList();
@@ -180,7 +181,7 @@ namespace Flowery.Uno.RuntimeTests.Controls
         {
             var column = new FlowKanbanColumnData { Title = "Todo", Tasks = { new FlowTask { Title = "Task" } } };
             var kanban = new FlowKanban { Board = new FlowKanbanData { Columns = { column } } };
-            var columnControl = await LoadColumnAsync(kanban, column);
+            var columnControl = await LoadColumnAsync(kanban, control => ReferenceEquals(control.ColumnData, column));
             var taskList = FindDescendants<ListView>(columnControl).Single(list => list.Name == "PART_TasksItemsControl");
             Assert.IsTrue(columnControl.AllowDrop);
             Assert.IsTrue(taskList.AllowDrop);
@@ -400,64 +401,10 @@ namespace Flowery.Uno.RuntimeTests.Controls
             Assert.AreEqual(3, columnControl.CalculateInsertIndex(100000, out _));
         }
 
-        private static T? FindDescendant<T>(Microsoft.UI.Xaml.DependencyObject root, Func<T, bool>? predicate = null)
+        private static T? FindDescendant<T>(Microsoft.UI.Xaml.DependencyObject root, Func<T, bool> predicate)
             where T : Microsoft.UI.Xaml.DependencyObject
         {
-            var count = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(root);
-            for (var i = 0; i < count; i++)
-            {
-                var child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(root, i);
-                if (child is T match && (predicate == null || predicate(match)))
-                    return match;
-
-                var found = FindDescendant(child, predicate);
-                if (found != null)
-                    return found;
-            }
-
-            return default;
-        }
-
-        private static async Task<FlowKanbanColumn> LoadColumnAsync(FlowKanban kanban, FlowKanbanColumnData column)
-        {
-            RuntimeTestHelpers.AttachToHost(kanban);
-            await RuntimeTestHelpers.EnsureLoadedAsync(kanban);
-
-            // With no saved boards, OnKanbanLoaded switches to the Home view, which hides the columns.
-            kanban.CurrentView = FlowKanbanView.Board;
-
-            // Only a column whose template has been applied (layouts that are not visible never apply it).
-            for (var attempt = 0; attempt < 50; attempt++)
-            {
-                var control = FindDescendants<FlowKanbanColumn>(kanban).FirstOrDefault(found =>
-                    ReferenceEquals(found.ColumnData, column)
-                    && FindDescendants<Grid>(found).Any(grid => grid.Name == "PART_ColumnRoot"));
-                if (control != null)
-                {
-                    control.UpdateLayout();
-                    return control;
-                }
-
-                await Task.Delay(100);
-            }
-
-            Assert.Fail("Column control was not realized.");
-            return null!;
-        }
-
-        private static IEnumerable<T> FindDescendants<T>(Microsoft.UI.Xaml.DependencyObject root)
-            where T : Microsoft.UI.Xaml.DependencyObject
-        {
-            var count = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(root);
-            for (var i = 0; i < count; i++)
-            {
-                var child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(root, i);
-                if (child is T match)
-                    yield return match;
-
-                foreach (var descendant in FindDescendants<T>(child))
-                    yield return descendant;
-            }
+            return FindDescendants<T>(root).FirstOrDefault(predicate);
         }
 
         [TestMethod]

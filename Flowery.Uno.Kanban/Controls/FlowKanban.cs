@@ -145,7 +145,10 @@ namespace Flowery.Uno.Kanban.Controls
                 if (ReferenceEquals(_boardStore, value))
                     return;
 
-                FlushAutoSave();
+                // Only a loaded board has an edit of the user waiting. Before the board loads, a waiting save comes from
+                // setting it up, as in an object initializer that sets Board before BoardStore, and belongs into the new store.
+                if (IsLoaded)
+                    FlushAutoSave();
                 _boardStore = value;
             }
         }
@@ -225,7 +228,7 @@ namespace Flowery.Uno.Kanban.Controls
         {
             if (d is FlowKanban kanban)
             {
-                if (e.OldValue is FlowKanbanData replaced)
+                if (kanban.IsLoaded && e.OldValue is FlowKanbanData replaced)
                     kanban.FlushAutoSave(replaced);
                 kanban.AttachBoardTracking(e.NewValue as FlowKanbanData);
             }
@@ -1634,21 +1637,28 @@ namespace Flowery.Uno.Kanban.Controls
             if (_autoSaveTimer is not { IsRunning: true } timer)
                 return;
 
-            timer.Stop();
-            if (replacedBoard == null)
-            {
-                ExecuteSave();
-                return;
-            }
-
-            // The replaced board is no longer open, so it does not become the last board.
             try
             {
-                SaveBoardStateCore(replacedBoard, updateLastBoardId: false);
+                if (replacedBoard == null)
+                {
+                    ExecuteSave();
+                }
+                else
+                {
+                    // The replaced board is no longer open, so it does not become the last board.
+                    SaveBoardStateCore(replacedBoard, updateLastBoardId: false);
+                }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to save Kanban: {ex.Message}");
+            }
+            finally
+            {
+                // After the save: the save itself gives a board a valid ID and the current schema version, which requests
+                // another auto-save that would save the board again later, such as after the home view cleared the last
+                // board ID.
+                timer.Stop();
             }
         }
 
@@ -1668,6 +1678,7 @@ namespace Flowery.Uno.Kanban.Controls
 
         private void OnAppEnteringBackground(object? sender, EventArgs e)
         {
+            // Uno raises the application's events on the UI thread; the timer and the board belong to that thread.
             if (DispatcherQueue is { HasThreadAccess: false } queue)
             {
                 queue.TryEnqueue(() => FlushAutoSave());
@@ -1700,7 +1711,7 @@ namespace Flowery.Uno.Kanban.Controls
             _isAppLifetimeHooked = true;
         }
 #else
-        // WinUI raises neither event for desktop apps.
+        // The Application of the Windows App SDK has neither event.
         private static void HookAppLifetime()
         {
         }
@@ -2151,6 +2162,11 @@ namespace Flowery.Uno.Kanban.Controls
 
         private void OnColumnPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
+            // The board sets these when it shows a board; they are not saved, so they are no edit.
+            if (string.Equals(e.PropertyName, nameof(FlowKanbanColumnData.IsArchiveColumn), StringComparison.Ordinal)
+                || string.Equals(e.PropertyName, nameof(FlowKanbanColumnData.IsArchiveColumnVisible), StringComparison.Ordinal))
+                return;
+
             if (sender is FlowKanbanColumnData column)
             {
                 ColumnEdited?.Invoke(this, column);

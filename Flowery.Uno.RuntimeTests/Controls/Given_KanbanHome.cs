@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Flowery.Uno.Kanban.Controls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Flowery.Uno.RuntimeTests.Controls.KanbanTestTree;
 
 namespace Flowery.Uno.RuntimeTests.Controls
 {
@@ -100,25 +101,6 @@ namespace Flowery.Uno.RuntimeTests.Controls
             var items = flyout.Items.OfType<DaisyMenuFlyoutItem>().ToList();
             CollectionAssert.AreEqual(TileMenuKeys, items.Select(item => item.LocalizationKey).ToList());
             return items;
-        }
-
-        private static IEnumerable<T> FindDescendants<T>(DependencyObject root)
-            where T : DependencyObject
-        {
-            var childCount = VisualTreeHelper.GetChildrenCount(root);
-            for (var i = 0; i < childCount; i++)
-            {
-                var child = VisualTreeHelper.GetChild(root, i);
-                if (child is T match)
-                {
-                    yield return match;
-                }
-
-                foreach (var descendant in FindDescendants<T>(child))
-                {
-                    yield return descendant;
-                }
-            }
         }
 
         private sealed class CommandRecorder(List<object?> parameters) : ICommand

@@ -49,5 +49,4 @@ The class uses `PasswordCredential` as the underlying transport. It calls `.Retr
 ## See Also
 
 - [ISecureStorage](ISecureStorage.md)
-- [GitHubUserProvider](GitHubUserProvider.md)
 - [PlatformCompatibility](../Flowery.Uno/Services/PlatformCompatibility.cs)

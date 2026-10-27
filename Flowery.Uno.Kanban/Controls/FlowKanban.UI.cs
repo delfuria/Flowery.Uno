@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -782,6 +782,7 @@ namespace Flowery.Uno.Kanban.Controls
         private void OnKanbanLoaded(object sender, RoutedEventArgs e)
         {
             DaisyResourceLookup.EnsureTokens();
+            AttachAppLifetime();
             AttachAssigneeAdapter(AssigneeAdapter);
             _ = ObserveAssigneeRefreshAsync(RefreshAssigneesAsync());
             TryLoadSettings(forceReload: false, out _);
@@ -809,6 +810,9 @@ namespace Flowery.Uno.Kanban.Controls
 
         private void OnKanbanUnloaded(object sender, RoutedEventArgs e)
         {
+            // Before the home view clears the last board ID below, which a later save would set again.
+            FlushAutoSave();
+            DetachAppLifetime();
             if (CurrentView == FlowKanbanView.Home)
             {
                 ClearLastBoardId();

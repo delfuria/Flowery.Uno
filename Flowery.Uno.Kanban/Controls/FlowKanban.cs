@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Collections.ObjectModel;
@@ -139,7 +139,15 @@ namespace Flowery.Uno.Kanban.Controls
         public IBoardStore BoardStore
         {
             get => _boardStore;
-            set => _boardStore = value ?? throw new ArgumentNullException(nameof(value));
+            set
+            {
+                ArgumentNullException.ThrowIfNull(value);
+                if (ReferenceEquals(_boardStore, value))
+                    return;
+
+                FlushAutoSave();
+                _boardStore = value;
+            }
         }
         internal bool IsLaneGroupingEnabled => Board.GroupBy == FlowKanbanGroupBy.Lane && Board.Lanes.Count > 0;
 
@@ -217,6 +225,8 @@ namespace Flowery.Uno.Kanban.Controls
         {
             if (d is FlowKanban kanban)
             {
+                if (e.OldValue is FlowKanbanData replaced)
+                    kanban.FlushAutoSave(replaced);
                 kanban.AttachBoardTracking(e.NewValue as FlowKanbanData);
             }
         }
@@ -1510,6 +1520,8 @@ namespace Flowery.Uno.Kanban.Controls
             if (string.IsNullOrWhiteSpace(boardId))
                 return false;
 
+            // Before the read, so reopening the open board loads its waiting edit too.
+            FlushAutoSave();
             if (!BoardStore.TryLoadBoard(boardId, out var data, out var error))
             {
                 if (error != null)
@@ -1613,6 +1625,86 @@ namespace Flowery.Uno.Kanban.Controls
         {
             _autoSaveTimer?.Stop();
         }
+
+        // Saves an edit that still waits for its auto-save now, on the board it was made on and into the store it was
+        // meant for: a board that leaves the tree, is replaced or changes its store loses no edit, and the timer does not
+        // fire later into whatever board, store or storage is current then.
+        private void FlushAutoSave(FlowKanbanData? replacedBoard = null)
+        {
+            if (_autoSaveTimer is not { IsRunning: true } timer)
+                return;
+
+            timer.Stop();
+            if (replacedBoard == null)
+            {
+                ExecuteSave();
+                return;
+            }
+
+            // The replaced board is no longer open, so it does not become the last board.
+            try
+            {
+                SaveBoardStateCore(replacedBoard, updateLastBoardId: false);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to save Kanban: {ex.Message}");
+            }
+        }
+
+        // On a phone the app goes to the background without unloading the board, and the system may end it there before
+        // the auto-save comes, so a loaded board saves its waiting edit when the app leaves the foreground.
+        private void AttachAppLifetime()
+        {
+            HookAppLifetime();
+            AppEnteringBackground -= OnAppEnteringBackground;
+            AppEnteringBackground += OnAppEnteringBackground;
+        }
+
+        private void DetachAppLifetime()
+        {
+            AppEnteringBackground -= OnAppEnteringBackground;
+        }
+
+        private void OnAppEnteringBackground(object? sender, EventArgs e)
+        {
+            if (DispatcherQueue is { HasThreadAccess: false } queue)
+            {
+                queue.TryEnqueue(() => FlushAutoSave());
+                return;
+            }
+
+            FlushAutoSave();
+        }
+
+        private static event EventHandler? AppEnteringBackground;
+
+        // Uno raises the application's events only from the platform, so tests raise this one themselves.
+        internal static void RaiseAppEnteringBackground()
+        {
+            AppEnteringBackground?.Invoke(null, EventArgs.Empty);
+        }
+
+#if HAS_UNO
+        private static bool _isAppLifetimeHooked;
+
+        // Uno raises EnteredBackground when an Android activity stops and when an iOS app or a browser tab goes to the
+        // background, and Suspending when a desktop window or a browser page closes.
+        private static void HookAppLifetime()
+        {
+            if (_isAppLifetimeHooked || Application.Current is not { } application)
+                return;
+
+            application.EnteredBackground += static (_, _) => RaiseAppEnteringBackground();
+            application.Suspending += static (_, _) => RaiseAppEnteringBackground();
+            _isAppLifetimeHooked = true;
+        }
+#else
+        // WinUI raises neither event for desktop apps.
+        private static void HookAppLifetime()
+        {
+        }
+#endif
 
         private void OnAutoSaveTimerTick(DispatcherQueueTimer sender, object args)
         {

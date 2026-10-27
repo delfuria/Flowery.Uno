@@ -50,5 +50,3 @@ public void StoreGithubToken(ISecureStorage storage, string token)
 ## See Also
 
 - [PasswordVaultSecureStorage](PasswordVaultSecureStorage.md)
-- [GitHubUserProvider](GitHubUserProvider.md)
-- [IUserProvider](../Flowery.Uno/Controls/Kanban/Users/Interfaces/IUserProvider.cs)

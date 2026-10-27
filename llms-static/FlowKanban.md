@@ -122,8 +122,6 @@ kanban.EditCardCommand = new RelayCommand<FlowTask>(async task =>
 });
 ```
 
-`IUserProvider`, `LocalUserProvider` and `CompositeUserProvider` remain available but no longer feed the board. `FlowKanbanUserManagement` remains a public control that hosts can show with their own `IUserProvider`; the board no longer opens it.
-
 ## Commands
 
 `FlowKanban` provides a suite of pre-wired commands for easy integration with your UI or ViewModels:
@@ -199,7 +197,7 @@ var saved = await FlowBoardEditorDialog.ShowAsync(board, control.XamlRoot);
 
 ### FlowKanbanSettingsDialog
 
-Configures Kanban instance settings. User-scoped preferences are persisted per user (see Persistence); board-level toggles update the current board. The undo/redo toggle applies immediately.
+Configures Kanban instance settings. Preferences are persisted in the Kanban settings (see Persistence); board-level toggles update the current board. The undo/redo toggle applies immediately.
 
 | Setting | Description |
 | --- | --- |
@@ -207,7 +205,7 @@ Configures Kanban instance settings. User-scoped preferences are persisted per u
 | Confirm card removals | Require confirmation before deleting a card. |
 | Auto-Save after edits | Auto-save board after any edit (uses the per-board storage key). |
 | Auto-expand card details | Expand card details in the editor by default. |
-| Enable undo/redo | Toggles command history and undo/redo UI (stored per user). |
+| Enable undo/redo | Toggles command history and undo/redo UI. |
 | Display Add Card | User preference for inline add placement (Bottom/Top/Both). |
 | Show archive column | Shows or hides the archive column for the current board. |
 | Show welcome message | Toggle the Home welcome panel. |
@@ -243,10 +241,9 @@ A high-level view for managing board collections. It features a responsive grid 
 
 Persistence is handled via `StateStorageProvider` and stores data in the same application settings location as other `.state` files.
 
-- **User settings**: per-user entry `kanban.user.settings.<userId>` with fallback to legacy `kanban.settings` (includes confirmations, auto-save, add card placement, welcome message, undo/redo, and status bar visibility).
+- **Settings**: one entry `kanban.settings` (includes confirmations, auto-save, add card placement, welcome message, undo/redo, and status bar visibility).
 - **Board files**: one entry per board ID using `kanban.board.<id>`.
 - **Board store**: `IBoardStore` allows swapping JSON for DB/cloud without changing the control.
-- **Global admin**: app-level entry `kanban.admin.global` storing the bootstrap admin ID.
 - **Atomic Save**: Uses temporary file and rename strategy for power-loss safety.
 - **Migration**: Automatic upgrade of older board files via `FlowKanbanMigration`.
 - **Load hardening**: input length/control characters are validated and invalid IDs are pruned on load.

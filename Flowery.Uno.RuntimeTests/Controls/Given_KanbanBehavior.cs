@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -96,23 +96,28 @@ namespace Flowery.Uno.RuntimeTests.Controls
         }
 
         [TestMethod]
-        public void When_BoardSize_Changes_EventFires()
+        public async Task When_BoardSize_Changes_OnALoadedBoard_ColumnsAndAddCardsTakeTheSize()
         {
-            var kanban = new FlowKanban();
-            var invocationCount = 0;
-            DaisySize? lastSize = null;
+            var column = new FlowKanbanColumnData { Title = "Todo", Tasks = { new FlowTask { Title = "Task" } } };
+            var kanban = new FlowKanban { Board = new FlowKanbanData { Columns = { column } } };
+            var columnControl = await LoadColumnAsync(kanban, column);
+            // The add cards subscribe to the board in their Loaded handlers.
+            await RuntimeTestHelpers.CompleteLayoutAsync(kanban);
+            var addCards = FindDescendants<FlowKanbanAddCard>(columnControl).ToList();
+            Assert.IsTrue(addCards.Count > 0, "The column has no add cards.");
+            var sizes = new List<DaisySize>();
+            kanban.BoardSizeChanged += (_, size) => sizes.Add(size);
+            var newSize = kanban.BoardSize == DaisySize.Large ? DaisySize.Small : DaisySize.Large;
 
-            kanban.BoardSizeChanged += (_, size) =>
+            // The column and the add cards take the size only through BoardSizeChanged.
+            kanban.BoardSize = newSize;
+
+            CollectionAssert.AreEqual(new[] { newSize }, sizes);
+            Assert.AreEqual(newSize, columnControl.ColumnSize);
+            foreach (var addCard in addCards)
             {
-                invocationCount++;
-                lastSize = size;
-            };
-
-            kanban.BoardSize = DaisySize.Small;
-            kanban.BoardSize = DaisySize.Large;
-
-            Assert.AreEqual(2, invocationCount);
-            Assert.AreEqual(DaisySize.Large, lastSize);
+                Assert.AreEqual(newSize, addCard.AddCardSize, addCard.Name);
+            }
         }
 
         [TestMethod]
@@ -168,6 +173,22 @@ namespace Flowery.Uno.RuntimeTests.Controls
 
             column.IsDropEnabled = false;
             Assert.IsFalse(column.AllowDrop);
+        }
+
+        [TestMethod]
+        public async Task When_DropIsDisabled_OnALoadedColumn_ColumnAndTaskListRefuseDrops()
+        {
+            var column = new FlowKanbanColumnData { Title = "Todo", Tasks = { new FlowTask { Title = "Task" } } };
+            var kanban = new FlowKanban { Board = new FlowKanbanData { Columns = { column } } };
+            var columnControl = await LoadColumnAsync(kanban, column);
+            var taskList = FindDescendants<ListView>(columnControl).Single(list => list.Name == "PART_TasksItemsControl");
+            Assert.IsTrue(columnControl.AllowDrop);
+            Assert.IsTrue(taskList.AllowDrop);
+
+            columnControl.IsDropEnabled = false;
+
+            Assert.IsFalse(columnControl.AllowDrop);
+            Assert.IsFalse(taskList.AllowDrop);
         }
 
         [TestMethod]
@@ -397,6 +418,48 @@ namespace Flowery.Uno.RuntimeTests.Controls
             return default;
         }
 
+        private static async Task<FlowKanbanColumn> LoadColumnAsync(FlowKanban kanban, FlowKanbanColumnData column)
+        {
+            RuntimeTestHelpers.AttachToHost(kanban);
+            await RuntimeTestHelpers.EnsureLoadedAsync(kanban);
+
+            // With no saved boards, OnKanbanLoaded switches to the Home view, which hides the columns.
+            kanban.CurrentView = FlowKanbanView.Board;
+
+            // Only a column whose template has been applied (layouts that are not visible never apply it).
+            for (var attempt = 0; attempt < 50; attempt++)
+            {
+                var control = FindDescendants<FlowKanbanColumn>(kanban).FirstOrDefault(found =>
+                    ReferenceEquals(found.ColumnData, column)
+                    && FindDescendants<Grid>(found).Any(grid => grid.Name == "PART_ColumnRoot"));
+                if (control != null)
+                {
+                    control.UpdateLayout();
+                    return control;
+                }
+
+                await Task.Delay(100);
+            }
+
+            Assert.Fail("Column control was not realized.");
+            return null!;
+        }
+
+        private static IEnumerable<T> FindDescendants<T>(Microsoft.UI.Xaml.DependencyObject root)
+            where T : Microsoft.UI.Xaml.DependencyObject
+        {
+            var count = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(root);
+            for (var i = 0; i < count; i++)
+            {
+                var child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(root, i);
+                if (child is T match)
+                    yield return match;
+
+                foreach (var descendant in FindDescendants<T>(child))
+                    yield return descendant;
+            }
+        }
+
         [TestMethod]
         public void When_PersistingBoard_RoundTrips()
         {
@@ -448,9 +511,11 @@ namespace Flowery.Uno.RuntimeTests.Controls
 
             var json = JsonSerializer.Serialize(board, FlowKanbanJsonContext.Default.FlowKanbanData);
             var root = JsonNode.Parse(json) as JsonObject;
-            root?.Remove("schemaVersion");
+            Assert.IsNotNull(root);
+            // Without the removal, a renamed property would turn this into a normal load.
+            Assert.IsTrue(root.Remove("schemaVersion"), "The board JSON has no schemaVersion to remove.");
 
-            var migrated = FlowKanbanMigration.MigrateFromJson(root?.ToJsonString() ?? json);
+            var migrated = FlowKanbanMigration.MigrateFromJson(root.ToJsonString());
 
             Assert.IsNotNull(migrated);
             Assert.AreEqual(board.Id, migrated!.Id);

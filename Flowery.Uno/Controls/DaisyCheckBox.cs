@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -529,7 +529,7 @@ namespace Flowery.Controls
         {
             return _checkboxBorder == null
                 ? []
-                : [new DaisyNeumorphicSurface(_checkboxBorder, DaisyNeumorphicMode.Inset)];
+                : new[] { new DaisyNeumorphicSurface(_checkboxBorder, DaisyNeumorphicMode.Inset) };
         }
 
         #endregion

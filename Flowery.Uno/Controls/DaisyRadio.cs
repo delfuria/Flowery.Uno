@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -326,7 +326,7 @@ namespace Flowery.Controls
         {
             return _indicatorBorder == null
                 ? []
-                : [new DaisyNeumorphicSurface(_indicatorBorder, DaisyNeumorphicMode.Inset)];
+                : new[] { new DaisyNeumorphicSurface(_indicatorBorder, DaisyNeumorphicMode.Inset) };
         }
 
         #endregion

@@ -16,7 +16,44 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # The .NET 11 SDK of the early-testing jobs, as in Flowery.WinUI's CI; every other job and the release use global.json.
+  NET11_SDK: 11.0.100-rc.2.26504.105
+
 jobs:
+  # Decides whether the build jobs run: a pull request that only changes Markdown files or llms-static/ cannot break a
+  # CI build. The build jobs are skipped then, and a skipped job counts as passed for the required checks; paths-ignore on
+  # the trigger would leave those checks without a status. Pushes to main always build. The build jobs only skip on an
+  # explicit code=false, so they still build when this job fails.
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      code: ${{ steps.files.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Find changes that need a build
+        id: files
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # --no-renames lists a moved file under its old path too, so moving code into llms-static/ still builds.
+          changed=$(git diff --no-renames --name-only "origin/$BASE_REF...HEAD")
+          printf 'Changed files:\n%s\n' "$changed"
+          if printf '%s\n' "$changed" | grep -qvE '(\.md$|^llms-static/)'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Only documentation changed; the build jobs are skipped."
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
   docs:
     runs-on: ubuntu-24.04
     steps:
@@ -36,12 +73,28 @@ jobs:
           test -s docs/style.css
 
   build-library:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 
+      # NuGet packages that nuget-audit saved on main, which restores every project of this OS. There are no lock files,
+      # so the key hashes the files that decide the packages; an older cache still saves most downloads.
+      - &nuget-cache-restore
+        name: Restore the NuGet package cache
+        uses: actions/cache/restore@v6
+        with:
+          path: &nuget-path ~/.nuget/packages
+          key: &nuget-key nuget-${{ runner.os }}-${{ hashFiles('global.json', 'NuGet.Config', '**/Directory.Packages.props', '**/Directory.Build.props', '**/Directory.Build.targets', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
       - name: Test Carousel GL resources and lifecycle
         run: node --test scripts/tests/carousel-gl.test.cjs
+
+      - name: Test the check of the Gallery runtime test results
+        shell: pwsh
+        run: ./scripts/tests/Assert-GalleryRuntimeTests.test.ps1
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -55,26 +108,24 @@ jobs:
         run: dotnet build Flowery.Uno/Flowery.Uno.csproj -c Release -p:CheckEolWorkloads=false
 
   build-gallery:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: windows-2025-vs2026
     steps:
       - uses: actions/checkout@v7
+
+      - *nuget-cache-restore
 
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
+      # Still needed without the WebAssembly build: dotnet run -f net10.0-desktop below restores every target framework.
       - name: Install WebAssembly tools
         run: dotnet workload install wasm-tools
 
       - name: Install Android workload
         run: dotnet workload install android
-
-      - name: Build Gallery WASM with Skia 4
-        shell: pwsh
-        run: |
-          $buildArgs = @('build', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj', '-c', 'Release', '-f', 'net10.0-browserwasm')
-          dotnet @buildArgs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Restore (Windows only)
         run: |
@@ -95,37 +146,13 @@ jobs:
         shell: pwsh
         run: |
           $frameworks = @('net10.0-windows10.0.19041', 'net10.0-desktop')
-          $requiredTests = @(
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
-            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
-          )
           foreach ($framework in $frameworks) {
             $result = Join-Path $env:RUNNER_TEMP ('flowery-runtime-{0}.xml' -f $framework)
             $runArgs = @('run', '--project', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj', '-c', 'Release', '-f', $framework)
             if ($framework -eq 'net10.0-windows10.0.19041') { $runArgs += '--no-build' }
             $runArgs += @('--', '--runtime-tests', $result)
             dotnet @runArgs
-            $exitCode = $LASTEXITCODE
-            # Name failed and inconclusive tests before stopping, so the log shows the cause.
-            if (Test-Path -LiteralPath $result) {
-              [xml]$report = Get-Content -LiteralPath $result -Raw
-              foreach ($test in @($report.tests.test | Where-Object outcome -NE 'Passed')) {
-                Write-Host ('{0}: {1} {2}' -f $framework, $test.outcome, $test.name)
-                if ($test.message) { Write-Host $test.message }
-              }
-            }
-            if ($exitCode -ne 0) { exit $exitCode }
-            [xml]$report = Get-Content -LiteralPath $result -Raw
-            if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed.' }
-            if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
-            foreach ($name in $requiredTests) {
-              $test = @($report.tests.test | Where-Object name -EQ $name)
-              if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
-            }
-            Write-Host ('{0}: {1} runtime tests passed' -f $framework, $report.tests.passed)
+            ./scripts/ci/Assert-GalleryRuntimeTests.ps1 -Result $result -Label $framework -ExitCode $LASTEXITCODE
           }
 
       - name: Upload Windows runtime test results
@@ -136,11 +163,36 @@ jobs:
           path: ${{ runner.temp }}/flowery-runtime-*.xml
           if-no-files-found: warn
 
-  test-gallery-drawer:
+  # The WebAssembly Gallery in Release, beside build-gallery instead of before its Windows build.
+  build-gallery-wasm:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+
+      - *nuget-cache-restore
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Install required workloads
+        run: dotnet workload install android wasm-tools
+
+      - name: Build Gallery WASM with Skia 4
+        run: dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-browserwasm
+
+  test-gallery-drawer:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - *nuget-cache-restore
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -181,10 +233,14 @@ jobs:
           if-no-files-found: warn
 
   build-gallery-linux:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+
+      - *nuget-cache-restore
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -212,22 +268,7 @@ jobs:
             '--project', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj', '-c', 'Release', '-f', 'net10.0-desktop',
             '--no-build', '--', '--runtime-tests', $result)
           xvfb-run @runArgs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          [xml]$report = Get-Content -LiteralPath $result -Raw
-          if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed.' }
-          if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
-          $requiredTests = @(
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
-            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
-          )
-          foreach ($name in $requiredTests) {
-            $test = @($report.tests.test | Where-Object name -EQ $name)
-            if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
-          }
-          Write-Host ('Linux Desktop: {0} runtime tests passed' -f $report.tests.passed)
+          ./scripts/ci/Assert-GalleryRuntimeTests.ps1 -Result $result -Label 'Linux Desktop' -ExitCode $LASTEXITCODE
 
       - name: Upload Linux runtime test results
         if: always()
@@ -238,15 +279,17 @@ jobs:
           if-no-files-found: warn
 
   # Early testing of the .NET 11 SDK: it builds the existing net10.0 desktop targets and runs the Skia runtime tests,
-  # as Flowery.WinUI's CI does with its own heads. The repository stays on .NET 10 (global.json); only this job selects
-  # the .NET 11 SDK. It is not a required check, so a failure shows what breaks without blocking a merge.
+  # as Flowery.WinUI's CI does with its own heads. The repository stays on .NET 10 (global.json); only the .NET 11 jobs
+  # select the .NET 11 SDK. It is not a required check, so a failure shows what breaks without blocking a merge.
   build-gallery-net11:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    env:
-      NET11_SDK: 11.0.100-rc.2.26504.105
     steps:
       - uses: actions/checkout@v7
+
+      - *nuget-cache-restore
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -279,31 +322,7 @@ jobs:
             '--project', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj', '-c', 'Release', '-f', 'net10.0-desktop',
             '-p:TargetFrameworks=net10.0-desktop', '--no-build', '--', '--runtime-tests', $result)
           xvfb-run @runArgs
-          $exitCode = $LASTEXITCODE
-          # Name failed and inconclusive tests before stopping, so the log shows what breaks with .NET 11.
-          if (Test-Path -LiteralPath $result) {
-            [xml]$report = Get-Content -LiteralPath $result -Raw
-            foreach ($test in @($report.tests.test | Where-Object outcome -NE 'Passed')) {
-              Write-Host ('{0} {1}' -f $test.outcome, $test.name)
-              if ($test.message) { Write-Host $test.message }
-            }
-          }
-          if ($exitCode -ne 0) { exit $exitCode }
-          [xml]$report = Get-Content -LiteralPath $result -Raw
-          if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed with the .NET 11 SDK.' }
-          if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
-          $requiredTests = @(
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
-            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
-          )
-          foreach ($name in $requiredTests) {
-            $test = @($report.tests.test | Where-Object name -EQ $name)
-            if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
-          }
-          Write-Host ('.NET 11 SDK: {0} runtime tests passed' -f $report.tests.passed)
+          ./scripts/ci/Assert-GalleryRuntimeTests.ps1 -Result $result -Label 'Linux Desktop with the .NET 11 SDK' -ExitCode $LASTEXITCODE
 
       - name: Upload .NET 11 runtime test results
         if: always()
@@ -313,11 +332,113 @@ jobs:
           path: ${{ runner.temp }}/flowery-runtime-net11.xml
           if-no-files-found: warn
 
+  # The Windows head with the .NET 11 SDK, as build-gallery builds it, with its runtime tests; not a required check.
+  build-gallery-windows-net11:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+
+      - *nuget-cache-restore
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.NET11_SDK }}
+
+      # global.json pins the .NET 10 SDK and rules out prereleases; here it names the .NET 11 SDK and keeps Uno.Sdk.
+      - name: Select the .NET 11 SDK
+        shell: pwsh
+        run: |
+          $globalJson = Get-Content -LiteralPath global.json -Raw | ConvertFrom-Json
+          $globalJson.sdk.version = $env:NET11_SDK
+          $globalJson.sdk.allowPrerelease = $true
+          $globalJson | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath global.json -Encoding utf8
+          dotnet --version
+
+      - name: Restore (Windows only)
+        run: |
+          dotnet restore Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj `
+            -p:Configuration=Release `
+            -p:TargetFramework=net10.0-windows10.0.19041 `
+            -p:TargetFrameworks=net10.0-windows10.0.19041
+
+      - name: Build Gallery Windows Desktop with the .NET 11 SDK
+        run: |
+          dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj `
+            -c Release `
+            -f net10.0-windows10.0.19041 `
+            --no-restore
+
+      - name: Test Gallery rendering on Windows with the .NET 11 SDK
+        timeout-minutes: 10
+        shell: pwsh
+        run: |
+          $result = Join-Path $env:RUNNER_TEMP 'flowery-runtime-windows-net11.xml'
+          dotnet run --project Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-windows10.0.19041 --no-build -- --runtime-tests $result
+          ./scripts/ci/Assert-GalleryRuntimeTests.ps1 -Result $result -Label 'Windows with the .NET 11 SDK' -ExitCode $LASTEXITCODE
+
+      - name: Upload Windows .NET 11 runtime test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gallery-runtime-windows-net11
+          path: ${{ runner.temp }}/flowery-runtime-windows-net11.xml
+          if-no-files-found: warn
+
+  # WebAssembly and Android with the .NET 11 SDK and its workloads, still for the net10.0 targets; not a required
+  # check. Both steps run even when the first fails, so the log shows the state of each head.
+  build-gallery-wasm-android-net11:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+
+      - *nuget-cache-restore
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.NET11_SDK }}
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # global.json pins the .NET 10 SDK and rules out prereleases; here it names the .NET 11 SDK and keeps Uno.Sdk.
+      - name: Select the .NET 11 SDK
+        run: |
+          jq --arg version "$NET11_SDK" '.sdk.version = $version | .sdk.allowPrerelease = true' global.json > global.json.tmp
+          mv global.json.tmp global.json
+          dotnet --version
+
+      # The workloads of the .NET 11 SDK for the net10.0 targets: wasm-tools-net10, as wasm-tools serves net11.0.
+      - name: Install the .NET 11 workloads
+        id: workloads
+        run: dotnet workload install android wasm-tools-net10
+
+      - name: Build Gallery WASM with the .NET 11 SDK
+        run: dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-browserwasm
+
+      # Also after a failed WebAssembly build, but not when the setup before it failed.
+      - name: Build Gallery Android with the .NET 11 SDK
+        if: ${{ !cancelled() && steps.workloads.outcome == 'success' }}
+        run: |
+          dotnet build Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj -c Release -f net10.0-android36.0 \
+            -p:InstallAndroidDependencies=true -p:AcceptAndroidSDKLicenses=true
+
   build-gallery-macos:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: macos-15
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+
+      - *nuget-cache-restore
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -338,22 +459,7 @@ jobs:
           $runArgs = @('run', '--project', 'Flowery.Uno.Gallery/Flowery.Uno.Gallery.csproj',
             '-c', 'Release', '-f', 'net10.0-desktop', '--no-build', '--', '--runtime-tests', $result)
           dotnet @runArgs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          [xml]$report = Get-Content -LiteralPath $result -Raw
-          if ([int]$report.tests.failed -ne 0) { throw 'Gallery runtime tests failed.' }
-          if ([int]$report.tests.total -le 0 -or [int]$report.tests.passed -le 0) { throw 'No Gallery runtime tests ran.' }
-          $requiredTests = @(
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Checkerboard_Transitions_MaskChangesDifferentRegions',
-            'Flowery.Uno.RuntimeTests.Controls.Given_CarouselRendering.When_Leaving_AnimatedSlide_OutgoingImagePoseStaysFrozen',
-            'Flowery.Uno.RuntimeTests.Controls.Given_SkiaImageProcessing.When_GlassEffect_ProcessesPixels_BlurSaturationAndRoundedClipApply',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_TransitionOutlastsTimer_EachCompletedSlideGetsItsNextEffect',
-            'Flowery.Uno.Gallery.Tests.Given_CarouselGalleryCycles.When_FiniteSlideshowEnds_EnablingInfiniteResumesWithNextEffect'
-          )
-          foreach ($name in $requiredTests) {
-            $test = @($report.tests.test | Where-Object name -EQ $name)
-            if ($test.Count -ne 1 -or $test[0].outcome -ne 'Passed') { throw ('Required regression test did not pass: {0}' -f $name) }
-          }
-          Write-Host ('macOS Desktop: {0} runtime tests passed' -f $report.tests.passed)
+          ./scripts/ci/Assert-GalleryRuntimeTests.ps1 -Result $result -Label 'macOS Desktop' -ExitCode $LASTEXITCODE
 
       - name: Upload macOS runtime test results
         if: always()
@@ -364,10 +470,14 @@ jobs:
           if-no-files-found: warn
 
   build-gallery-android:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+
+      - *nuget-cache-restore
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -388,14 +498,23 @@ jobs:
             -p:InstallAndroidDependencies=true -p:AcceptAndroidSDKLicenses=true
 
   nuget-audit:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2025-vs2026, macos-15]
-        configuration: [Debug, Release]
+        os: [ubuntu-24.04, windows-2025-vs2026, macos-15]
     steps:
       - uses: actions/checkout@v7
+      # This job restores every project for Debug and Release, so it alone saves the cache of its OS, on main only.
+      # It restores only the exact key, so a saved cache holds no packages that the projects no longer use.
+      - name: Restore the NuGet package cache
+        id: nuget-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: *nuget-path
+          key: *nuget-key
       - name: Test audit output confidentiality
         shell: pwsh
         run: ./scripts/tests/audit-nuget.test.ps1
@@ -409,9 +528,28 @@ jobs:
           if ($IsMacOS) { $workloads += 'ios' }
           dotnet @workloads
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      # Debug adds Uno.WinUI.DevServer to the Gallery, so both configurations are audited, Release first. A failure in one
+      # does not stop the other, so the log tells whether the released packages are affected.
       - name: Audit all projects including transitive packages
         shell: pwsh
-        run: ./scripts/audit-nuget.ps1 -Configuration ${{ matrix.configuration }}
+        run: |
+          $failed = @()
+          foreach ($configuration in 'Release', 'Debug') {
+            try {
+              ./scripts/audit-nuget.ps1 -Configuration $configuration
+            }
+            catch {
+              Write-Host ('::error::NuGet audit failed for {0}: {1}' -f $configuration, $_.Exception.Message)
+              $failed += $configuration
+            }
+          }
+          if ($failed) { exit 1 }
+      - name: Save the NuGet package cache
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.nuget-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v6
+        with:
+          path: *nuget-path
+          key: ${{ steps.nuget-cache.outputs.cache-primary-key }}
 
   dependency-submission:
     # GitHub only updates the repository graph from its default branch.

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
@@ -544,7 +544,7 @@ namespace Flowery.Controls
         /// </summary>
         protected virtual IReadOnlyList<DaisyNeumorphicSurface> GetNeumorphicSurfaces()
         {
-            return [new DaisyNeumorphicSurface(GetNeumorphicHostElement() ?? this)];
+            return new[] { new DaisyNeumorphicSurface(GetNeumorphicHostElement() ?? this) };
         }
 
         /// <summary>

@@ -415,6 +415,13 @@ Unavailable Uno Debug remote-control WebSockets (`/rc`) remain in the logs but d
 Other console errors and all unhandled page errors fail the test.
 Chromium uses SwiftShader for WebGL. This job does not test a physical GPU.
 
+The same job runs `gl-transitions.spec.cjs`. It loads the Gallery's GL transition engine
+(`Flowery.Uno.Gallery.Core/WasmScripts/flowery-carousel-gl-transitions.js`) and the transition shaders
+from the source tree into a blank page, renders single frames at a set time and reads their pixels.
+The middle frame of `pixelize` must be made of squares and differ from the `fade` crossfade of the same images.
+The test does not use the Gallery, but the runner starts the Gallery server for every run.
+`pnpm exec playwright test gl-transitions.spec.cjs` runs only this test.
+
 ### Build fails with missing SDK
 
 Ensure you have .NET 10.0 SDK installed:

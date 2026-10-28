@@ -220,7 +220,7 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm exec playwright install --with-deps chromium
 
-      - name: Test normal and missing drawer state groups
+      - name: Test the drawer state groups and the GL transitions
         working-directory: scripts/tests/browser
         run: pnpm test
 

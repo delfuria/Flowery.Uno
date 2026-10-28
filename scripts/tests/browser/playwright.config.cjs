@@ -3,7 +3,7 @@ const path = require("node:path");
 
 module.exports = defineConfig({
     testDir: __dirname,
-    testMatch: "drawer.spec.cjs",
+    testMatch: ["drawer.spec.cjs", "gl-transitions.spec.cjs"],
     workers: 1,
     retries: 0,
     timeout: 180000,

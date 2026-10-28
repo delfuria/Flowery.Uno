@@ -419,8 +419,9 @@ The same job runs `gl-transitions.spec.cjs`. It loads the Gallery's GL transitio
 (`Flowery.Uno.Gallery.Core/WasmScripts/flowery-carousel-gl-transitions.js`) and the transition shaders
 from the source tree into a blank page, renders single frames at a set time and reads their pixels.
 The middle frame of `pixelize` must be made of squares and differ from the `fade` crossfade of the same images.
-The test does not use the Gallery, but the runner starts the Gallery server for every run.
-`pnpm exec playwright test gl-transitions.spec.cjs` runs only this test.
+The middle frame of `BookFlip` must show the outgoing image left of the center and the incoming image right of it.
+The tests do not use the Gallery, but the runner starts the Gallery server for every run.
+`pnpm exec playwright test gl-transitions.spec.cjs` runs only these tests.
 
 ### Build fails with missing SDK
 

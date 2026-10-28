@@ -51,7 +51,9 @@ function installManualFrames() {
     }
 
     globalThis.glTransitionTest = {
-        images: (width, height) => ({ from: checkerboard(width, height), to: solid(width, height, "#f00") }),
+        images: (width, height, kind) => kind === "solid"
+            ? { from: solid(width, height, "#2050c0"), to: solid(width, height, "#30a040") }
+            : { from: checkerboard(width, height), to: solid(width, height, "#f00") },
         pendingFrames: () => frames.length,
         // Renders the queued frame after advancing the clock and reads the canvas in the same task,
         // before the browser clears the drawing buffer.
@@ -69,12 +71,40 @@ function installManualFrames() {
     };
 }
 
-async function renderMiddleFrame(page, transition) {
-    // 0.8 s is 1 s after the engine's duration scale; without an interval, 500 ms is the middle of the transition.
-    await page.evaluate(({ name, size }) => {
-        const images = glTransitionTest.images(size, size);
+// Opens the blank page with the engine and returns the list that collects console errors and page errors.
+async function openEngine(page) {
+    const errors = [];
+    page.on("pageerror", error => errors.push(error.message));
+    page.on("console", message => {
+        if (message.type() === "error")
+            errors.push(message.text());
+    });
+    await page.route(`${origin}/**`, async route => {
+        const url = new URL(route.request().url());
+        if (url.pathname === "/")
+            return route.fulfill({ contentType: "text/html", body: pageHtml });
+        const prefix = `/${appBase}/Flowery.Uno.Gallery.Core/`;
+        if (!url.pathname.startsWith(prefix))
+            return route.fulfill({ status: 404 });
+        const file = path.join(galleryCore, ...decodeURIComponent(url.pathname.slice(prefix.length)).split("/"));
+        const contentType = file.endsWith(".js") ? "text/javascript" : "text/plain";
+        try {
+            return route.fulfill({ contentType, body: await readFile(file, "utf8") });
+        } catch {
+            return route.fulfill({ status: 404 });
+        }
+    });
+    await page.addInitScript(installManualFrames);
+    await page.goto(`${origin}/`);
+    return errors;
+}
+
+async function renderMiddleFrame(page, transition, imageKind = "checkerboard") {
+    // 0.8 s is 1 s after the engine's duration scale; without an interval, 500 ms is exactly the middle of the transition.
+    await page.evaluate(({ name, size, imageKind }) => {
+        const images = glTransitionTest.images(size, size, imageKind);
         FloweryCarouselGLTransitions.attachOverlay("test", 0, 0, size, size, images, name, 0.8, 0);
-    }, { name: transition, size });
+    }, { name: transition, size, imageKind });
     await expect.poll(() => page.evaluate(() => glTransitionTest.pendingFrames()),
         { message: `The ${transition} transition must load its shader and images.` }).toBe(1);
     const frame = await page.evaluate(() => {
@@ -119,30 +149,7 @@ function colorChangeRatio(frame) {
 }
 
 test("Carousel GL transition pixelize pixelates its middle frame", async ({ page }, testInfo) => {
-    const errors = [];
-    page.on("pageerror", error => errors.push(error.message));
-    page.on("console", message => {
-        if (message.type() === "error")
-            errors.push(message.text());
-    });
-    await page.route(`${origin}/**`, async route => {
-        const url = new URL(route.request().url());
-        if (url.pathname === "/")
-            return route.fulfill({ contentType: "text/html", body: pageHtml });
-        const prefix = `/${appBase}/Flowery.Uno.Gallery.Core/`;
-        if (!url.pathname.startsWith(prefix))
-            return route.fulfill({ status: 404 });
-        const file = path.join(galleryCore, ...decodeURIComponent(url.pathname.slice(prefix.length)).split("/"));
-        const contentType = file.endsWith(".js") ? "text/javascript" : "text/plain";
-        try {
-            return route.fulfill({ contentType, body: await readFile(file, "utf8") });
-        } catch {
-            return route.fulfill({ status: 404 });
-        }
-    });
-    await page.addInitScript(installManualFrames);
-    await page.goto(`${origin}/`);
-
+    const errors = await openEngine(page);
     const fade = await renderMiddleFrame(page, "fade");
     const pixelize = await renderMiddleFrame(page, "pixelize");
     const report = {
@@ -161,5 +168,27 @@ test("Carousel GL transition pixelize pixelates its middle frame", async ({ page
     // pixelize reads progress in a global initializer. A shader that sees 0 there draws the same crossfade.
     expect(report.pixelize.differenceFromFade).toBeGreaterThan(10);
     expect(report.pixelize.colorChanges).toBeLessThan(0.15);
+    expect(errors).toEqual([]);
+});
+
+// At exactly progress 0.5, BookFlip's skew functions divide by zero. GLSL leaves the result unspecified, and a NaN
+// there must not reach the frame. Chrome's ANGLE backends turn it into infinite texture coordinates and clamp them,
+// so this frame was also right here before the fix; other GPUs can return NaN.
+test("Carousel GL transition BookFlip shows from left and to right of the center in its middle frame", async ({ page }) => {
+    const errors = await openEngine(page);
+    const frame = await renderMiddleFrame(page, "BookFlip", "solid");
+    const from = [0x20, 0x50, 0xc0];
+    const to = [0x30, 0xa0, 0x40];
+    const wrongPixels = { left: 0, right: 0 };
+    for (let y = 0; y < frame.height; y++) {
+        for (let x = 0; x < frame.width; x++) {
+            const i = (y * frame.width + x) * 4;
+            const left = x < frame.width / 2;
+            const expected = left ? from : to;
+            if (expected.some((value, channel) => Math.abs(frame.pixels[i + channel] - value) > 2))
+                wrongPixels[left ? "left" : "right"]++;
+        }
+    }
+    expect(wrongPixels).toEqual({ left: 0, right: 0 });
     expect(errors).toEqual([]);
 });

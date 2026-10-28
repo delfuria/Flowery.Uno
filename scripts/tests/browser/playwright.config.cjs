@@ -8,7 +8,7 @@ module.exports = defineConfig({
     retries: 0,
     timeout: 180000,
     forbidOnly: true,
-    reporter: [["list"], ["junit", { outputFile: "test-results/drawer.xml" }]],
+    reporter: [["list"], ["junit", { outputFile: "test-results/gallery-browser.xml" }]],
     use: {
         baseURL: "http://127.0.0.1:5280",
         viewport: { width: 600, height: 800 },

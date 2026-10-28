@@ -224,11 +224,11 @@ jobs:
         working-directory: scripts/tests/browser
         run: pnpm test
 
-      - name: Upload drawer browser test results
+      - name: Upload the browser test results
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: gallery-drawer-browser
+          name: gallery-browser-tests
           path: scripts/tests/browser/test-results/
           if-no-files-found: warn
 

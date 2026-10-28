@@ -409,7 +409,7 @@ pnpm test
 
 The runner starts and stops the Gallery server on port 5280. The port must be free.
 Each case uses a fresh browser context. Retries are disabled.
-CI uploads JSON results, console logs, and a JUnit report in the `gallery-drawer-browser` artifact.
+CI uploads JSON results, console logs, and a JUnit report in the `gallery-browser-tests` artifact.
 Failed tests also include a screenshot and a Playwright trace.
 Unavailable Uno Debug remote-control WebSockets (`/rc`) remain in the logs but do not fail the test.
 Other console errors and all unhandled page errors fail the test.

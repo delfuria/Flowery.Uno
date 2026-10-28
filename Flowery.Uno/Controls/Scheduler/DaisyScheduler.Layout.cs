@@ -31,9 +31,11 @@ public partial class DaisyScheduler
         var viewportHeight = scroll.ViewportHeight > 0 ? scroll.ViewportHeight : scroll.ActualHeight;
         if (viewportWidth <= 0 || viewportHeight <= 0)
             return;
+        var zoom = ColumnZoom;
+        _appliedZoom = zoom;
         if (_monthGrid is { } month)
         {
-            month.Width = Math.Max(month.MinWidth, viewportWidth);
+            month.Width = Math.Max(month.MinWidth, viewportWidth) * zoom;
             month.Height = Math.Max(month.MinHeight, viewportHeight);
         }
         if (_timeColumns.Count == 0)
@@ -44,7 +46,7 @@ public partial class DaisyScheduler
         var extra = Math.Max(0, (viewportWidth - minimumWidth) / _timeColumns.Count);
         foreach (var column in _timeColumns)
         {
-            var width = column.MinimumWidth + extra;
+            var width = (column.MinimumWidth + extra) * zoom;
             column.Header.Width = new GridLength(width);
             column.Body.Width = new GridLength(width);
             column.Surface.Width = width;

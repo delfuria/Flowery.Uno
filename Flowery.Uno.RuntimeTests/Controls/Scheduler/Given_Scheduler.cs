@@ -326,8 +326,10 @@ public class Given_Scheduler
         await scope.LayoutAsync();
         Assert.HasCount(1, scope.Frames(scope.Appointment));
         var grid = scope.Descendants<Grid>().Single(control => control.RowDefinitions.Count == 7 && control.ColumnDefinitions.Count == 7);
+        // The heading cell holds its text beside the grip on its right edge.
         var header = (Border)grid.Children[0];
-        Assert.AreEqual(new DateTime(2026, 9, 27).ToString("ddd", scope.Scheduler.FormattingCulture), ((TextBlock)header.Child).Text);
+        var text = ((Grid)header.Child).Children.OfType<TextBlock>().Single();
+        Assert.AreEqual(new DateTime(2026, 9, 27).ToString("ddd", scope.Scheduler.FormattingCulture), text.Text);
     }
 
     [TestMethod]

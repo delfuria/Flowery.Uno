@@ -66,9 +66,10 @@ public partial class DaisyScheduler
         return RoundToPixel(width) / 60;
     }
 
-    // Only this part depends on the visible width, so a resize does not measure the labels again.
+    // Only this part depends on the visible width, so a resize does not measure the labels again. The column zoom
+    // widens the hours beyond the width that fills the view.
     private double FillPixelsPerMinute(double minimum, int dayCount, double gutterWidth) =>
-        Math.Max(minimum, ((_viewHost?.ActualWidth ?? 0) - gutterWidth) / (dayCount * 1440));
+        Math.Max(minimum, ((_viewHost?.ActualWidth ?? 0) - gutterWidth) / (dayCount * 1440)) * ColumnZoom;
 
     // Avalonia's "Auto,*" definition strings, so the view builders read like the original.
     private static Grid WithDefinitions(Grid grid, string columns, string rows = "")

@@ -6,7 +6,7 @@
 
 # 🌼 Flowery.Uno
 
-**An [Uno Platform](https://platform.uno/) / WinUI port of [Flowery.NET](https://github.com/tobitege/Flowery.NET) — fully themed C# controls.**
+**More than 100 themed controls for [Uno Platform](https://platform.uno/) on the desktop, in the browser and on Android.**
 
 [![NuGet](https://img.shields.io/nuget/v/Flowery.Uno?style=flat-square)](https://www.nuget.org/packages/Flowery.Uno)
 [![Downloads](https://img.shields.io/nuget/dt/Flowery.Uno?style=flat-square)](https://www.nuget.org/packages/Flowery.Uno)

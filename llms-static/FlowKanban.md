@@ -522,6 +522,11 @@ var json = manager.ExportToJson();
 - `Ctrl + N` → Create card in active column (uses inline add).
 - `Ctrl + Alt + Left/Right` → Switch active column (for rename/add).
 - `Ctrl + +` / `Ctrl + -` → Zoom in/out.
+- `Ctrl` (`Cmd`) + mouse wheel → Zoom in/out, one size tier per notch.
+
+### Pinch to Zoom
+
+On Android and in the browser, spreading two fingers zooms the board in and pinching them zooms it out, one size tier per quarter of their distance, within the same tiers as the zoom buttons (`ExtraSmall` to `ExtraLarge`). In the browser the gesture zooms the board, not the page. A pinch neither selects nor drags a card: a card that the first finger selected gets its selection back when the second finger lands, and no card starts a drag until both fingers are lifted. One finger works as before.
 
 ### Accessibility Metadata
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Windows.Input;
@@ -820,6 +820,13 @@ namespace Flowery.Uno.Kanban.Controls
 
         private void OnDragStarting(UIElement sender, Microsoft.UI.Xaml.DragStartingEventArgs args)
         {
+            // Fingers that pinch zoom the board; they drag no card.
+            if (_parentKanban?.IsPinchTouch == true)
+            {
+                args.Cancel = true;
+                return;
+            }
+
             // Store the task data for the drag operation
             var task = CloseCommandParameter as FlowTask;
             if (task != null)
@@ -864,6 +871,10 @@ namespace Flowery.Uno.Kanban.Controls
             var task = CloseCommandParameter as FlowTask ?? Task ?? _trackedTask;
             if (task == null)
                 return;
+
+            // A second finger may follow and make this a pinch, which undoes the selection below.
+            if (e.Pointer.PointerDeviceType == Microsoft.UI.Input.PointerDeviceType.Touch)
+                (_parentKanban ?? FindParentKanban())?.RememberSelectionBeforeTouch();
 
             var column = FindAncestor<FlowKanbanColumn>(this);
             if (column != null)

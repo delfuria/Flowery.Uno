@@ -111,6 +111,8 @@ public partial class DaisyScheduler
         public required int ClickCount { get; init; }
         public AppointmentTarget? Appointment { get; init; }
         public DayTarget? Day { get; init; }
+        /// <summary>A tap on a column heading; the second in a row switches the column zoom.</summary>
+        public bool Heading { get; init; }
     }
 
     private Press? _press;
@@ -157,6 +159,8 @@ public partial class DaisyScheduler
         {
             var handled = element switch
             {
+                ColumnEdgeGrip grip => PressColumnEdge(grip, input),
+                FrameworkElement { Tag: ColumnHeading } heading => PressColumnHeading(heading, input),
                 Border { Tag: AppointmentTarget } frame => PressAppointment(frame, input),
                 Canvas { Tag: Lane } surface => PressLane(surface, input),
                 FrameworkElement { Tag: DayTarget } day => PressEmptyDay(day, input),
@@ -346,6 +350,8 @@ public partial class DaisyScheduler
 
     internal bool MovePointer(PointerInput input)
     {
+        if (MoveColumnEdge(input))
+            return true;
         if (_press is TouchTap tap && tap.PointerId == input.PointerId)
         {
             var (x, y) = (input.WindowPosition.X - tap.WindowPosition.X, input.WindowPosition.Y - tap.WindowPosition.Y);
@@ -436,10 +442,17 @@ public partial class DaisyScheduler
 
     internal bool ReleasePointer(PointerInput input)
     {
+        if (ReleaseColumnEdge(input.PointerId))
+            return true;
         if (_press is TouchTap tap && tap.PointerId == input.PointerId)
         {
             _press = null;
-            if (tap.Appointment is { } target)
+            if (tap.Heading)
+            {
+                if (tap.ClickCount == 2)
+                    ToggleWideColumns(tap.WindowPosition);
+            }
+            else if (tap.Appointment is { } target)
             {
                 RememberSelectionResource(target);
                 SelectAppointment(target.Appointment, HasControl(input.Modifiers));
@@ -598,6 +611,7 @@ public partial class DaisyScheduler
     /// <summary>Drops the press of a pointer the system took, e.g. a swipe that a native scroll view took over.</summary>
     internal void CancelPointer(uint pointerId)
     {
+        ReleaseColumnEdge(pointerId);
         if (_press is not { } press || press.PointerId != pointerId)
             return;
         if (press.IsTouch)

@@ -1,4 +1,4 @@
-using Flowery.Controls.Scheduler.Models;
+﻿using Flowery.Controls.Scheduler.Models;
 using Microsoft.UI.Xaml.Automation;
 
 namespace Flowery.Controls;
@@ -29,6 +29,9 @@ public partial class DaisyScheduler
             .Append(TimeSlotInterval).Distinct().Order().Select(step => new PreferenceChoice(step,
                 string.Format(Culture, Text("Minutes"), step.TotalMinutes))).ToArray();
         AddPreference(settings, "TimeSlotInterval", TimeSlotIntervalProperty, TimeSlotInterval, intervals);
+        var zooms = new[] { 1, 1.5, 2, 3, 4 }.Append(ColumnZoom).Distinct().Order()
+            .Select(zoom => new PreferenceChoice(zoom, zoom.ToString("P0", Culture))).ToArray();
+        AddPreference(settings, "ColumnZoom", ColumnZoomProperty, ColumnZoom, zooms);
     }
 
     private PreferenceChoice[] TimeChoices(TimeSpan current) => Enumerable.Range(0, 48)
@@ -68,6 +71,7 @@ public partial class DaisyScheduler
             case TimeSpan time when property == TimeSlotStartProperty: TimeSlotStart = time; break;
             case TimeSpan time when property == TimeSlotEndProperty: TimeSlotEnd = time; break;
             case TimeSpan time: TimeSlotInterval = time; break;
+            case double zoom: ColumnZoom = zoom; break;
         }
     }
 }

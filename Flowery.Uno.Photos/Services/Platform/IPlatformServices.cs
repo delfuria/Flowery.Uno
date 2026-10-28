@@ -38,8 +38,15 @@ namespace Flowery.Uno.Photos.Services.Platform
         /// <summary>The system accent, or null when the OS has no readable one (callers fall back to the theme accent).</summary>
         SystemAccent? GetSystemAccent();
 
-        /// <summary>Display work areas in screen pixels, or empty when unavailable (callers restore the window without clamping).</summary>
+        /// <summary>
+        /// Display rectangles, or empty when unavailable (callers then restore the window without clamping).
+        /// What a rectangle means differs per OS and is named by <see cref="DisplayGeometry"/>; convert before comparing
+        /// with window bounds from another OS.
+        /// </summary>
         IReadOnlyList<DisplayRect> GetDisplays();
+
+        /// <summary>The unit and area of the rectangles returned by <see cref="GetDisplays"/>.</summary>
+        DisplayGeometry DisplayGeometry { get; }
     }
 
     [Flags]
@@ -56,6 +63,19 @@ namespace Flowery.Uno.Photos.Services.Platform
         CopyFiles = 1 << 5,
         SystemAccent = 1 << 6,
         DisplayInfo = 1 << 7,
+    }
+
+    /// <summary>What <see cref="IPlatformServices.GetDisplays"/> returns on this OS.</summary>
+    public enum DisplayGeometry
+    {
+        /// <summary>No display information.</summary>
+        None,
+        /// <summary>Work area (without the taskbar) in physical pixels. Windows: GetMonitorInfo.</summary>
+        WorkAreaPixels,
+        /// <summary>Full monitor bounds in physical pixels, panels and docks included. Linux: xrandr.</summary>
+        BoundsPixels,
+        /// <summary>Full display bounds in points (logical units, multiply by the backing scale for pixels). macOS: NSScreen frame.</summary>
+        BoundsPoints,
     }
 
     public enum TitleBarMode

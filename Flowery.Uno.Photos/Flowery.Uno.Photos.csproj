@@ -25,7 +25,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Flowery.Uno\Flowery.Uno.csproj" />
     <PackageReference Include="SkiaSharp" />
-    <PackageReference Include="Uno.Toolkit.Skia.WinUI" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,13 +34,16 @@
 
   <!-- Fonts and sample photos come from the Gallery assets (no copy), at ms-appx:///Assets/... as in the Gallery. -->
   <ItemGroup>
-    <Content Include="..\Flowery.Uno.Gallery.Core\Assets\Fonts\*-Regular.ttf;..\Flowery.Uno.Gallery.Core\Assets\Fonts\*-Regular.otf">
+    <!-- StaticFonts-OFL.txt: one license file covers the five Noto fonts (Flowery.WinUI c1d9cbd). -->
+    <Content Include="..\Flowery.Uno.Gallery.Core\Assets\Fonts\*-Regular.ttf;..\Flowery.Uno.Gallery.Core\Assets\Fonts\*-Regular.otf;..\Flowery.Uno.Gallery.Core\Assets\Fonts\StaticFonts-OFL.txt">
       <Link>Assets\Fonts\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
-    <Content Include="..\Flowery.Uno.Gallery.Core\Assets\wallpaper_*.jpg;..\Flowery.Uno.Gallery.Core\Assets\tile_*.jpg">
+    <Content Include="..\Flowery.Uno.Gallery.Core\Assets\wallpaper_*.jpg;..\Flowery.Uno.Gallery.Core\Assets\tile_*.jpg;..\Flowery.Uno.Gallery.Core\Assets\placeholder1.jpg">
       <Link>Assets\Samples\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
   </ItemGroup>
 

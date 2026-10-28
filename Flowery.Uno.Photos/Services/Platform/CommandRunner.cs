@@ -1,4 +1,5 @@
 using IOPath = System.IO.Path;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 
 namespace Flowery.Uno.Photos.Services.Platform
@@ -75,7 +76,12 @@ namespace Flowery.Uno.Photos.Services.Platform
             }
         }
 
-        public bool IsAvailable(string tool)
+        // Looking through PATH touches the disk for every directory; the answer does not change during a run.
+        private readonly ConcurrentDictionary<string, bool> _available = new(StringComparer.Ordinal);
+
+        public bool IsAvailable(string tool) => _available.GetOrAdd(tool, FindTool);
+
+        private static bool FindTool(string tool)
         {
             if (IOPath.IsPathRooted(tool))
                 return File.Exists(tool);

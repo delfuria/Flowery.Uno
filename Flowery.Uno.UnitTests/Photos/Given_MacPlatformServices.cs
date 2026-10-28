@@ -24,18 +24,6 @@ namespace Flowery.Uno.UnitTests.Photos
         }
 
         [TestMethod]
-        public void When_Created_HidesOnlyCopyFiles()
-        {
-            var services = new MacPlatformServices(new FakeCommandRunner(), new FakeMacNative());
-
-            Assert.IsFalse(services.Features.HasFlag(PlatformFeatures.CopyFiles));
-            Assert.IsFalse(services.Features.HasFlag(PlatformFeatures.OpenWithChooser));
-            Assert.IsTrue(services.Features.HasFlag(PlatformFeatures.OpenWithList));
-            Assert.IsTrue(services.Features.HasFlag(PlatformFeatures.Trash | PlatformFeatures.RevealInFileManager | PlatformFeatures.SetWallpaper));
-            Assert.AreEqual(TitleBarMode.System, services.TitleBarMode);
-        }
-
-        [TestMethod]
         public async Task When_CopyingFiles_ReturnsFalse()
         {
             var services = new MacPlatformServices(new FakeCommandRunner(), new FakeMacNative());

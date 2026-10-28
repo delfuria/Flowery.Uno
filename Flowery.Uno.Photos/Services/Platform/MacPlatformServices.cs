@@ -53,6 +53,8 @@ namespace Flowery.Uno.Photos.Services.Platform
 
         public override IReadOnlyList<DisplayRect> GetDisplays() => native.GetDisplays();
 
+        public override DisplayGeometry DisplayGeometry => DisplayGeometry.BoundsPoints;
+
         public static class Commands
         {
             public static CommandSpec Reveal(string path) => new("/usr/bin/open", "-R", path);

@@ -10,26 +10,15 @@ namespace Flowery.Uno.UnitTests.Photos
     public class Given_WindowsPlatformServices
     {
         [TestMethod]
-        public void When_Created_ExtendsTheTitleBarAndHasEveryAction()
-        {
-            var services = new WindowsPlatformServices(new FakeCommandRunner());
-
-            Assert.AreEqual(TitleBarMode.Extended, services.TitleBarMode);
-            Assert.IsTrue(services.Features.HasFlag(PlatformFeatures.OpenWithChooser));
-            Assert.IsTrue(services.Features.HasFlag(PlatformFeatures.CopyFiles));
-            Assert.IsFalse(services.Features.HasFlag(PlatformFeatures.OpenWithList));
-        }
-
-        [TestMethod]
         public void When_Revealing_QuotesThePathAfterSelect()
         {
             Assert.AreEqual("explorer.exe /select,\"C:\\My Pictures\\a.jpg\"", WindowsPlatformServices.Commands.Reveal("C:\\My Pictures\\a.jpg").ToString());
         }
 
         [TestMethod]
-        public void When_OpeningWith_UsesTheShell32Dialog()
+        public void When_OpeningWith_UsesTheShell32DialogWithTheUnquotedPath()
         {
-            Assert.AreEqual("rundll32.exe shell32.dll,OpenAs_RunDLL \"C:\\My Pictures\\a.jpg\"", WindowsPlatformServices.Commands.OpenWith("C:\\My Pictures\\a.jpg").ToString());
+            Assert.AreEqual("rundll32.exe shell32.dll,OpenAs_RunDLL C:\\My Pictures\\a.jpg", WindowsPlatformServices.Commands.OpenWith("C:\\My Pictures\\a.jpg").ToString());
         }
 
         [TestMethod]

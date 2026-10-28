@@ -34,10 +34,12 @@ namespace Flowery.Uno.Photos.Services.Platform
 
         public virtual IReadOnlyList<DisplayRect> GetDisplays() => [];
 
-        public async Task<bool> CopyBitmapToClipboardAsync(byte[] pngBytes)
+        public virtual DisplayGeometry DisplayGeometry => DisplayGeometry.None;
+
+        public Task<bool> CopyBitmapToClipboardAsync(byte[] pngBytes)
         {
             if (pngBytes.Length == 0)
-                return false;
+                return Task.FromResult(false);
             try
             {
                 // Skia: DataWriter.DetachStream is not implemented on the desktop head; a MemoryStream-backed stream is.
@@ -45,11 +47,11 @@ namespace Flowery.Uno.Photos.Services.Platform
                 var package = new DataPackage();
                 package.SetBitmap(RandomAccessStreamReference.CreateFromStream(stream));
                 Clipboard.SetContent(package);
-                return await Task.FromResult(true);
+                return Task.FromResult(true);
             }
             catch
             {
-                return false;
+                return Task.FromResult(false);
             }
         }
 

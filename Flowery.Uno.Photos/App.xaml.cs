@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Flowery.Uno.Photos.Localization;
+using Flowery.Uno.Photos.Services;
 using IOPath = System.IO.Path;
 
 namespace Flowery.Uno.Photos
@@ -38,36 +39,55 @@ namespace Flowery.Uno.Photos
             });
             DaisyResourceLookup.EnsureTokens();
 
+            PhotosSettings.Initialize(GetStateDirectory());
+
             // Ensure the localization registers its resolver early.
             _ = PhotosLocalization.Instance;
 
-            // Skia: PhotosSettings (saved language, theme and size) arrives with the library in phase 2.
+            // Apply language BEFORE creating the window so all bindings start in the right culture.
+            var savedLanguage = PhotosSettings.LoadLanguage();
+            if (!string.IsNullOrWhiteSpace(savedLanguage))
+            {
+                FloweryLocalization.SetCulture(savedLanguage);
+            }
+
             var startupFile = Environment.GetCommandLineArgs()
                 .Skip(1)
-                .FirstOrDefault(File.Exists);
+                .FirstOrDefault(a => File.Exists(a) && ImageMetadataReader.IsSupported(a));
 
             _window = new MainWindow(startupFile);
             FlowerySizeManager.MainWindow = _window;
             FloweryScaleManager.MainWindow = _window;
 
+            ApplyPersistedSettings();
+
             _window.Activate();
         }
 
-        internal static string GetStateDirectory()
+        private static void ApplyPersistedSettings()
         {
-            var configuredRoot = Environment.GetEnvironmentVariable("FLOWERY_STATE_ROOT");
-            if (!string.IsNullOrWhiteSpace(configuredRoot))
-            {
-                if (!IOPath.IsPathFullyQualified(configuredRoot))
-                {
-                    throw new ArgumentException("FLOWERY_STATE_ROOT must be an absolute directory path.");
-                }
+            FloweryLocalization.CultureChanged += (_, cultureName) =>
+                PhotosSettings.SaveLanguage(cultureName);
 
-                return IOPath.GetFullPath(configuredRoot);
+            var savedTheme = PhotosSettings.LoadTheme() ?? "Dark";
+            if (!DaisyThemeManager.ApplyTheme(savedTheme))
+            {
+                DaisyThemeManager.ApplyTheme("Dark");
+            }
+            DaisyThemeManager.ThemeChanged += (_, name) =>
+                PhotosSettings.SaveTheme(name);
+
+            var savedSize = PhotosSettings.LoadGlobalSize();
+            if (savedSize.HasValue)
+            {
+                FlowerySizeManager.ApplySize(savedSize.Value);
             }
 
-            return IOPath.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Flowery.Uno.Photos");
+            FlowerySizeManager.SizeChanged += (_, size) =>
+                PhotosSettings.SaveGlobalSize(size);
         }
+
+        internal static string GetStateDirectory() => StateDirectory.Resolve();
 
         private void ConfigureCrashLogging()
         {

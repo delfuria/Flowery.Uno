@@ -1,4 +1,4 @@
-using Flowery.Uno.Photos;
+using Flowery.Uno.Photos.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Flowery.Uno.UnitTests.Photos
@@ -21,7 +21,7 @@ namespace Flowery.Uno.UnitTests.Photos
             var root = Path.Combine(Path.GetTempPath(), "photos-state", "..", "photos-state-2");
             Environment.SetEnvironmentVariable(Variable, root);
 
-            Assert.AreEqual(Path.GetFullPath(root), App.GetStateDirectory());
+            Assert.AreEqual(Path.GetFullPath(root), StateDirectory.Resolve());
         }
 
         [TestMethod]
@@ -29,7 +29,7 @@ namespace Flowery.Uno.UnitTests.Photos
         {
             Environment.SetEnvironmentVariable(Variable, Path.Combine("relative", "state"));
 
-            Assert.ThrowsExactly<ArgumentException>(() => App.GetStateDirectory());
+            Assert.ThrowsExactly<ArgumentException>(() => StateDirectory.Resolve());
         }
 
         [TestMethod]
@@ -38,7 +38,7 @@ namespace Flowery.Uno.UnitTests.Photos
             Environment.SetEnvironmentVariable(Variable, null);
 
             var expected = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Flowery.Uno.Photos");
-            Assert.AreEqual(expected, App.GetStateDirectory());
+            Assert.AreEqual(expected, StateDirectory.Resolve());
         }
     }
 }

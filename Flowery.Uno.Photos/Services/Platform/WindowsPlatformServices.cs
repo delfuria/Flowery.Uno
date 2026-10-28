@@ -82,6 +82,8 @@ namespace Flowery.Uno.Photos.Services.Platform
 
         public override IReadOnlyList<DisplayRect> GetDisplays() => Native.GetWorkAreas();
 
+        public override DisplayGeometry DisplayGeometry => DisplayGeometry.WorkAreaPixels;
+
         /// <summary>The DWM accent is stored as 0xAABBGGRR.</summary>
         public static SystemAccent ParseAccent(uint abgr) =>
             new((byte)(abgr & 0xFF), (byte)((abgr >> 8) & 0xFF), (byte)((abgr >> 16) & 0xFF));
@@ -95,7 +97,9 @@ namespace Flowery.Uno.Photos.Services.Platform
 
             public static CommandSpec OpenUri(string uri) => new("rundll32.exe", "url.dll,FileProtocolHandler", uri);
 
-            public static CommandSpec OpenWith(string path) => CommandSpec.Raw("rundll32.exe", $"shell32.dll,OpenAs_RunDLL \"{path}\"");
+            // No quotes: rundll32 hands the rest of the line to OpenAs_RunDLL as the path, spaces included. With quotes the dialog
+            // never appears on Windows 11 (checked on the VM, paths with and without spaces).
+            public static CommandSpec OpenWith(string path) => CommandSpec.Raw("rundll32.exe", $"shell32.dll,OpenAs_RunDLL {path}");
         }
 
         /// <summary>Builds the CF_HDROP payload (a DROPFILES header followed by double-null terminated UTF-16 paths).</summary>

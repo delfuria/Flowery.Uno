@@ -25,6 +25,8 @@ namespace Flowery.Uno.Photos
 
             GetSafeAppWindow()?.Resize(DefaultSize);
 
+            Shell.Initialize(this, startupFile);
+
             WindowsAccent.Initialize(DispatcherQueue);
             Activated += (_, args) =>
             {

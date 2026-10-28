@@ -6,23 +6,69 @@ namespace Flowery.Uno.UnitTests.Photos
     [TestClass]
     public class Given_LinuxPlatformServices
     {
+        private static FakeCommandRunner GnomeRunner() => new FakeCommandRunner("gio", "dbus-send", "xdg-open", "gsettings")
+            .Returns("gsettings list-keys org.gnome.desktop.background", 0, "picture-options\npicture-uri\npicture-uri-dark\n")
+            .Returns("gsettings list-keys org.gnome.desktop.interface", 0, "accent-color\ncolor-scheme\n");
+
         [TestMethod]
-        public void When_AllToolsPresent_AllFeaturesExceptNothingAreOn()
+        public void When_AllToolsAndGnomeKeysPresent_AllFeaturesAreOn()
         {
-            var services = new LinuxPlatformServices(new FakeCommandRunner("gio", "dbus-send", "xdg-open", "gsettings"));
+            var services = new LinuxPlatformServices(GnomeRunner());
 
             var expected = PlatformFeatures.Trash | PlatformFeatures.RevealInFileManager | PlatformFeatures.SetWallpaper
                 | PlatformFeatures.OpenWithList | PlatformFeatures.CopyFiles | PlatformFeatures.SystemAccent | PlatformFeatures.DisplayInfo;
             Assert.AreEqual(expected, services.Features);
-            Assert.AreEqual(TitleBarMode.System, services.TitleBarMode);
+        }
+
+        [TestMethod]
+        public void When_GsettingsExistsWithoutTheGnomeSchemas_WallpaperAndAccentStayHidden()
+        {
+            // KDE and others ship gsettings but not the GNOME schemas; the keys do not exist there.
+            var runner = new FakeCommandRunner("gio", "xdg-open", "gsettings")
+                .Returns("gsettings list-keys org.gnome.desktop.background", 1, "No such schema")
+                .Returns("gsettings list-keys org.gnome.desktop.interface", 1, "No such schema");
+
+            var features = new LinuxPlatformServices(runner).Features;
+
+            Assert.IsFalse(features.HasFlag(PlatformFeatures.SetWallpaper));
+            Assert.IsFalse(features.HasFlag(PlatformFeatures.SystemAccent));
+            Assert.IsTrue(features.HasFlag(PlatformFeatures.Trash));
+        }
+
+        [TestMethod]
+        public void When_GnomeIsOlderThanTheAccentKey_OnlyTheWallpaperIsOn()
+        {
+            var runner = new FakeCommandRunner("gsettings")
+                .Returns("gsettings list-keys org.gnome.desktop.background", 0, "picture-uri\n")
+                .Returns("gsettings list-keys org.gnome.desktop.interface", 0, "color-scheme\n");
+
+            var features = new LinuxPlatformServices(runner).Features;
+
+            Assert.IsTrue(features.HasFlag(PlatformFeatures.SetWallpaper));
+            Assert.IsFalse(features.HasFlag(PlatformFeatures.SystemAccent));
+        }
+
+        [TestMethod]
+        public void When_FeaturesAreReadRepeatedly_TheSystemIsProbedOnce()
+        {
+            var runner = GnomeRunner();
+            var services = new LinuxPlatformServices(runner);
+
+            _ = services.Features;
+            _ = services.Features;
+            _ = services.Features;
+
+            Assert.AreEqual(2, runner.Ran.Count, "one gsettings key listing per schema");
         }
 
         [TestMethod]
         public void When_ToolsAreMissing_TheMatchingFeaturesAreOff()
         {
-            var services = new LinuxPlatformServices(new FakeCommandRunner("xdg-open"));
+            var runner = new FakeCommandRunner("xdg-open");
+            var services = new LinuxPlatformServices(runner);
 
             Assert.AreEqual(PlatformFeatures.RevealInFileManager | PlatformFeatures.CopyFiles | PlatformFeatures.DisplayInfo, services.Features);
+            Assert.AreEqual(0, runner.Ran.Count);
         }
 
         [TestMethod]

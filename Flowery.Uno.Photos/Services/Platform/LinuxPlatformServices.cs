@@ -14,19 +14,34 @@ namespace Flowery.Uno.Photos.Services.Platform
         private readonly Func<string, bool> _fileExists = fileExists ?? File.Exists;
         private readonly IReadOnlyList<string> _dataDirs = dataDirs ?? GetDataDirs();
 
-        public override PlatformFeatures Features
+        private PlatformFeatures? _features;
+
+        // Probed once: it looks for tools and asks gsettings about its schemas, which should not repeat on every access.
+        public override PlatformFeatures Features => _features ??= DetectFeatures(Runner);
+
+        private static PlatformFeatures DetectFeatures(ICommandRunner runner)
         {
-            get
+            var features = PlatformFeatures.CopyFiles | PlatformFeatures.DisplayInfo;
+            if (runner.IsAvailable("gio"))
+                features |= PlatformFeatures.Trash | PlatformFeatures.OpenWithList;
+            if (runner.IsAvailable("dbus-send") || runner.IsAvailable("xdg-open"))
+                features |= PlatformFeatures.RevealInFileManager;
+
+            // gsettings is installed on KDE and others too, where the GNOME keys do not exist: check the keys, not the tool.
+            if (runner.IsAvailable("gsettings"))
             {
-                var features = PlatformFeatures.CopyFiles | PlatformFeatures.DisplayInfo;
-                if (Runner.IsAvailable("gio"))
-                    features |= PlatformFeatures.Trash | PlatformFeatures.OpenWithList;
-                if (Runner.IsAvailable("dbus-send") || Runner.IsAvailable("xdg-open"))
-                    features |= PlatformFeatures.RevealInFileManager;
-                if (Runner.IsAvailable("gsettings"))
-                    features |= PlatformFeatures.SetWallpaper | PlatformFeatures.SystemAccent;
-                return features;
+                if (HasKey(runner, "org.gnome.desktop.background", "picture-uri"))
+                    features |= PlatformFeatures.SetWallpaper;
+                if (HasKey(runner, "org.gnome.desktop.interface", "accent-color"))
+                    features |= PlatformFeatures.SystemAccent;
             }
+            return features;
+        }
+
+        private static bool HasKey(ICommandRunner runner, string schema, string key)
+        {
+            var result = runner.Run(Commands.ListKeys(schema));
+            return result.Success && result.Output.Split('\n', StringSplitOptions.TrimEntries).Contains(key);
         }
 
         public override bool MoveToTrash(string path)
@@ -79,6 +94,8 @@ namespace Flowery.Uno.Photos.Services.Platform
             var result = Runner.Run(Commands.GetAccentColor());
             return result.Success ? ParseAccent(result.Output) : null;
         }
+
+        public override DisplayGeometry DisplayGeometry => DisplayGeometry.BoundsPixels;
 
         public override IReadOnlyList<DisplayRect> GetDisplays()
         {
@@ -137,6 +154,8 @@ namespace Flowery.Uno.Photos.Services.Platform
 
             public static CommandSpec SetWallpaper(string key, string uri) =>
                 new("gsettings", "set", "org.gnome.desktop.background", key, uri);
+
+            public static CommandSpec ListKeys(string schema) => new("gsettings", "list-keys", schema);
 
             public static CommandSpec GetAccentColor() => new("gsettings", "get", "org.gnome.desktop.interface", "accent-color");
 

@@ -409,11 +409,19 @@ pnpm test
 
 The runner starts and stops the Gallery server on port 5280. The port must be free.
 Each case uses a fresh browser context. Retries are disabled.
-CI uploads JSON results, console logs, and a JUnit report in the `gallery-drawer-browser` artifact.
+CI uploads JSON results, console logs, and a JUnit report in the `gallery-browser-tests` artifact.
 Failed tests also include a screenshot and a Playwright trace.
 Unavailable Uno Debug remote-control WebSockets (`/rc`) remain in the logs but do not fail the test.
 Other console errors and all unhandled page errors fail the test.
 Chromium uses SwiftShader for WebGL. This job does not test a physical GPU.
+
+The same job runs `gl-transitions.spec.cjs`. It loads the Gallery's GL transition engine
+(`Flowery.Uno.Gallery.Core/WasmScripts/flowery-carousel-gl-transitions.js`) and the transition shaders
+from the source tree into a blank page, renders single frames at a set time and reads their pixels.
+The middle frame of `pixelize` must be made of squares and differ from the `fade` crossfade of the same images.
+The middle frame of `BookFlip` must show the outgoing image left of the center and the incoming image right of it.
+The tests do not use the Gallery, but the runner starts the Gallery server for every run.
+`pnpm exec playwright test gl-transitions.spec.cjs` runs only these tests.
 
 ### Build fails with missing SDK
 
